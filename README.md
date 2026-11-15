@@ -23,10 +23,11 @@ Todos los días, a las 7:00 de España, GitHub descarga los catálogos completos
 | `data/mercadona.json` | Todos los productos de Mercadona, uno por línea |
 | `data/consum.json` | Todos los productos de Consum, uno por línea |
 | `data/meta.json` | Fecha, número de productos y estado de cada tienda |
+| `data/app.json` | Versión ligera para la app: solo los campos que usa (sin enlaces ni fotos) y el estado de cada tienda. Unos 2,4 MB, que se descargan comprimidos como unos 420 KB |
 
-Cada producto tiene su precio y su `precioRef`: el precio por kg, por litro o por unidad, que es el que sirve para comparar entre tiendas.
+Cada producto tiene su precio y su `precioRef`: el precio por kg, por litro o por unidad, que es el que sirve para comparar entre tiendas. Si está en oferta, `oferta` dice cuál es y `ofertaHasta`, su último día.
 
-Si nada ha cambiado, no se crea ningún commit. Si cambian precios, aparece un commit «Actualiza los precios del DD/MM/AAAA» hecho por `github-actions[bot]`.
+La fecha de los precios está en `meta.json` (una por tienda), no en cada producto. Los productos van ordenados por id, uno por línea, así que cada commit diario «Actualiza los precios del DD/MM/AAAA», hecho por `github-actions[bot]`, solo muestra las líneas de los productos que han cambiado. Si no ha cambiado nada, no se crea ningún commit.
 
 ### Lanzarlo a mano
 
@@ -45,9 +46,10 @@ npm ci
 npm run scrape            # todas las tiendas
 npm run scrape -- consum  # solo una tienda
 npm run estado            # resumen de data/meta.json
+npm run app               # regenera data/app.json sin descargar nada
 ```
 
-Para respetar las webs, conviene no lanzarlo más de una vez al día.
+Para respetar las webs, conviene no lanzarlo más de una vez al día. Las ejecuciones automáticas ya lo tienen en cuenta: si ese día ya hay datos, no descargan nada.
 
 ### Cómo saber si ha fallado
 
@@ -57,7 +59,18 @@ Para respetar las webs, conviene no lanzarlo más de una vez al día.
    - `"ok"`: los precios son del día (`actualizado`).
    - `"fallida"`: algo ha ido mal y **se han conservado los precios del último día bueno**. `motivo` explica qué ha pasado y `actualizado` indica de qué día son los precios guardados.
 
-Es normal ver cada día una segunda ejecución verde que no hace nada: es la otra hora programada (la del horario de verano o de invierno) y se detiene sola.
+### Horario y ejecución de reserva
+
+La ejecución está programada a las 7:00 en hora de España (`timezone: 'Europe/Madrid'`), así que sigue siendo a las 7:00 en verano y en invierno. GitHub no garantiza que se ejecuten todos los cron, sobre todo a las horas en punto, así que hay una **reserva a las 9:30**: si a esa hora aún no hay precios del día, los descarga; si ya los hay, termina en verde sin hacer nada. Es normal ver esa segunda ejecución corta cada día.
+
+### Si GitHub desactiva la ejecución diaria
+
+En los repositorios públicos, GitHub desactiva las ejecuciones programadas si pasan **60 días sin actividad** en el repositorio. No aclara si cuentan los commits del robot, así que puede pasar aunque los precios se actualicen cada día. Cómo darse cuenta:
+
+- la app mostrará el aviso «precios de X del día DD/MM» con una fecha antigua;
+- en la pestaña **Actions** aparece un aviso amarillo y GitHub suele enviar un correo.
+
+Cómo arreglarlo (un minuto): pestaña **Actions** → **Precios diarios** → botón **Enable workflow**. Mientras se trabaje en la app habrá commits propios a menudo, que muy probablemente cuentan como actividad.
 
 ### Cuándo se conservan los datos anteriores
 

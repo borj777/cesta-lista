@@ -5,10 +5,14 @@ name: Precios diarios
 
 on:
   schedule:
-    # GitHub solo entiende la hora UTC, que no cambia en verano. Se programa a las dos horas
-    # posibles y el primer paso decide cuál corresponde hoy a las 7:00 de España.
-    - cron: '0 5 * * *' # 7:00 en horario de verano (UTC+2)
-    - cron: '0 6 * * *' # 7:00 en horario de invierno (UTC+1)
+    # Con timezone, GitHub aplica solo el horario de verano y de invierno (desde marzo de 2026).
+    - cron: '0 7 * * *'
+      timezone: 'Europe/Madrid'
+    # Reserva: GitHub no garantiza que se ejecuten todos los cron (a veces se retrasan o se
+    # pierden, sobre todo a las horas en punto). Si a las 9:30 aún no hay datos de hoy, se
+    # descargan entonces; si ya los hay, esta ejecución no hace nada.
+    - cron: '30 9 * * *'
+      timezone: 'Europe/Madrid'
   workflow_dispatch:
 
 # Necesita escribir para poder hacer commit de /data.
@@ -26,34 +30,29 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Comprobar que son las 7:00 en España
-        id: hora
-        env:
-          EVENTO: ${{ github.event_name }}
-          CRON: ${{ github.event.schedule }}
-        run: |
-          desfase=$(TZ=Europe/Madrid date +%z)
-          if [ "$EVENTO" != "schedule" ]; then
-            toca=si
-          elif [ "$CRON" = "0 5 * * *" ] && [ "$desfase" = "+0200" ]; then
-            toca=si
-          elif [ "$CRON" = "0 6 * * *" ] && [ "$desfase" = "+0100" ]; then
-            toca=si
-          else
-            toca=no
-          fi
-          echo "toca=$toca" >> "$GITHUB_OUTPUT"
-          echo "Evento: $EVENTO · cron: ${CRON:-ninguno} · hora de Madrid: UTC$desfase · ¿toca hoy?: $toca"
-          if [ "$toca" = no ]; then
-            echo "Esta es la otra hora programada: hoy no corresponde a las 7:00 de España." >> "$GITHUB_STEP_SUMMARY"
-          fi
-
       - name: Descargar el código del repositorio
-        if: steps.hora.outputs.toca == 'si'
         uses: actions/checkout@v7
 
+      # Una pasada al día como máximo: las ejecuciones programadas no hacen nada si ya hay
+      # datos de hoy. Lanzado a mano, siempre descarga.
+      - name: Comprobar si ya hay datos de hoy
+        id: decidir
+        env:
+          EVENTO: ${{ github.event_name }}
+        run: |
+          hoy=$(TZ=Europe/Madrid date +%F)
+          generado=$(jq -r '.generado // empty' data/meta.json 2>/dev/null || true)
+          ultimo="ninguno"
+          if [ -n "$generado" ]; then ultimo=$(TZ=Europe/Madrid date -d "$generado" +%F); fi
+          if [ "$EVENTO" = "schedule" ] && [ "$ultimo" = "$hoy" ]; then toca=no; else toca=si; fi
+          echo "toca=$toca" >> "$GITHUB_OUTPUT"
+          echo "Evento: $EVENTO · hoy en España: $hoy · última descarga: $ultimo · ¿descargar?: $toca"
+          if [ "$toca" = no ]; then
+            echo "Ya hay precios de hoy ($hoy): esta ejecución programada no descarga nada." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Instalar Node 26
-        if: steps.hora.outputs.toca == 'si'
+        if: steps.decidir.outputs.toca == 'si'
         uses: actions/setup-node@v7
         with:
           node-version: 26
@@ -61,17 +60,17 @@ jobs:
           cache-dependency-path: scraper/package-lock.json
 
       - name: Instalar dependencias
-        if: steps.hora.outputs.toca == 'si'
+        if: steps.decidir.outputs.toca == 'si'
         working-directory: scraper
         run: npm ci
 
       - name: Descargar los precios
-        if: steps.hora.outputs.toca == 'si'
+        if: steps.decidir.outputs.toca == 'si'
         working-directory: scraper
         run: npm run scrape
 
       - name: Guardar los cambios en el repositorio
-        if: steps.hora.outputs.toca == 'si'
+        if: steps.decidir.outputs.toca == 'si'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -86,7 +85,7 @@ jobs:
 
       # Si alguna tienda ha fallado, este paso termina en rojo y GitHub avisa por correo.
       - name: Comprobar el estado de cada tienda
-        if: steps.hora.outputs.toca == 'si'
+        if: steps.decidir.outputs.toca == 'si'
         working-directory: scraper
         shell: bash
         run: node src/comprobar-meta.ts | tee -a "$GITHUB_STEP_SUMMARY"
