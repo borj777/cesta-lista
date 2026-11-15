@@ -21,10 +21,13 @@ export const ProductoSchema = z.object({
   precioRef: z.number().positive(),
   precioAnterior: z.number().positive().optional(),
   oferta: z.string().min(1).optional(),
+  /** Último día de la oferta (AAAA-MM-DD, hora de España), si la tienda lo indica. */
+  ofertaHasta: z.iso.date().optional(),
   url: z.string().min(1).optional(),
   imagen: z.string().min(1).optional(),
-  actualizado: z.iso.datetime(),
 });
+// La fecha de actualización no va en cada producto, sino en data/meta.json (una por tienda),
+// para que cada commit diario solo muestre los productos cuyo precio cambia.
 
 export type Producto = z.infer<typeof ProductoSchema>;
 

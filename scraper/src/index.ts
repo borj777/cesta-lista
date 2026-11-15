@@ -3,22 +3,19 @@
  * Uso: npm run scrape            (todas las tiendas)
  *      npm run scrape -- consum  (solo una)
  */
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { descargarConsum } from './adapters/consum.ts';
 import { descargarMercadona } from './adapters/mercadona.ts';
+import { actualizarApp, escribir, leerJson, leerMeta } from './archivos.ts';
 import { crearCliente, type Pedir } from './http.ts';
 import {
   estadoTienda,
   leerProductos,
-  MetaSchema,
   serializarProductos,
   type EstadoTienda,
   type Meta,
 } from './meta.ts';
-import { conservarFechas, evaluar, type Veredicto } from './proteccion.ts';
+import { evaluar, type Veredicto } from './proteccion.ts';
 import type { ResultadoAdaptador } from './tipos.ts';
-
-const DATOS = new URL('../../data/', import.meta.url);
 
 type Descargar = (
   pedir: Pedir,
@@ -33,22 +30,6 @@ const ADAPTADORES = {
 type TiendaScraper = keyof typeof ADAPTADORES;
 
 const registrar = (mensaje: string) => console.log(`[${new Date().toISOString()}] ${mensaje}`);
-
-async function leerJson(nombre: string): Promise<unknown> {
-  try {
-    return JSON.parse(await readFile(new URL(nombre, DATOS), 'utf8'));
-  } catch {
-    return null;
-  }
-}
-
-/** Escribe primero en un archivo temporal y luego lo renombra: nunca deja un archivo a medias. */
-async function escribir(nombre: string, contenido: string): Promise<void> {
-  const destino = new URL(nombre, DATOS);
-  const temporal = new URL(`${nombre}.tmp`, DATOS);
-  await writeFile(temporal, contenido, 'utf8');
-  await rename(temporal, destino);
-}
 
 async function procesar(
   tienda: TiendaScraper,
@@ -70,9 +51,8 @@ async function procesar(
   }
 
   if (veredicto.valido && resultado) {
-    const productos = conservarFechas(resultado.productos, anteriores);
-    await escribir(`${tienda}.json`, serializarProductos(productos));
-    registrar(`${tienda}: OK, ${productos.length} productos guardados`);
+    await escribir(`${tienda}.json`, serializarProductos(resultado.productos));
+    registrar(`${tienda}: OK, ${resultado.productos.length} productos guardados`);
   } else if (!veredicto.valido) {
     registrar(`${tienda}: FALLIDA, se conservan los datos anteriores. Motivo: ${veredicto.motivo}`);
   }
@@ -98,19 +78,18 @@ async function main(): Promise<void> {
     argumentos.length > 0 ? argumentos : Object.keys(ADAPTADORES)
   ) as TiendaScraper[];
 
-  await mkdir(DATOS, { recursive: true });
   const ahora = new Date().toISOString();
-  const metaPrevia = MetaSchema.safeParse(await leerJson('meta.json'));
-  const meta: Meta = {
-    generado: ahora,
-    tiendas: metaPrevia.success ? { ...metaPrevia.data.tiendas } : {},
-  };
+  const metaPrevia = await leerMeta();
+  const meta: Meta = { generado: ahora, tiendas: { ...metaPrevia?.tiendas } };
 
   for (const tienda of tiendas) {
     meta.tiendas[tienda] = await procesar(tienda, meta.tiendas[tienda], ahora);
   }
   await escribir('meta.json', `${JSON.stringify(meta, null, 2)}\n`);
   registrar('meta.json actualizado');
+
+  const bytes = await actualizarApp(meta);
+  registrar(`app.json actualizado (${(bytes / 1024 / 1024).toFixed(2)} MB)`);
 }
 
 await main();

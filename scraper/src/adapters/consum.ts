@@ -60,14 +60,22 @@ const PaginaSchema = z.object({
   products: z.array(z.unknown()),
 });
 
-const diaMes = new Intl.DateTimeFormat('es-ES', {
-  day: '2-digit',
+/** Fecha AAAA-MM-DD en hora de España ("en-CA" escribe las fechas en ese orden). */
+const fechaEspana = new Intl.DateTimeFormat('en-CA', {
+  year: 'numeric',
   month: '2-digit',
+  day: '2-digit',
   timeZone: 'Europe/Madrid',
 });
 
-/** Texto de la oferta vigente, p. ej. "Ahora más barato hasta el 18/11". */
-function textoOferta(ofertas: Oferta[] | null | undefined, ahora: string): string | undefined {
+/**
+ * Oferta vigente: su texto ("Ahora más barato") y su último día.
+ * Consum indica el fin como "2026-11-18T22:59:00Z", que en España es el 18/11 a las 23:59.
+ */
+export function ofertaVigente(
+  ofertas: Oferta[] | null | undefined,
+  ahora: string,
+): { oferta?: string; ofertaHasta?: string } {
   const momento = Date.parse(ahora);
   const vigente = ofertas?.find(
     (o) =>
@@ -75,9 +83,10 @@ function textoOferta(ofertas: Oferta[] | null | undefined, ahora: string): strin
       (!o.to || Date.parse(o.to) >= momento) &&
       (o.shortDescription || o.longDescription),
   );
-  if (!vigente) return undefined;
-  const nombre = vigente.shortDescription ?? vigente.longDescription;
-  return vigente.to ? `${nombre} hasta el ${diaMes.format(new Date(vigente.to))}` : nombre;
+  if (!vigente) return {};
+  const oferta = vigente.shortDescription ?? vigente.longDescription;
+  const fin = vigente.to ? Date.parse(vigente.to) : NaN;
+  return Number.isNaN(fin) ? { oferta } : { oferta, ofertaHasta: fechaEspana.format(fin) };
 }
 
 /**
@@ -142,10 +151,9 @@ export function normalizarConsum(crudo: unknown, ahora: string): Normalizado {
     precio,
     precioRef,
     precioAnterior: oferta ? redondear(normal.value.centAmount, 2) : undefined,
-    oferta: textoOferta(p.offers, ahora),
+    ...ofertaVigente(p.offers, ahora),
     url: p.productData.url,
     imagen: p.productData.imageURL,
-    actualizado: ahora,
   });
   if (!producto) return { ok: false };
 

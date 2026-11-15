@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { descargarConsum, normalizarConsum } from '../src/adapters/consum.ts';
+import { descargarConsum, normalizarConsum, ofertaVigente } from '../src/adapters/consum.ts';
 import { ErrorFormato, ProductoSchema, type Producto } from '../src/tipos.ts';
 import { AHORA, fixture, pedirFalso, respuesta } from './ayudas.ts';
 
@@ -43,7 +43,8 @@ describe('normalizarConsum con respuestas reales', () => {
     expect(buscar('Lentejas a La Riojana Bote')).toMatchObject({
       precio: 2,
       precioAnterior: 2.35,
-      oferta: 'Ahora más barato hasta el 18/11',
+      oferta: 'Ahora más barato',
+      ofertaHasta: '2026-11-18',
       formato: { cantidad: 0.425, unidad: 'kg' },
       precioRef: 4.7059,
     });
@@ -132,5 +133,39 @@ describe('ejemplos de descartados', () => {
     );
     const r = await descargarConsum(pedir, AHORA);
     expect(r).toMatchObject({ descartados: 1, ejemplosDescartados: ['7 Sin precio 1 L'] });
+  });
+});
+
+describe('ofertaVigente', () => {
+  const oferta = (from: string, to: string) => [
+    { from, to, shortDescription: 'Ahora más barato', longDescription: 'Ahora más barato' },
+  ];
+
+  it('separa el texto de la oferta y su último día en hora de España', () => {
+    // 22:59 UTC en invierno son las 23:59 del mismo día en España.
+    expect(ofertaVigente(oferta('2026-11-09T23:00:00Z', '2026-11-18T22:59:00Z'), AHORA)).toEqual({
+      oferta: 'Ahora más barato',
+      ofertaHasta: '2026-11-18',
+    });
+  });
+
+  it('tiene en cuenta el horario de verano', () => {
+    // 21:59 UTC en julio son las 23:59 en España; 22:30 UTC ya es el día siguiente.
+    const julio = '2027-07-01T10:00:00Z';
+    expect(ofertaVigente(oferta(julio, '2027-07-10T21:59:00Z'), julio).ofertaHasta).toBe(
+      '2027-07-10',
+    );
+    expect(ofertaVigente(oferta(julio, '2027-07-10T22:30:00Z'), julio).ofertaHasta).toBe(
+      '2027-07-11',
+    );
+  });
+
+  it('ignora las ofertas caducadas o que aún no han empezado', () => {
+    expect(ofertaVigente(oferta('2026-10-01T00:00:00Z', '2026-11-01T00:00:00Z'), AHORA)).toEqual(
+      {},
+    );
+    expect(ofertaVigente(oferta('2026-12-01T00:00:00Z', '2026-12-31T00:00:00Z'), AHORA)).toEqual(
+      {},
+    );
   });
 });

@@ -84,7 +84,7 @@ export function formatoMercadona(pi: InstruccionesPrecio): Formato | null {
 }
 
 /** Convierte un producto de la API de Mercadona al esquema común. */
-export function normalizarMercadona(crudo: unknown, ahora: string): Normalizado {
+export function normalizarMercadona(crudo: unknown): Normalizado {
   const r = ProductoCrudoSchema.safeParse(crudo);
   if (!r.success) return { ok: false };
   const p = r.data;
@@ -107,7 +107,6 @@ export function normalizarMercadona(crudo: unknown, ahora: string): Normalizado 
     precioAnterior: anterior && anterior > precio ? redondear(anterior, 2) : undefined,
     url: p.share_url ?? undefined,
     imagen: p.thumbnail ?? undefined,
-    actualizado: ahora,
   });
   if (!producto) return { ok: false };
 
@@ -124,10 +123,13 @@ export function normalizarMercadona(crudo: unknown, ahora: string): Normalizado 
   return aviso ? { ok: true, producto, aviso } : { ok: true, producto };
 }
 
-/** Recorre todo el catálogo de Mercadona con los precios de Valencia. */
+/**
+ * Recorre todo el catálogo de Mercadona con los precios de Valencia.
+ * Mercadona no publica fechas de fin de oferta, así que no usa la fecha de la ejecución.
+ */
 export async function descargarMercadona(
   pedir: Pedir,
-  ahora: string,
+  _ahora: string,
   registrar: (mensaje: string) => void = () => {},
 ): Promise<ResultadoAdaptador> {
   // 1. Comprobar que el código postal de Valencia sigue siendo el almacén vlc1.
@@ -171,5 +173,5 @@ export async function descargarMercadona(
     }
   }
 
-  return normalizarTodos(crudos.values(), (c) => normalizarMercadona(c, ahora));
+  return normalizarTodos(crudos.values(), normalizarMercadona);
 }

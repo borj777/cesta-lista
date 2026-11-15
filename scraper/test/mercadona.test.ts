@@ -16,7 +16,7 @@ const crudos = CATEGORIAS.flatMap((c) =>
     (s) => s.products,
   ),
 );
-const normalizados = crudos.map((c) => normalizarMercadona(c, AHORA));
+const normalizados = crudos.map((c) => normalizarMercadona(c));
 const productos = normalizados.flatMap((r) => (r.ok ? [r.producto] : []));
 
 function buscar(nombre: string, precio?: number): Producto {
@@ -62,9 +62,10 @@ describe('normalizarMercadona con respuestas reales', () => {
     expect(buscar('Limones')).toMatchObject({ precio: 2.2, precioAnterior: 2.3 });
   });
 
-  it('rellena tienda, url, imagen y fecha', () => {
+  it('rellena tienda, url e imagen, sin fecha por producto', () => {
     const p = buscar('Plátano de Canarias IGP');
-    expect(p).toMatchObject({ tienda: 'mercadona', id: '3819', actualizado: AHORA });
+    expect(p).toMatchObject({ tienda: 'mercadona', id: '3819' });
+    expect(p).not.toHaveProperty('actualizado');
     expect(p.url).toMatch(/^https:\/\/tienda\.mercadona\.es\//);
     expect(p.imagen).toMatch(/^https:\/\//);
   });
@@ -77,10 +78,10 @@ describe('normalizarMercadona con respuestas reales', () => {
   });
 
   it('descarta un producto sin precio o sin formato', () => {
-    expect(normalizarMercadona({ id: 1, display_name: 'Roto' }, AHORA)).toEqual({ ok: false });
+    expect(normalizarMercadona({ id: 1, display_name: 'Roto' })).toEqual({ ok: false });
     const sinTamano = structuredClone(crudos[0]) as { price_instructions: { unit_size: null } };
     sinTamano.price_instructions.unit_size = null;
-    expect(normalizarMercadona(sinTamano, AHORA).ok).toBe(false);
+    expect(normalizarMercadona(sinTamano).ok).toBe(false);
   });
 });
 
@@ -151,7 +152,6 @@ describe('packs de paquetes en Mercadona (datos reales del 15/11/2026)', () => {
         total_units: tu,
         pack_size: pack,
       }),
-      AHORA,
     );
     expect(r).toMatchObject({ ok: true, producto: { formato: { cantidad: us, unidad: 'ud' } } });
     expect(r.ok && r.producto.precioRef).toBe(ref);

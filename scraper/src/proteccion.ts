@@ -75,22 +75,3 @@ export function evaluar(nuevo: ResultadoAdaptador, anteriores: Producto[] | null
 
   return { valido: true };
 }
-
-/**
- * Conserva la fecha "actualizado" de los productos cuyo precio no ha cambiado,
- * para que cada commit diario solo muestre los cambios reales.
- */
-export function conservarFechas(nuevos: Producto[], anteriores: Producto[] | null): Producto[] {
-  if (!anteriores) return nuevos;
-  const previos = new Map(anteriores.map((p) => [p.id, p]));
-  return nuevos.map((p) => {
-    const previo = previos.get(p.id);
-    const igual =
-      previo &&
-      previo.precio === p.precio &&
-      previo.precioRef === p.precioRef &&
-      previo.precioAnterior === p.precioAnterior &&
-      previo.oferta === p.oferta;
-    return igual ? { ...p, actualizado: previo.actualizado } : p;
-  });
-}

@@ -19,7 +19,6 @@ const producto: Producto = {
   formato: { cantidad: 0.15, unidad: 'kg' },
   precio: 0.48,
   precioRef: 3.2,
-  actualizado: AYER,
 };
 
 const resultado: ResultadoAdaptador = {
@@ -115,5 +114,21 @@ describe('archivos de productos', () => {
   it('ignora un archivo con datos no válidos', () => {
     expect(leerProductos([{ id: 'x' }])).toBeNull();
     expect(leerProductos(null)).toBeNull();
+  });
+});
+
+describe('commits diarios pequeños', () => {
+  it('si cambia un precio, solo cambia la línea de ese producto', () => {
+    const lista = (precio: number): Producto[] => [
+      producto,
+      { ...producto, id: '8280', precio, precioRef: precio },
+      { ...producto, id: '9999' },
+    ];
+    const ayer = serializarProductos(lista(1.8)).split('\n');
+    const hoy = serializarProductos(lista(1.95)).split('\n');
+    const distintas = hoy.filter((linea, i) => linea !== ayer[i]);
+    expect(distintas).toHaveLength(1);
+    expect(distintas[0]).toContain('"id":"8280"');
+    expect(hoy.join('\n')).not.toContain('actualizado');
   });
 });

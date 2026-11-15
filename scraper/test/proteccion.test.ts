@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { normalizarConsum } from '../src/adapters/consum.ts';
 import { normalizarTodos } from '../src/normalizar.ts';
-import { conservarFechas, evaluar } from '../src/proteccion.ts';
+import { evaluar } from '../src/proteccion.ts';
 import type { Producto, ResultadoAdaptador } from '../src/tipos.ts';
 import { AHORA, fixture } from './ayudas.ts';
 
 const AYER = '2026-11-14T06:00:00.000Z';
 
-function producto(id: number, precio: number, actualizado = AYER): Producto {
+function producto(id: number, precio: number): Producto {
   return {
     tienda: 'consum',
     id: String(id),
@@ -15,7 +15,6 @@ function producto(id: number, precio: number, actualizado = AYER): Producto {
     formato: { cantidad: 1, unidad: 'kg' },
     precio,
     precioRef: precio,
-    actualizado,
   };
 }
 
@@ -105,23 +104,5 @@ describe('evaluar: protección contra datos malos', () => {
     expect(malos.productos).toHaveLength(100);
     expect(evaluar(malos, buenos.productos)).toMatchObject({ valido: false });
     expect(evaluar(buenos, buenos.productos)).toEqual({ valido: true });
-  });
-});
-
-describe('conservarFechas', () => {
-  it('mantiene la fecha de los productos cuyo precio no ha cambiado', () => {
-    const anteriores = [producto(1, 1), producto(2, 1)];
-    const nuevos = [producto(1, 1, AHORA), producto(2, 1.2, AHORA), producto(3, 5, AHORA)];
-    expect(conservarFechas(nuevos, anteriores).map((p) => p.actualizado)).toEqual([
-      AYER,
-      AHORA,
-      AHORA,
-    ]);
-  });
-
-  it('marca como actualizado un producto que entra o sale de oferta', () => {
-    const anteriores = [producto(1, 1)];
-    const nuevos = [{ ...producto(1, 1, AHORA), oferta: 'Ahora más barato hasta el 18/11' }];
-    expect(conservarFechas(nuevos, anteriores)[0]?.actualizado).toBe(AHORA);
   });
 });
