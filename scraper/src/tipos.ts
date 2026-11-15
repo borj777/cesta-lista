@@ -47,6 +47,8 @@ export type ResultadoAdaptador = {
   descartados: number;
   /** Total de productos distintos recibidos de la tienda. */
   recibidos: number;
+  /** Productos que la tienda dice tener, si lo indica (Consum: totalCount). */
+  esperados?: number;
 };
 
 /** La respuesta de la tienda no tiene la forma esperada: posible cambio de formato. */
