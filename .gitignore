@@ -14,3 +14,6 @@ respuestas/
 .env
 *.local.json
 cesta-lista-copia*.json
+
+# Archivos temporales del scraper (se escriben y se renombran)
+data/*.tmp

@@ -72,7 +72,9 @@ export function parsearFormatoDescripcion(descripcion: string, unidad: Unidad): 
   const packs = [...descripcion.matchAll(RE_PACK)]
     .map((m) => {
       const base = unidadBase(m[3] ?? '');
-      return base && { cantidad: Number(m[1]) * numero(m[2] ?? '') * base.factor, unidad: base.unidad };
+      return (
+        base && { cantidad: Number(m[1]) * numero(m[2] ?? '') * base.factor, unidad: base.unidad }
+      );
     })
     .filter((f): f is Formato => !!f && f.unidad === unidad && f.cantidad > 0);
   const pack = ultima(packs);

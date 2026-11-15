@@ -12,7 +12,9 @@ import {
 export function validar<T>(esquema: z.ZodType<T>, datos: unknown, que: string): T {
   const r = esquema.safeParse(datos);
   if (!r.success) {
-    throw new ErrorFormato(`Formato inesperado en ${que}: ${z.prettifyError(r.error).slice(0, 300)}`);
+    throw new ErrorFormato(
+      `Formato inesperado en ${que}: ${z.prettifyError(r.error).slice(0, 300)}`,
+    );
   }
   return r.data;
 }

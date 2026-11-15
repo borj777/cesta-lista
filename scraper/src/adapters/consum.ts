@@ -95,7 +95,9 @@ export function normalizarConsum(crudo: unknown, ahora: string): Normalizado {
   if (!normal || !(normal.value.centAmount > 0)) return { ok: false };
   const oferta = p.priceData.prices.find(
     (x) =>
-      x.id === 'OFFER_PRICE' && x.value.centAmount > 0 && x.value.centAmount < normal.value.centAmount,
+      x.id === 'OFFER_PRICE' &&
+      x.value.centAmount > 0 &&
+      x.value.centAmount < normal.value.centAmount,
   );
   const usado = oferta ?? normal;
   // Ojo: centAmount viene en euros, no en céntimos.
@@ -118,7 +120,7 @@ export function normalizarConsum(crudo: unknown, ahora: string): Normalizado {
   }
 
   let precioRef: number;
-  let sinVerificar = false;
+  let sinVerificar: boolean;
   if (formato) {
     precioRef = calcularPrecioRef(precio, formato.cantidad);
     sinVerificar = refTienda === null;
@@ -170,7 +172,7 @@ export async function descargarConsum(
   registrar: (mensaje: string) => void = () => {},
 ): Promise<ResultadoAdaptador> {
   const crudos = new Map<string, unknown>();
-  let total = 0;
+  let total: number;
 
   for (let pagina = 0; ; pagina++) {
     if (pagina >= MAX_PAGINAS) {
@@ -188,8 +190,7 @@ export async function descargarConsum(
       if (id && !crudos.has(id)) crudos.set(id, crudo);
     }
 
-    const ultima =
-      !datos.hasMore || datos.products.length === 0 || offset + TAMANO_PAGINA >= total;
+    const ultima = !datos.hasMore || datos.products.length === 0 || offset + TAMANO_PAGINA >= total;
     if ((pagina + 1) % 20 === 0 || ultima) {
       registrar(`Consum: página ${pagina + 1}, ${crudos.size} de ${total} productos`);
     }

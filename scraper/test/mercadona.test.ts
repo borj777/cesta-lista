@@ -12,13 +12,17 @@ type Categoria = { categories: { products: unknown[] }[] };
 
 const CATEGORIAS = ['fruta', 'leche', 'huevos', 'detergente', 'papel', 'pollo'];
 const crudos = CATEGORIAS.flatMap((c) =>
-  (fixture(`mercadona-categoria-${c}-vlc1.json`) as Categoria).categories.flatMap((s) => s.products),
+  (fixture(`mercadona-categoria-${c}-vlc1.json`) as Categoria).categories.flatMap(
+    (s) => s.products,
+  ),
 );
 const normalizados = crudos.map((c) => normalizarMercadona(c, AHORA));
 const productos = normalizados.flatMap((r) => (r.ok ? [r.producto] : []));
 
 function buscar(nombre: string, precio?: number): Producto {
-  const p = productos.find((x) => x.nombre === nombre && (precio === undefined || x.precio === precio));
+  const p = productos.find(
+    (x) => x.nombre === nombre && (precio === undefined || x.precio === precio),
+  );
   if (!p) throw new Error(`No está en las fixtures: ${nombre}`);
   return p;
 }
@@ -40,7 +44,12 @@ describe('normalizarMercadona con respuestas reales', () => {
       { cantidad: 3, unidad: 'l' },
       1.1667,
     ],
-    ['Detergente ropa todo en 1 Ariel Pods en cápsulas', 4.95, { cantidad: 19, unidad: 'ud' }, 0.2605],
+    [
+      'Detergente ropa todo en 1 Ariel Pods en cápsulas',
+      4.95,
+      { cantidad: 19, unidad: 'ud' },
+      0.2605,
+    ],
     ['Pastillas antical para lavadora Bosque Verde', 3.25, { cantidad: 40, unidad: 'ud' }, 0.0813],
     ['Papel higiénico Doble Rollo Bosque Verde', 4.6, { cantidad: 12, unidad: 'ud' }, 0.3833],
   ] as const)('%s', (nombre, precio, formato, precioRef) => {

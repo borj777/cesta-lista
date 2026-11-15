@@ -2,12 +2,7 @@ import { z } from 'zod';
 import type { Pedir } from '../http.ts';
 import { cerrarProducto, idDe, normalizarTodos, validar } from '../normalizar.ts';
 import type { Normalizado, ResultadoAdaptador } from '../tipos.ts';
-import {
-  calcularPrecioRef,
-  coincidePrecioRef,
-  redondear,
-  type Formato,
-} from '../unidades.ts';
+import { calcularPrecioRef, coincidePrecioRef, redondear, type Formato } from '../unidades.ts';
 
 export const MERCADONA_API = 'https://tienda.mercadona.es/api';
 /** Almacén de Valencia, validado en la fase 0 con el código postal 46001. */
@@ -71,8 +66,10 @@ export function formatoMercadona(pi: InstruccionesPrecio): Formato | null {
   const piezas = pi.total_units && pi.total_units > 0 ? pi.total_units : null;
   const unitSize = pi.unit_size && pi.unit_size > 0 ? pi.unit_size : null;
 
-  if (pi.reference_format.toLowerCase() === 'ud' && piezas) return { cantidad: piezas, unidad: 'ud' };
-  if (tamano === 'kg' || tamano === 'l') return unitSize ? { cantidad: unitSize, unidad: tamano } : null;
+  if (pi.reference_format.toLowerCase() === 'ud' && piezas)
+    return { cantidad: piezas, unidad: 'ud' };
+  if (tamano === 'kg' || tamano === 'l')
+    return unitSize ? { cantidad: unitSize, unidad: tamano } : null;
   if (tamano === 'ud') {
     const cantidad = piezas ?? unitSize;
     return cantidad ? { cantidad, unidad: 'ud' } : null;

@@ -58,5 +58,4 @@ export class ErrorFormato extends Error {
 
 /** Resultado de normalizar un producto suelto. */
 export type Normalizado =
-  | { ok: true; producto: Producto; aviso?: AvisoPrecioRef; sinVerificar?: boolean }
-  | { ok: false };
+  { ok: true; producto: Producto; aviso?: AvisoPrecioRef; sinVerificar?: boolean } | { ok: false };
