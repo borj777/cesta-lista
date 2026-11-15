@@ -1,0 +1,311 @@
+{
+  "generado": "2026-11-15T20:55:19.208Z",
+  "tiendas": {
+    "mercadona": {
+      "estado": "ok",
+      "actualizado": "2026-11-15T20:55:19.208Z",
+      "productos": 4345,
+      "comprobado": "2026-11-15T20:55:19.208Z",
+      "duracionSegundos": 264,
+      "peticiones": 154,
+      "sinVerificar": 0,
+      "descartados": 40,
+      "avisosPrecioRef": 70,
+      "ejemplosAvisos": [
+        {
+          "id": "29540",
+          "nombre": "Pepinillos pequeños Hacendado",
+          "unidad": "kg",
+          "calculado": 3.625,
+          "tienda": 3.45
+        },
+        {
+          "id": "79603",
+          "nombre": "Toallitas bebé frescas & perfumadas Deliplus",
+          "unidad": "ud",
+          "calculado": 0.9167,
+          "tienda": 0.01
+        },
+        {
+          "id": "17789",
+          "nombre": "Pañales bebé talla 3 Deliplus de 5-10 kg",
+          "unidad": "ud",
+          "calculado": 6,
+          "tienda": 0.15
+        },
+        {
+          "id": "17791",
+          "nombre": "Pañales bebé talla 4 Deliplus de 10-15 kg",
+          "unidad": "ud",
+          "calculado": 6.3333,
+          "tienda": 0.17
+        },
+        {
+          "id": "17793",
+          "nombre": "Pañales bebé talla 5 Deliplus de 14-18 kg",
+          "unidad": "ud",
+          "calculado": 6.6667,
+          "tienda": 0.19
+        },
+        {
+          "id": "21889",
+          "nombre": "Cocktail sabor caipirinha coco sin alcohol Pi.omka con zumo de lima",
+          "unidad": "l",
+          "calculado": 5.2,
+          "tienda": 4.73
+        },
+        {
+          "id": "24565",
+          "nombre": "Barritas de cereales avellana y cacao Hacendado",
+          "unidad": "kg",
+          "calculado": 13.4783,
+          "tienda": 12.92
+        },
+        {
+          "id": "55108",
+          "nombre": "Fuet espetec Hacendado",
+          "unidad": "kg",
+          "calculado": 10.4167,
+          "tienda": 2.5
+        },
+        {
+          "id": "55125",
+          "nombre": "Longaniza clásica extra Hacendado",
+          "unidad": "kg",
+          "calculado": 10,
+          "tienda": 2.8
+        },
+        {
+          "id": "16282",
+          "nombre": "Longaniza de payés extra Hacendado",
+          "unidad": "kg",
+          "calculado": 14.1071,
+          "tienda": 3.95
+        },
+        {
+          "id": "55028",
+          "nombre": "Salami montañés extra El Pozo",
+          "unidad": "kg",
+          "calculado": 9.25,
+          "tienda": 1.85
+        },
+        {
+          "id": "54105",
+          "nombre": "Chorizo de Tarancón Bricio",
+          "unidad": "kg",
+          "calculado": 8.7143,
+          "tienda": 3.05
+        },
+        {
+          "id": "58293",
+          "nombre": "Jamón serrano Incarlopsa",
+          "unidad": "kg",
+          "calculado": 8.6667,
+          "tienda": 9.56
+        },
+        {
+          "id": "58154",
+          "nombre": "Paleta de cebo ibérica 50% La Hacienda del Ibérico",
+          "unidad": "kg",
+          "calculado": 15,
+          "tienda": 18.75
+        },
+        {
+          "id": "45297",
+          "nombre": "Envase rellenable Deliplus tamaño viaje",
+          "unidad": "l",
+          "calculado": 10.5,
+          "tienda": 1.05
+        },
+        {
+          "id": "12754",
+          "nombre": "Cuchillas para perfilar cejas y vello facial Deliplus",
+          "unidad": "ud",
+          "calculado": 0.9333,
+          "tienda": 2.8
+        },
+        {
+          "id": "42222",
+          "nombre": "Tratamiento para uñas base 9 en 1 Deliplus vitaminada y alisadora",
+          "unidad": "l",
+          "calculado": 350,
+          "tienda": 3.5
+        },
+        {
+          "id": "42286",
+          "nombre": "Tratamiento para uñas gel brillo top coat Deliplus secado rápido",
+          "unidad": "l",
+          "calculado": 350,
+          "tienda": 3.5
+        },
+        {
+          "id": "41692",
+          "nombre": "Laca de uñas manicura francesa Deliplus 01 blanco punta",
+          "unidad": "l",
+          "calculado": 250,
+          "tienda": 2.75
+        },
+        {
+          "id": "41685",
+          "nombre": "Laca de uñas manicura francesa Deliplus 03 rosa",
+          "unidad": "l",
+          "calculado": 250,
+          "tienda": 2.75
+        }
+      ]
+    },
+    "consum": {
+      "estado": "ok",
+      "actualizado": "2026-11-15T20:55:19.208Z",
+      "productos": 9238,
+      "comprobado": "2026-11-15T20:55:19.208Z",
+      "duracionSegundos": 174,
+      "peticiones": 94,
+      "sinVerificar": 417,
+      "descartados": 140,
+      "avisosPrecioRef": 23,
+      "ejemplosAvisos": [
+        {
+          "id": "9744",
+          "nombre": "Magdalenas Redondas",
+          "unidad": "kg",
+          "calculado": 4.2571,
+          "tienda": 4.14
+        },
+        {
+          "id": "10336",
+          "nombre": "Calamar en su Tinta Lata Pack de 3",
+          "unidad": "kg",
+          "calculado": 19.4915,
+          "tienda": 23.96
+        },
+        {
+          "id": "12535",
+          "nombre": "Pila Recargable AAA Pack de 4 Unidades",
+          "unidad": "ud",
+          "calculado": 7.9,
+          "tienda": 1.98
+        },
+        {
+          "id": "13027",
+          "nombre": "Duplo Rec Ambientador Fresh Matic Nenuco",
+          "unidad": "ud",
+          "calculado": 6.99,
+          "tienda": 3.5
+        },
+        {
+          "id": "13837",
+          "nombre": "Bombón Dulces Deseos",
+          "unidad": "kg",
+          "calculado": 57.942,
+          "tienda": 59.32
+        },
+        {
+          "id": "17256",
+          "nombre": "Tarta Princesa de la Abuela",
+          "unidad": "kg",
+          "calculado": 11.0537,
+          "tienda": 12.92
+        },
+        {
+          "id": "17633",
+          "nombre": "Hermetic Twist c/rosca 1000 ml  Pack de 2 uds",
+          "unidad": "ud",
+          "calculado": 2.05,
+          "tienda": 1.03
+        },
+        {
+          "id": "19136",
+          "nombre": "Bolsa para Residuos Recambios",
+          "unidad": "ud",
+          "calculado": 0.0825,
+          "tienda": 0.03
+        },
+        {
+          "id": "19682",
+          "nombre": "Pila Alcalina AA Blister 4 Más 2",
+          "unidad": "ud",
+          "calculado": 5.29,
+          "tienda": 0.88
+        },
+        {
+          "id": "22502",
+          "nombre": "Pila Alcalina AAA Blister 4 Más 2",
+          "unidad": "ud",
+          "calculado": 5.39,
+          "tienda": 0.9
+        },
+        {
+          "id": "22962",
+          "nombre": "Pila Cegasa LR14 C Superalkaline",
+          "unidad": "ud",
+          "calculado": 4.49,
+          "tienda": 2.25
+        },
+        {
+          "id": "23317",
+          "nombre": "Pila Cegasa LR20 D Superalkaline",
+          "unidad": "ud",
+          "calculado": 4.49,
+          "tienda": 2.25
+        },
+        {
+          "id": "26807",
+          "nombre": "Bastoncillos Algodón",
+          "unidad": "ud",
+          "calculado": 0.0043,
+          "tienda": 0.01
+        },
+        {
+          "id": "29570",
+          "nombre": "Recambio Air Wick Duplo F.Matic W.Buquet",
+          "unidad": "ud",
+          "calculado": 6.99,
+          "tienda": 3.5
+        },
+        {
+          "id": "31860",
+          "nombre": "Toallita Limpieza y Fresc Pack 3 Unidades",
+          "unidad": "ud",
+          "calculado": 0.0344,
+          "tienda": 0.01
+        },
+        {
+          "id": "32707",
+          "nombre": "Champú Familiar",
+          "unidad": "l",
+          "calculado": 1.35,
+          "tienda": 1.4
+        },
+        {
+          "id": "32736",
+          "nombre": "Gel de Baño Dermo Familiar",
+          "unidad": "l",
+          "calculado": 1.05,
+          "tienda": 1.1
+        },
+        {
+          "id": "33888",
+          "nombre": "Set Vasos Vela Maxi Sandalo y Vainilla",
+          "unidad": "ud",
+          "calculado": 3.99,
+          "tienda": 2
+        },
+        {
+          "id": "34119",
+          "nombre": "Pipeta Repelente para Perros",
+          "unidad": "ud",
+          "calculado": 4.6,
+          "tienda": 2.3
+        },
+        {
+          "id": "34120",
+          "nombre": "Pipeta Repelente para Gatos",
+          "unidad": "ud",
+          "calculado": 4.6,
+          "tienda": 2.3
+        }
+      ]
+    }
+  }
+}
