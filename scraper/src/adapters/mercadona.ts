@@ -32,6 +32,7 @@ const ProductoCrudoSchema = z.object({
     unit_size: z.number().nullish(),
     size_format: z.string(),
     total_units: z.number().nullish(),
+    pack_size: z.number().nullish(),
     previous_unit_price: importeOpcional,
   }),
 });
@@ -58,22 +59,27 @@ const DetalleSchema = z.object({
  * Formato del producto según Mercadona. Lo comprobado con las respuestas reales:
  * - Si se vende por kg o litros, unit_size es el total del envase (un pack de 6 briks de 1 L = 6).
  * - Si se cuenta en unidades (huevos, rollos, cápsulas, pastillas), bulk_price es el precio
- *   por pieza y el número de piezas está en total_units o, si falta, en unit_size.
+ *   por pieza. Las piezas pueden estar en total_units (12 rollos) o en unit_size (12 huevos).
+ *   En los packs de paquetes, total_units cuenta paquetes y unit_size piezas (pañales: 3
+ *   paquetes de 40 = unit_size 120), así que se toma el mayor de los dos.
  * - Los detergentes ("lv", lavados) tienen bulk_price por litro o kg, no por lavado.
  */
 export function formatoMercadona(pi: InstruccionesPrecio): Formato | null {
   const tamano = pi.size_format.toLowerCase();
-  const piezas = pi.total_units && pi.total_units > 0 ? pi.total_units : null;
-  const unitSize = pi.unit_size && pi.unit_size > 0 ? pi.unit_size : null;
+  const positivo = (n: number | null | undefined) => (n && n > 0 ? n : null);
+  const unitSize = positivo(pi.unit_size);
+  const candidatas = [
+    positivo(pi.total_units),
+    tamano === 'ud' ? unitSize : null,
+    pi.total_units && pi.pack_size ? positivo(pi.total_units * pi.pack_size) : null,
+  ].filter((n): n is number => n !== null);
+  const piezas = candidatas.length > 0 ? Math.max(...candidatas) : null;
 
   if (pi.reference_format.toLowerCase() === 'ud' && piezas)
     return { cantidad: piezas, unidad: 'ud' };
   if (tamano === 'kg' || tamano === 'l')
     return unitSize ? { cantidad: unitSize, unidad: tamano } : null;
-  if (tamano === 'ud') {
-    const cantidad = piezas ?? unitSize;
-    return cantidad ? { cantidad, unidad: 'ud' } : null;
-  }
+  if (tamano === 'ud') return piezas ? { cantidad: piezas, unidad: 'ud' } : null;
   return null;
 }
 

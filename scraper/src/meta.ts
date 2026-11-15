@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MAX_EJEMPLOS } from './normalizar.ts';
 import type { Veredicto } from './proteccion.ts';
 import {
   ProductoSchema,
@@ -9,8 +10,7 @@ import {
   type ResultadoAdaptador,
 } from './tipos.ts';
 
-/** Avisos de precioRef que se guardan como ejemplo en meta.json (el total va aparte). */
-export const MAX_EJEMPLOS = 20;
+export { MAX_EJEMPLOS };
 
 const AvisoSchema = z.object({
   id: z.string(),
@@ -40,6 +40,8 @@ export const EstadoTiendaSchema = z.object({
   /** Productos cuyo precioRef calculado no coincide con el de la tienda. */
   avisosPrecioRef: z.number().int().nonnegative(),
   ejemplosAvisos: z.array(AvisoSchema),
+  /** "id nombre" de algunos productos descartados, para revisar por qué no se pudieron leer. */
+  ejemplosDescartados: z.array(z.string()).optional(),
 });
 export type EstadoTienda = z.infer<typeof EstadoTiendaSchema>;
 
@@ -68,6 +70,7 @@ export function estadoTienda(args: {
     descartados: resultado?.descartados ?? 0,
     avisosPrecioRef: avisos.length,
     ejemplosAvisos: avisos.slice(0, MAX_EJEMPLOS),
+    ejemplosDescartados: (resultado?.ejemplosDescartados ?? []).slice(0, MAX_EJEMPLOS),
   };
 
   if (veredicto.valido && resultado) {

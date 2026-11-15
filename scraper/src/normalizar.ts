@@ -8,6 +8,9 @@ import {
   type ResultadoAdaptador,
 } from './tipos.ts';
 
+/** Ejemplos de productos descartados que se guardan en meta.json (el total va aparte). */
+export const MAX_EJEMPLOS = 20;
+
 /** Valida una respuesta de la tienda; si no tiene la forma esperada, lanza ErrorFormato. */
 export function validar<T>(esquema: z.ZodType<T>, datos: unknown, que: string): T {
   const r = esquema.safeParse(datos);
@@ -24,6 +27,16 @@ export function idDe(crudo: unknown): string | null {
   if (typeof crudo !== 'object' || crudo === null || !('id' in crudo)) return null;
   const id = (crudo as { id: unknown }).id;
   return typeof id === 'string' || typeof id === 'number' ? String(id) : null;
+}
+
+/** "id nombre" de un producto crudo, para identificar los descartados en meta.json. */
+export function descripcionCruda(crudo: unknown): string {
+  const c = (typeof crudo === 'object' && crudo !== null ? crudo : {}) as {
+    display_name?: unknown;
+    productData?: { description?: unknown; name?: unknown };
+  };
+  const nombre = c.display_name ?? c.productData?.description ?? c.productData?.name ?? '?';
+  return `${idDe(crudo) ?? '?'} ${String(nombre)}`;
 }
 
 /** Quita las propiedades undefined y valida el producto final con zod. */
@@ -43,12 +56,16 @@ export function normalizarTodos(
   let sinVerificar = 0;
   let descartados = 0;
   let recibidos = 0;
+  const ejemplosDescartados: string[] = [];
 
   for (const crudo of crudos) {
     recibidos++;
     const r = normalizar(crudo);
     if (!r.ok) {
       descartados++;
+      if (ejemplosDescartados.length < MAX_EJEMPLOS) {
+        ejemplosDescartados.push(descripcionCruda(crudo));
+      }
       continue;
     }
     productos.push(r.producto);
@@ -57,5 +74,5 @@ export function normalizarTodos(
   }
 
   productos.sort((a, b) => a.id.localeCompare(b.id, 'es', { numeric: true }));
-  return { productos, avisos, sinVerificar, descartados, recibidos };
+  return { productos, avisos, sinVerificar, descartados, recibidos, ejemplosDescartados };
 }

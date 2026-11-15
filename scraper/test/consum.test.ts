@@ -120,3 +120,17 @@ describe('descargarConsum', () => {
     await expect(descargarConsum(pedir, AHORA)).rejects.toBeInstanceOf(ErrorFormato);
   });
 });
+
+describe('ejemplos de descartados', () => {
+  it('guarda el id y el nombre de los productos que no se pueden leer', async () => {
+    const { pedir } = pedirFalso(() =>
+      respuesta({
+        totalCount: 1,
+        hasMore: false,
+        products: [{ id: 7, productData: { name: 'Sin precio', description: 'Sin precio 1 L' } }],
+      }),
+    );
+    const r = await descargarConsum(pedir, AHORA);
+    expect(r).toMatchObject({ descartados: 1, ejemplosDescartados: ['7 Sin precio 1 L'] });
+  });
+});

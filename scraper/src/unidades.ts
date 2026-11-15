@@ -43,7 +43,9 @@ const MEDIDA = String.raw`(kgs?|kilos?|grs?|g|gramos|litros?|lt|l|cl|ml)`;
 const FIN = String.raw`(?=[\s.,)]|$)`;
 const RE_PACK = new RegExp(String.raw`(\d+)\s*x\s*${NUM}\s*${MEDIDA}${FIN}`, 'gi');
 const RE_MEDIDA = new RegExp(String.raw`${NUM}\s*${MEDIDA}${FIN}`, 'gi');
-const RE_UNIDADES = new RegExp(String.raw`(\d+)\s*(unidades|unidad|uds|ud|u)${FIN}`, 'gi');
+const UDS = String.raw`(unidades|unidad|uds|ud|u)`;
+const RE_UNIDADES = new RegExp(String.raw`(\d+)\s*${UDS}${FIN}`, 'gi');
+const RE_PACK_UNIDADES = new RegExp(String.raw`(\d+)\s*x\s*(\d+)\s*${UDS}${FIN}`, 'gi');
 
 /** Interpreta una cantidad con unidad, p. ej. "1 Kg", "100 Gr", "0,75 L", "1 U". */
 export function parsearCantidad(texto: string): Formato | null {
@@ -65,6 +67,9 @@ export function parsearFormatoDescripcion(descripcion: string, unidad: Unidad): 
   const ultima = <T>(lista: T[]): T | undefined => lista[lista.length - 1];
 
   if (unidad === 'ud') {
+    // "Pila Recargable AAA Pack de 4 Unidades 4 x 1 U" → 4 ud.
+    const pack = ultima([...descripcion.matchAll(RE_PACK_UNIDADES)]);
+    if (pack?.[1] && pack[2]) return { cantidad: Number(pack[1]) * Number(pack[2]), unidad: 'ud' };
     const m = ultima([...descripcion.matchAll(RE_UNIDADES)]);
     return m?.[1] ? { cantidad: Number(m[1]), unidad: 'ud' } : null;
   }

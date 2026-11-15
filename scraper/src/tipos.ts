@@ -49,6 +49,8 @@ export type ResultadoAdaptador = {
   recibidos: number;
   /** Productos que la tienda dice tener, si lo indica (Consum: totalCount). */
   esperados?: number;
+  /** "id nombre" de algunos productos descartados, para poder revisarlos. */
+  ejemplosDescartados?: string[];
 };
 
 /** La respuesta de la tienda no tiene la forma esperada: posible cambio de formato. */

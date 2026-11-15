@@ -83,3 +83,14 @@ describe('parsearFormatoDescripcion', () => {
     expect(parsearFormatoDescripcion('Leche Semidesnatada Brik 1 L', 'kg')).toBeNull();
   });
 });
+
+describe('packs en unidades de Consum (datos reales del 15/11/2026)', () => {
+  it.each([
+    ['Pila Recargable AAA Pack de 4 Unidades 4 x 1 U', 4],
+    ['Duplo Rec Ambientador Fresh Matic Nenuco 2 x 1 U', 2],
+    ['Recambio Ambientador Eléctrico Duplo Nenuco 2 U', 2],
+    ['Recambio Duplo Eléctrico Peonía Blanca-FlorJazmín 1 U', 1],
+  ] as const)('%s → %s ud', (descripcion, cantidad) => {
+    expect(parsearFormatoDescripcion(descripcion, 'ud')).toEqual({ cantidad, unidad: 'ud' });
+  });
+});

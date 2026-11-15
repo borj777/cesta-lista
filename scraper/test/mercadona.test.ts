@@ -130,3 +130,31 @@ describe('descargarMercadona', () => {
     expect(r).toMatchObject({ recibidos: 1, descartados: 1, productos: [] });
   });
 });
+
+describe('packs de paquetes en Mercadona (datos reales del 15/11/2026)', () => {
+  const crudo = (nombre: string, pi: Record<string, unknown>) => ({
+    id: '1',
+    display_name: nombre,
+    price_instructions: { reference_format: 'ud', size_format: 'ud', ...pi },
+  });
+
+  it.each([
+    // 3 paquetes de 40 pañales: total_units cuenta paquetes y unit_size, pañales.
+    ['Pañales bebé talla 3', '18.00', '0.15', 120, 3, 40, 0.15],
+    ['Toallitas bebé (pack de 3)', '2.75', '0.01', 240, 3, 80, 0.0115],
+  ])('%s: cuenta las piezas, no los paquetes', (nombre, precio, bulk, us, tu, pack, ref) => {
+    const r = normalizarMercadona(
+      crudo(nombre, {
+        unit_price: precio,
+        bulk_price: bulk,
+        unit_size: us,
+        total_units: tu,
+        pack_size: pack,
+      }),
+      AHORA,
+    );
+    expect(r).toMatchObject({ ok: true, producto: { formato: { cantidad: us, unidad: 'ud' } } });
+    expect(r.ok && r.producto.precioRef).toBe(ref);
+    expect(r.ok && r.aviso).toBeFalsy();
+  });
+});
