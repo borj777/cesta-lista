@@ -38,7 +38,9 @@ Idioma de la interfaz, de los textos y de los mensajes de commit: **español**, 
   /adapters         mercadona.ts, consum.ts, lidl-ofertas.ts (fase 3)
   /fixtures         Respuestas reales guardadas para los tests
 /data               Salida pública generada por el scraper
-  mercadona.json, consum.json, meta.json (fecha y estado de cada fuente)
+  mercadona.json, consum.json (completos, un producto por línea, ordenados por id)
+  meta.json (fecha, estado y avisos de cada fuente)
+  app.json (ligero para la PWA: sin url ni imagen, con estado y fecha de cada tienda)
 /app                PWA: Vite + TypeScript + Preact (ligera y sin dependencias pesadas)
   manifest, service worker (offline), IndexedDB
 /.github/workflows  scrape.yml (cron diario), deploy.yml (Pages), ci.yml (tests)
@@ -56,12 +58,13 @@ type Producto = {
   precio: number;          // € por artículo
   precioRef: number;       // € por kg, l o ud., calculado y verificado
   precioAnterior?: number;
-  oferta?: string;
+  oferta?: string;         // texto, p. ej. "Ahora más barato"
+  ofertaHasta?: string;    // último día de la oferta, AAAA-MM-DD en hora de España
   url?: string;
   imagen?: string;
-  actualizado: string;     // ISO
 };
 ```
+La fecha de actualización no va en cada producto: está en `meta.json` (una por tienda), para que cada commit diario solo muestre los productos cuyo precio cambia.
 
 ### Modelo de la app
 - **Necesidad**: lo que hace falta comprar ("pechuga de pollo", 1,5 kg/semana; "detergente", 1 ud./mes). Se genera desde la dieta o se añade a mano.
@@ -84,8 +87,13 @@ Crear el repositorio y un workflow manual que pida una categoría de Mercadona y
 **Resultado (15/11/2026, completada):** Mercadona y Consum responden desde GitHub Actions exactamente igual que desde casa, sin bloqueos y con los mismos precios. Se sigue con GitHub Actions; el plan B no hace falta por ahora. La zona se fija con `wh=vlc1`. Prueba: `scraper/fase0/comprobar.sh`, workflow «Fase 0 · Comprobar acceso a los supermercados». Las respuestas están en `scraper/fixtures/`.
 
 **Fase 1. Scraper completo de Mercadona y Consum.** Adaptadores, normalización, validación, tests y cron diario que hace commit de `/data`.
-**Resultado (15/11/2026, completada):** `scraper/` (Node 26, TypeScript sin compilar) y workflow «Precios diarios» (`scrape.yml`, 7:00 de España). Primera descarga real en GitHub: Mercadona 4345 productos (154 peticiones, 4,4 min) y Consum 9238 (94 peticiones, 2,9 min). Pendiente para más adelante: EAN de Mercadona (requiere una petición por producto).
+**Resultado (15/11/2026, completada):** `scraper/` (Node 26, TypeScript sin compilar) y workflow «Precios diarios» (`scrape.yml`: cron a las 7:00 con `timezone: 'Europe/Madrid'`, que aplica el horario de verano e invierno, y reserva a las 9:30 por si GitHub se salta la primera; las ejecuciones programadas no descargan si ya hay datos del día). En repositorios públicos GitHub desactiva los cron tras 60 días sin «actividad» y no define si cuentan los commits del robot; no se usan trucos para evitarlo (GitHub ha bloqueado herramientas que lo hacían): la app avisa si los precios son antiguos y el README explica cómo reactivarlo. Primera descarga real en GitHub: Mercadona 4345 productos (154 peticiones, 4,4 min) y Consum 9238 (94 peticiones, 2,9 min). Pendiente para más adelante: EAN de Mercadona (requiere una petición por producto).
 
 **Fase 2. PWA básica.** Necesidades, equivalencias, precios manuales de Lidl, optimizador y lista de compra. Instalable y offline, con exportación e importación de copia de seguridad.
+Reglas acordadas para la fase 2:
+- **Equivalencias por id, nunca por nombre.** Cada equivalencia guarda `tienda` + `id` del producto. En Mercadona hay 273 nombres repetidos (p. ej. 6 «Leche semidesnatada Hacendado» con formatos distintos, del 15/11/2026) y en Consum el nombre no incluye la marca. Si un id desaparece del catálogo, la app lo avisa y pide elegir otro; nunca lo sustituye por otro del mismo nombre.
+- **Mostrar siempre el formato** (p. ej. «pack 6 × 1 l», «12 ud.», «250 g») junto al nombre y al precio, en el buscador, en las equivalencias y en la lista, además del `precioRef` con su unidad (€/kg, €/l o €/ud.).
+- La app descarga solo `data/app.json` (unos 420 KB comprimido). Si una tienda tiene `estado: "fallida"` o su `actualizado` tiene más de 36 horas, muestra el aviso «precios de X del día DD/MM».
+- Si se muestra una oferta con `ofertaHasta`, indicar «hasta el DD/MM» y no aplicarla después de esa fecha.
 
 **Fase 3. Mejoras.** Dieta semanal convertida en necesidades, ofertas semanales de Lidl, historial de precios y avisos de bajadas.
