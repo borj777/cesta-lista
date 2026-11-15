@@ -1,0 +1,30 @@
+# Fase 0: comprueba si Mercadona y Consum responden desde los servidores de GitHub.
+# Solo se lanza a mano: pestaña Actions → este workflow → botón «Run workflow».
+name: Fase 0 · Comprobar acceso a los supermercados
+
+on:
+  workflow_dispatch:
+
+# Permisos mínimos: solo puede leer el repositorio.
+permissions:
+  contents: read
+
+jobs:
+  comprobar:
+    name: Pedir datos a Mercadona y Consum
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Descargar el código del repositorio
+        uses: actions/checkout@v7
+
+      - name: Hacer las peticiones de prueba
+        run: bash scraper/fase0/comprobar.sh respuestas
+
+      - name: Guardar las respuestas como artefacto
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: respuestas-fase0
+          path: respuestas/
+          retention-days: 14
