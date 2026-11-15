@@ -1,0 +1,16 @@
+# Archivos que nunca se suben al repositorio
+
+# Basura del Mac
+.DS_Store
+
+# Dependencias y compilaciones (se regeneran solas)
+node_modules/
+dist/
+
+# Respuestas guardadas al probar el script de la fase 0 en el Mac
+respuestas/
+
+# Variables de entorno y copias de seguridad personales de la app
+.env
+*.local.json
+cesta-lista-copia*.json
