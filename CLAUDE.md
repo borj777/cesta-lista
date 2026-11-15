@@ -17,13 +17,13 @@ Idioma de la interfaz, de los textos y de los mensajes de commit: **español**, 
 - `GET https://tienda.mercadona.es/api/categories/` devuelve el árbol de categorías.
 - `GET https://tienda.mercadona.es/api/categories/{id}/?lang=es&wh=vlc1` devuelve las subcategorías con sus productos.
 - Campos útiles: `id`, `display_name`, `packaging`, `thumbnail`, `share_url` y `price_instructions` (`unit_price` = precio del artículo; `bulk_price` = precio por unidad de referencia; `reference_format` = L, kg o ud.; `unit_size`, `size_format`, `previous_unit_price`, `price_decreased`).
-- Los precios dependen de la zona o almacén. **Pendiente de verificar** si el parámetro `wh` basta o hace falta fijar el código postal (46001) por cookie o cabecera.
+- Los precios dependen de la zona o almacén. **Verificado en la fase 0 (15/11/2026):** en la categoría «Fruta», 26 de 43 precios cambian entre `wh=vlc1` y `wh=mad1`, así que basta con añadir `wh=vlc1` a cada petición, sin cookies ni cabeceras. El código postal 46001 corresponde al almacén `vlc1` (`PUT /api/postal-codes/actions/change-pc/` con `{"new_postal_code":"46001"}` lo confirma en la cabecera `x-customer-wh`). Sin `wh` devuelve hoy los precios de `vlc1`, también desde GitHub Actions, pero se indica siempre por si cambia.
 - El listado no incluye el EAN, que solo aparece en el detalle de cada producto (`/api/products/{id}/`).
 
 ### Consum: API JSON pública, sin login
 - `GET https://tienda.consum.es/api/rest/V1.0/catalog/product?limit=N&offset=M&q=texto` devuelve `totalCount`, `hasMore` y `products[]`.
 - Campos útiles: `id`, `code`, `ean`, `productData.name`, `productData.brand.name`, `productData.description` (incluye el formato, p. ej. "1 L"), `productData.imageURL` y `priceData.prices[]` (el de `id: "PRICE"`; **ojo: `value.centAmount` está en euros, no en céntimos**; `centUnitAmount` es el precio por unidad de referencia). Además, `priceData.unitPriceUnitType` (p. ej. "1 L") y `offers[]`.
-- Para el catálogo completo, recorrer con `limit`/`offset` sin `q` o por categorías. Verificarlo en la fase 0.
+- Para el catálogo completo, recorrer con `limit`/`offset` sin `q` o por categorías. Sin `q`, `totalCount` era de 9378 productos el 15/11/2026. Queda por comprobar en la fase 1 el `limit` máximo que acepta y que el recorrido completo no repite ni pierde productos.
 
 ### Lidl: no hay catálogo de alimentación online
 - Solo publica las ofertas semanales en HTML: `https://www.lidl.es/c/store/ofertas-semanales/a10089449` (nombre, precio, precio con Lidl Plus, formato y fechas). No se ha encontrado ninguna API JSON.
@@ -79,6 +79,7 @@ type Producto = {
 
 **Fase 0. Validar el acceso desde GitHub (decide la arquitectura).**
 Crear el repositorio y un workflow manual que pida una categoría de Mercadona y una búsqueda de Consum y guarde las respuestas como artefacto. Si GitHub Actions es bloqueado, el plan B es ejecutar el scraper en el Mac con `launchd` una vez al día y hacer `git push` de `/data`. Resolver también cómo fijar la zona de Valencia en Mercadona.
+**Resultado (15/11/2026, completada):** Mercadona y Consum responden desde GitHub Actions exactamente igual que desde casa, sin bloqueos y con los mismos precios. Se sigue con GitHub Actions; el plan B no hace falta por ahora. La zona se fija con `wh=vlc1`. Prueba: `scraper/fase0/comprobar.sh`, workflow «Fase 0 · Comprobar acceso a los supermercados». Las respuestas están en `scraper/fixtures/`.
 
 **Fase 1. Scraper completo de Mercadona y Consum.** Adaptadores, normalización, validación, tests y cron diario que hace commit de `/data`.
 
