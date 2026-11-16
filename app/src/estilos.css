@@ -1,0 +1,275 @@
+/* Cesta Lista: estilos pensados para el iPhone y el pulgar, en modo claro y oscuro. */
+:root {
+  --fondo: #f5f6f4;
+  --superficie: #ffffff;
+  --superficie-2: #eef0ec;
+  --texto: #18201b;
+  --texto-2: #5a645d;
+  --texto-3: #8a938c;
+  --borde: rgb(24 32 27 / 0.1);
+  --borde-fuerte: rgb(24 32 27 / 0.2);
+  --marca: #1e6b45;
+  --marca-suave: #e3f1e8;
+  --atencion: #8a5300;
+  --atencion-fondo: #fdf0d7;
+  --error: #a32d2d;
+  --error-fondo: #fcebeb;
+  --info: #185fa5;
+  --info-fondo: #e6f1fb;
+  --bien: #2e7d32;
+  --mercadona: #3e8e2f;
+  --consum: #e0612b;
+  --lidl: #1d5fb0;
+  --radio: 14px;
+  --alto-pestanas: 64px;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo: #111412;
+    --superficie: #1b201d;
+    --superficie-2: #252b27;
+    --texto: #eef2ee;
+    --texto-2: #a9b3ac;
+    --texto-3: #7b857e;
+    --borde: rgb(238 242 238 / 0.1);
+    --borde-fuerte: rgb(238 242 238 / 0.22);
+    --marca: #6fcf97;
+    --marca-suave: #16301f;
+    --atencion: #f5c26b;
+    --atencion-fondo: #3a2a0c;
+    --error: #f09595;
+    --error-fondo: #3d1515;
+    --info: #85b7eb;
+    --info-fondo: #0f2740;
+    --bien: #81c784;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  background: var(--fondo);
+}
+
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--texto);
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, 'Segoe UI', Roboto, sans-serif;
+  font-size: 17px;
+  line-height: 1.45;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1 {
+  font-size: 30px;
+  line-height: 1.15;
+  font-weight: 700;
+  margin: 8px 0 6px;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-size: 19px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+p {
+  margin: 0 0 8px;
+}
+
+.contenido {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: calc(env(safe-area-inset-top) + 12px) 16px
+    calc(var(--alto-pestanas) + env(safe-area-inset-bottom) + 24px);
+}
+
+.secundario {
+  color: var(--texto-2);
+  font-size: 15px;
+}
+
+.texto--atencion {
+  color: var(--atencion);
+}
+
+.texto--bien {
+  color: var(--bien);
+}
+
+.icono {
+  flex: none;
+  vertical-align: -0.2em;
+}
+
+/* Tarjetas */
+.tarjeta {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.tarjeta--destacada {
+  background: var(--marca-suave);
+  border-color: transparent;
+}
+
+.tarjeta.vacia {
+  text-align: left;
+}
+
+/* Avisos */
+.avisos {
+  margin: 4px 0 8px;
+}
+
+.aviso {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 8px 0;
+  font-size: 15px;
+}
+
+.aviso span {
+  flex: 1;
+}
+
+.aviso--atencion {
+  background: var(--atencion-fondo);
+  color: var(--atencion);
+}
+
+.aviso--error {
+  background: var(--error-fondo);
+  color: var(--error);
+}
+
+.aviso--info {
+  background: var(--info-fondo);
+  color: var(--info);
+}
+
+/* Filas de listas */
+.filas {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+}
+
+.fila {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--borde);
+}
+
+.fila:last-child {
+  border-bottom: none;
+}
+
+.fila__texto {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.punto {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.punto--mercadona {
+  background: var(--mercadona);
+}
+
+.punto--consum {
+  background: var(--consum);
+}
+
+.punto--lidl {
+  background: var(--lidl);
+}
+
+/* Botones: al menos 44 px de alto, como pide Apple. */
+.boton {
+  font: inherit;
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 12px;
+  border: 1px solid var(--borde-fuerte);
+  background: var(--superficie);
+  color: var(--texto);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.boton:active {
+  transform: scale(0.98);
+}
+
+.boton--pequeno {
+  min-height: 40px;
+  padding: 0 14px;
+  font-size: 15px;
+  background: transparent;
+  border-color: currentColor;
+  color: inherit;
+}
+
+/* Barra de pestañas, abajo y al alcance del pulgar */
+.pestanas {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: space-around;
+  height: calc(var(--alto-pestanas) + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  background: color-mix(in srgb, var(--superficie) 88%, transparent);
+  -webkit-backdrop-filter: saturate(180%) blur(16px);
+  backdrop-filter: saturate(180%) blur(16px);
+  border-top: 1px solid var(--borde);
+  z-index: 10;
+}
+
+.pestana {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--texto-3);
+  text-decoration: none;
+}
+
+.pestana--activa {
+  color: var(--marca);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boton:active {
+    transform: none;
+  }
+}
