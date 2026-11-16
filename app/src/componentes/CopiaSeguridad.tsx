@@ -61,9 +61,14 @@ export function CopiaSeguridad() {
     if (!confirmado) return;
     setOcupado(true);
     try {
-      await reemplazarTodo(copia);
+      // La copia importada se hizo en su fecha: esa es ahora la última copia de estos datos.
+      // (Dentro de la copia no está su propia fecha, porque se apunta después de crearla.)
+      await reemplazarTodo({
+        ...copia,
+        ajustes: { ...copia.ajustes, ultimaCopia: copia.exportada },
+      });
       await recargarNecesidades();
-      setUltima((copia.ajustes.ultimaCopia as string | undefined) ?? null);
+      setUltima(copia.exportada);
       setMensaje({ tipo: 'bien', texto: `Copia importada: ${cosas(copia.necesidades.length)}.` });
     } catch (error) {
       setMensaje({
