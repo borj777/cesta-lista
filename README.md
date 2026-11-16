@@ -12,7 +12,13 @@ Es un proyecto personal y sin ánimo de lucro.
 
 - **Fase 0 (terminada):** Mercadona y Consum responden desde GitHub Actions.
 - **Fase 1 (terminada):** descarga diaria completa de Mercadona y Consum.
-- Fase 2: la aplicación para el iPhone.
+- **Fase 2 (en curso):** la app para el iPhone, en pasos pequeños.
+
+## La app
+
+Está en **https://borj777.github.io/cesta-lista/**. Para instalarla en el iPhone: ábrela en Safari, pulsa **Compartir** y luego **Añadir a pantalla de inicio**. Funciona sin conexión con los últimos precios descargados.
+
+Se publica sola (workflow «Publicar la app») cada vez que se sube un cambio a `main` y cada mañana después de la descarga de precios, siempre que pasen los tests. Tus datos (necesidades, equivalencias, listas) se guardan solo en el iPhone.
 
 ## Precios diarios
 
@@ -99,10 +105,21 @@ npm test         # tests con Vitest (usan respuestas reales guardadas en scraper
 npm run check    # tipos, ESLint, Prettier y tests
 ```
 
+La app:
+
+```bash
+cd app
+npm ci
+npm run dev      # vista previa en http://localhost:5173/cesta-lista/
+npm run check    # tipos, ESLint, Prettier y tests
+npm run build    # versión para publicar, en app/dist
+```
+
 | Carpeta | Contenido |
 |---|---|
 | `scraper/src/adapters/` | Un adaptador por supermercado |
 | `scraper/src/` | Cliente HTTP, normalización, `precioRef`, protección y programa principal |
 | `scraper/test/` | Tests |
 | `scraper/fixtures/` | Respuestas reales de las tiendas para los tests |
-| `.github/workflows/` | `scrape.yml` (diario), `ci.yml` (tests) y `fase0.yml` (prueba de acceso) |
+| `app/` | La app (Vite, Preact y TypeScript) |
+| `.github/workflows/` | `scrape.yml` (precios diarios), `deploy.yml` (publicar la app), `ci.yml` (tests de las propuestas de cambio) y `fase0.yml` (prueba de acceso) |

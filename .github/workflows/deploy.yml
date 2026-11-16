@@ -1,0 +1,99 @@
+# Publica la app en GitHub Pages (https://borj777.github.io/cesta-lista/) solo si pasan
+# los tests del scraper y de la app. Se ejecuta:
+# - en cada cambio subido a main;
+# - después de la descarga diaria de precios, para publicar el app.json nuevo (los commits
+#   del robot no lanzan workflows por sí mismos);
+# - a mano: pestaña Actions → «Publicar la app» → «Run workflow».
+name: Publicar la app
+
+on:
+  push:
+    branches: [main]
+  workflow_run:
+    workflows: ['Precios diarios']
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Una publicación cada vez; si llega otra, espera a que acabe la anterior.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  tests:
+    name: Tests del scraper y de la app
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion != 'cancelled'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Descargar el código del repositorio
+        uses: actions/checkout@v7
+
+      - name: Instalar Node 26
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: |
+            scraper/package-lock.json
+            app/package-lock.json
+
+      - name: Tests del scraper
+        working-directory: scraper
+        run: |
+          npm ci
+          npm run check
+
+      - name: Tests de la app
+        working-directory: app
+        run: |
+          npm ci
+          npm run check
+
+  publicar:
+    name: Compilar y publicar en GitHub Pages
+    needs: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - name: Descargar el código del repositorio
+        uses: actions/checkout@v7
+
+      - name: Instalar Node 26
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Compilar la app
+        working-directory: app
+        run: |
+          npm ci
+          npm run build
+
+      - name: Añadir los precios del día
+        run: |
+          mkdir -p app/dist/data
+          cp data/app.json app/dist/data/app.json
+          echo "app.json: $(du -h app/dist/data/app.json | cut -f1)"
+
+      - name: Preparar GitHub Pages
+        uses: actions/configure-pages@v6
+
+      - name: Subir la app
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: app/dist
+
+      - name: Publicar
+        id: despliegue
+        uses: actions/deploy-pages@v5

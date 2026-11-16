@@ -1,10 +1,8 @@
-# Comprueba el código cada vez que se sube un cambio: tipos, estilo y tests.
+# Comprueba el código de las propuestas de cambio (pull requests): tipos, estilo y tests.
+# Los cambios subidos a main se comprueban en «Publicar la app», que solo publica si pasan.
 name: Tests
 
 on:
-  push:
-    branches: [main]
-    paths-ignore: ['data/**']
   pull_request:
   workflow_dispatch:
 
@@ -12,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  tests:
+  scraper:
     name: Tipos, estilo y tests del scraper
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -29,6 +27,30 @@ jobs:
           node-version: 26
           cache: npm
           cache-dependency-path: scraper/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Comprobar tipos, estilo y tests
+        run: npm run check
+
+  app:
+    name: Tipos, estilo y tests de la app
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - name: Descargar el código del repositorio
+        uses: actions/checkout@v7
+
+      - name: Instalar Node 26
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: app/package-lock.json
 
       - name: Instalar dependencias
         run: npm ci
