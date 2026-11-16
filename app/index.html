@@ -21,6 +21,76 @@
   </head>
   <body>
     <div id="app"></div>
+    <div
+      id="rescate"
+      hidden
+      style="
+        font:
+          17px/1.45 -apple-system,
+          system-ui,
+          sans-serif;
+        padding: 72px 24px;
+        color: CanvasText;
+        background: Canvas;
+      "
+    >
+      <h1 style="font-size: 26px; margin: 0 0 12px">Cesta Lista no ha podido arrancar</h1>
+      <p style="margin: 0 0 20px">
+        Puede pasar tras una actualización. Pulsa «Reparar»: se borra la copia de la app guardada en
+        el iPhone y se descarga de nuevo. Tus datos no se tocan.
+      </p>
+      <button
+        id="reparar"
+        type="button"
+        style="
+          font: inherit;
+          font-weight: 600;
+          min-height: 48px;
+          padding: 0 20px;
+          border-radius: 12px;
+          border: 1px solid;
+          background: transparent;
+          color: inherit;
+        "
+      >
+        Reparar
+      </button>
+    </div>
+    <script>
+      // Si la app no ha arrancado en 8 segundos, muestra la opción de repararla.
+      setTimeout(function () {
+        var app = document.getElementById('app');
+        if (app && app.childElementCount > 0) return;
+        document.getElementById('rescate').hidden = false;
+        document.getElementById('reparar').onclick = function () {
+          var quitarRegistros = navigator.serviceWorker
+            ? navigator.serviceWorker.getRegistrations().then(function (registros) {
+                return Promise.all(
+                  registros.map(function (r) {
+                    return r.unregister();
+                  }),
+                );
+              })
+            : Promise.resolve();
+          var borrarApp = window.caches
+            ? caches.keys().then(function (nombres) {
+                return Promise.all(
+                  nombres
+                    .filter(function (n) {
+                      return n.indexOf('app-') === 0;
+                    })
+                    .map(function (n) {
+                      return caches.delete(n);
+                    }),
+                );
+              })
+            : Promise.resolve();
+          Promise.all([quitarRegistros, borrarApp]).finally(function () {
+            location.reload();
+          });
+        };
+      }, 8000);
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

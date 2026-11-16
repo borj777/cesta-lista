@@ -1,53 +1,52 @@
 /**
- * Registra el service worker (funcionamiento sin conexión) y avisa cuando hay una versión
- * nueva de la app esperando, para que el usuario decida cuándo recargar.
+ * Registra el service worker (funcionamiento sin conexión). Las versiones nuevas se activan
+ * solas y se usan la próxima vez que se abre la app; mientras tanto se avisa de que hay una
+ * lista, por si se quiere cargar ya.
  */
 type Oyente = (hayVersionNueva: boolean) => void;
 const oyentes = new Set<Oyente>();
-let esperando: ServiceWorker | null = null;
+let hayVersionNueva = false;
 
 export function alHaberVersionNueva(oyente: Oyente): () => void {
   oyentes.add(oyente);
-  oyente(esperando !== null);
+  oyente(hayVersionNueva);
   return () => oyentes.delete(oyente);
 }
 
-function avisar(trabajador: ServiceWorker) {
-  esperando = trabajador;
+function avisar() {
+  hayVersionNueva = true;
   for (const oyente of oyentes) oyente(true);
 }
 
-/** Activa la versión nueva y recarga la app. */
+/** Carga la versión nueva, que ya está activa. */
 export function actualizarApp(): void {
-  if (!esperando) return;
-  navigator.serviceWorker.addEventListener('controllerchange', () => location.reload(), {
-    once: true,
-  });
-  esperando.postMessage('activar');
+  location.reload();
 }
+
+const URL_SW = `${import.meta.env.BASE_URL}sw.js`;
 
 export async function registrarServiceWorker(): Promise<void> {
   if (!('serviceWorker' in navigator) || !import.meta.env.PROD) return;
+  // Si la página ya estaba controlada, una versión nueva que se active es una actualización.
+  const yaControlada = navigator.serviceWorker.controller !== null;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (yaControlada) avisar();
+  });
+
   let registro: ServiceWorkerRegistration;
   try {
-    registro = await navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`);
+    registro = await navigator.serviceWorker.register(URL_SW);
   } catch (error) {
     console.warn('No se ha podido activar el modo sin conexión', error);
     return;
   }
-  if (registro.waiting && navigator.serviceWorker.controller) avisar(registro.waiting);
-  registro.addEventListener('updatefound', () => {
-    const nuevo = registro.installing;
-    nuevo?.addEventListener('statechange', () => {
-      if (nuevo.state === 'installed' && navigator.serviceWorker.controller) avisar(nuevo);
-    });
-  });
+
   // Busca versiones nuevas al volver a la app. Si el registro ya no existe (el sistema lo ha
   // borrado), se vuelve a registrar.
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
     registro.update().catch(() => {
-      void navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {});
+      void navigator.serviceWorker.register(URL_SW).catch(() => {});
     });
   });
 }

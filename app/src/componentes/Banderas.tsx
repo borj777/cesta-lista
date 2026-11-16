@@ -31,9 +31,9 @@ export function VersionNueva() {
   return (
     <div class="aviso aviso--info" role="status">
       <Icono nombre="recargar" tamano={20} />
-      <span>Hay una versión nueva de Cesta Lista.</span>
+      <span>Versión nueva lista. Se usará la próxima vez que abras la app.</span>
       <button type="button" class="boton boton--pequeno" onClick={actualizarApp}>
-        Actualizar
+        Usar ya
       </button>
     </div>
   );

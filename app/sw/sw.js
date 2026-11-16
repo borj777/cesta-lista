@@ -12,9 +12,17 @@ const CACHE_APP = `app-${VERSION}`;
 const CACHE_DATOS = 'datos';
 
 self.addEventListener('install', (evento) => {
+  // La versión nueva se activa sin esperar: la app abierta sigue funcionando con lo que ya
+  // ha cargado y la próxima vez que se abra usará la versión nueva.
+  self.skipWaiting();
   evento.waitUntil(
     Promise.all([
-      caches.open(CACHE_APP).then((cache) => cache.addAll(ARCHIVOS)),
+      // cache: 'reload' obliga a descargar del servidor. Sin él, el navegador puede dar su
+      // copia de la página principal de hace unos minutos, que apunta a archivos de la
+      // versión anterior que ya no existen, y la app se queda en blanco (visto en iPhone).
+      caches
+        .open(CACHE_APP)
+        .then((cache) => cache.addAll(ARCHIVOS.map((u) => new Request(u, { cache: 'reload' })))),
       // La primera vez que se abre la app instalada, los precios se descargan antes de que
       // este service worker esté activo y no pasan por él: se guardan aquí para que haya
       // copia sin conexión desde el primer día. Si falla, no impide la instalación.
@@ -39,11 +47,6 @@ self.addEventListener('activate', (evento) => {
       )
       .then(() => self.clients.claim()),
   );
-});
-
-// La app pide activar la versión nueva cuando el usuario pulsa «Actualizar».
-self.addEventListener('message', (evento) => {
-  if (evento.data === 'activar') self.skipWaiting();
 });
 
 /** Con poca cobertura, si la red tarda más que esto y hay precios guardados, se usan esos. */
