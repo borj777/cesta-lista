@@ -5,7 +5,8 @@ import { Icono, type NombreIcono } from './componentes/Icono.tsx';
 import { cargarDatos } from './datos.ts';
 import { avisosPrecios } from './estado.ts';
 import { PantallaNecesidades } from './necesidades/PantallaNecesidades.tsx';
-import { PantallaAjustes, PantallaLidl, PantallaLista } from './pantallas.tsx';
+import { PantallaLidl } from './lidl/PantallaLidl.tsx';
+import { PantallaAjustes, PantallaLista } from './pantallas.tsx';
 import type { DatosApp } from './tipos.ts';
 
 const PESTANAS = [
@@ -89,7 +90,7 @@ export function App() {
         {datos && <AvisosPrecios avisos={avisosPrecios(datos, ahora)} />}
         {pestana === 'lista' && <PantallaLista datos={datos} ahora={ahora} />}
         {pestana === 'necesidades' && <PantallaNecesidades sub={sub} datos={datos} />}
-        {pestana === 'lidl' && <PantallaLidl />}
+        {pestana === 'lidl' && <PantallaLidl sub={sub} />}
         {pestana === 'ajustes' && (
           <PantallaAjustes datos={datos} ahora={ahora} guardados={guardados} error={error} />
         )}

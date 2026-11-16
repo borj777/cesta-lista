@@ -30,18 +30,6 @@ export function PantallaLista({ datos, ahora }: Props) {
   );
 }
 
-export function PantallaLidl() {
-  return (
-    <>
-      <h1>Precios de Lidl</h1>
-      <Proximamente titulo="Próximamente">
-        Lidl no publica sus precios en internet. Aquí podrás apuntar a mano los de los productos que
-        compras allí, y la app te avisará cuando tengan más de 30 días.
-      </Proximamente>
-    </>
-  );
-}
-
 export function PantallaAjustes({
   datos,
   ahora,

@@ -3,12 +3,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   cerrar,
   guardarAjuste,
+  guardarProductoLidl,
   guardarNecesidad,
   leerTodo,
   listarNecesidades,
   reemplazarTodo,
 } from '../src/almacen.ts';
 import { crearCopia, leerCopia, nombreArchivo, textoCopia, VERSION_COPIA } from '../src/copia.ts';
+import { crearProductoLidl } from '../src/lidl/modelo.ts';
 import { crearNecesidad, type Necesidad } from '../src/necesidades/modelo.ts';
 
 const AHORA = '2026-11-16T10:00:00.000Z';
@@ -35,6 +37,12 @@ const detergente = crearNecesidad(
   },
   AHORA,
   'detergente',
+);
+
+const lecheLidl = crearProductoLidl(
+  { nombre: 'Leche semidesnatada', marca: 'Milbona', cantidad: 6, unidad: 'l', precio: 4.74 },
+  AHORA,
+  'leche-lidl',
 );
 
 /** Copia válida con las necesidades dadas, como texto. */
@@ -128,6 +136,30 @@ describe('leerCopia', () => {
     });
   });
 
+  it('acepta y conserva los precios de Lidl', () => {
+    const r = leerCopia(copiaTexto([pollo], { lidl: [lecheLidl] }));
+    expect(r).toMatchObject({ ok: true, copia: { lidl: [lecheLidl] } });
+  });
+
+  it('rechaza un precio de Lidl dañado y dice cuál es', () => {
+    const r = leerCopia(
+      copiaTexto([pollo], { lidl: [lecheLidl, { ...lecheLidl, id: 'x', precio: 0 }] }),
+    );
+    expect(r).toEqual({
+      ok: false,
+      error:
+        'El producto de Lidl n.º 2 («Leche semidesnatada») no es válido: el precio no es válido.',
+    });
+  });
+
+  it('rechaza precios de Lidl repetidos', () => {
+    const r = leerCopia(copiaTexto([], { lidl: [lecheLidl, lecheLidl] }));
+    expect(r).toEqual({
+      ok: false,
+      error: 'El producto de Lidl n.º 2 («Leche semidesnatada») está repetido.',
+    });
+  });
+
   it('rechaza necesidades repetidas', () => {
     const r = leerCopia(copiaTexto([pollo, pollo]));
     expect(r).toEqual({
@@ -156,6 +188,7 @@ describe('exportar e importar con la base de datos', () => {
     await guardarNecesidad(pollo);
     await guardarNecesidad(detergente);
     await guardarAjuste('costeVisita', 2);
+    await guardarProductoLidl(lecheLidl);
     const texto = textoCopia(crearCopia(await leerTodo(), AHORA));
 
     // Se borra todo, como en un iPhone nuevo, y se importa la copia.
@@ -172,6 +205,7 @@ describe('exportar e importar con la base de datos', () => {
       pollo,
     ]);
     expect(contenido.ajustes).toEqual({ costeVisita: 2 });
+    expect(contenido.lidl).toEqual([lecheLidl]);
   });
 
   it('importar sustituye lo que había', async () => {

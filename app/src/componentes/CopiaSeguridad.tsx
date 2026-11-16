@@ -2,15 +2,22 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { guardarAjuste, leerAjuste, leerTodo, reemplazarTodo } from '../almacen.ts';
 import { crearCopia, leerCopia, nombreArchivo, ofrecerArchivo, textoCopia } from '../copia.ts';
 import { fechaHora } from '../estado.ts';
+import { recargarLidl, useLidl } from '../lidl/estado.ts';
 import { recargarNecesidades, useNecesidades } from '../necesidades/estado.ts';
 import { Icono } from './Icono.tsx';
 
 type Mensaje = { tipo: 'bien' | 'error'; texto: string };
 const cosas = (n: number) => (n === 1 ? '1 necesidad' : `${n} necesidades`);
+/** "4 necesidades y 3 precios de Lidl" (sin la parte de Lidl si no hay ninguno). */
+const contenido = (necesidades: number, lidl: number) =>
+  lidl === 0
+    ? cosas(necesidades)
+    : `${cosas(necesidades)} y ${lidl === 1 ? '1 precio' : `${lidl} precios`} de Lidl`;
 
 /** Ajustes → Copia de seguridad: exportar e importar todos los datos en un archivo. */
 export function CopiaSeguridad() {
   const { necesidades } = useNecesidades();
+  const { productos: lidl } = useLidl();
   const [ultima, setUltima] = useState<string | null>(null);
   const [mensaje, setMensaje] = useState<Mensaje | null>(null);
   const [ocupado, setOcupado] = useState(false);
@@ -32,7 +39,7 @@ export function CopiaSeguridad() {
         setUltima(copia.exportada);
         setMensaje({
           tipo: 'bien',
-          texto: `Copia creada con ${cosas(copia.necesidades.length)}. Guárdala en Archivos o en iCloud.`,
+          texto: `Copia creada con ${contenido(copia.necesidades.length, copia.lidl.length)}. Guárdala en Archivos o en iCloud.`,
         });
       }
     } catch (error) {
@@ -53,10 +60,10 @@ export function CopiaSeguridad() {
       return;
     }
     const { copia } = lectura;
-    const actuales = necesidades?.length ?? 0;
+    const actuales = contenido(necesidades?.length ?? 0, lidl?.length ?? 0);
     const confirmado = confirm(
-      `La copia del ${fechaHora(copia.exportada)} tiene ${cosas(copia.necesidades.length)}. ` +
-        `Sustituirá lo que tienes ahora en este iPhone (${cosas(actuales)}). ¿Continuar?`,
+      `La copia del ${fechaHora(copia.exportada)} tiene ${contenido(copia.necesidades.length, copia.lidl.length)}. ` +
+        `Sustituirá lo que tienes ahora en este iPhone (${actuales}). ¿Continuar?`,
     );
     if (!confirmado) return;
     setOcupado(true);
@@ -67,9 +74,12 @@ export function CopiaSeguridad() {
         ...copia,
         ajustes: { ...copia.ajustes, ultimaCopia: copia.exportada },
       });
-      await recargarNecesidades();
+      await Promise.all([recargarNecesidades(), recargarLidl()]);
       setUltima(copia.exportada);
-      setMensaje({ tipo: 'bien', texto: `Copia importada: ${cosas(copia.necesidades.length)}.` });
+      setMensaje({
+        tipo: 'bien',
+        texto: `Copia importada: ${contenido(copia.necesidades.length, copia.lidl.length)}.`,
+      });
     } catch (error) {
       setMensaje({
         tipo: 'error',
@@ -85,8 +95,8 @@ export function CopiaSeguridad() {
       <h2>Copia de seguridad</h2>
       <p class="secundario">
         Tus datos se guardan solo en este iPhone
-        {necesidades ? ` (${cosas(necesidades.length)})` : ''}. Haz una copia de vez en cuando y
-        guárdala en Archivos o en iCloud por si cambias de móvil o borras la app.
+        {necesidades ? ` (${contenido(necesidades.length, lidl?.length ?? 0)})` : ''}. Haz una copia
+        de vez en cuando y guárdala en Archivos o en iCloud por si cambias de móvil o borras la app.
       </p>
       <p class="secundario">Última copia: {ultima ? fechaHora(ultima) : 'todavía ninguna'}.</p>
       {mensaje && (

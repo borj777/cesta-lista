@@ -24,6 +24,20 @@ export const NOMBRE_UNIDAD: Record<UnidadNecesidad, { una: string; varias: strin
   m: { una: 'metro', varias: 'metros' },
 };
 
+/** Botones de unidad de los formularios. */
+export const OPCIONES_UNIDAD = UNIDADES_NECESIDAD.map((u) => ({
+  valor: u,
+  texto: {
+    kg: 'kg',
+    g: 'g',
+    l: 'litros',
+    ml: 'ml',
+    ud: 'unidades',
+    lavado: 'lavados',
+    m: 'metros',
+  }[u],
+}));
+
 export const FRECUENCIAS = ['semana', 'quincena', 'mes'] as const;
 export type Frecuencia = (typeof FRECUENCIAS)[number];
 

@@ -2,6 +2,8 @@ import { useMemo, useState } from 'preact/hooks';
 import { indicePorId } from '../buscador.ts';
 import { Icono } from '../componentes/Icono.tsx';
 import { Opciones } from '../componentes/Opciones.tsx';
+import { useLidl } from '../lidl/estado.ts';
+import { aProductoApp } from '../lidl/modelo.ts';
 import type { DatosApp, ProductoApp } from '../tipos.ts';
 import { DetalleNecesidad } from './DetalleNecesidad.tsx';
 import { ElegirProducto } from './ElegirProducto.tsx';
@@ -15,8 +17,8 @@ import {
   FRECUENCIAS,
   leerCantidad,
   NOMBRE_CATEGORIA,
+  OPCIONES_UNIDAD,
   textoNecesidad,
-  UNIDADES_NECESIDAD,
   validarBorrador,
   type Categoria,
   type ErroresBorrador,
@@ -42,7 +44,13 @@ export function PantallaNecesidades({
   datos: DatosApp | null;
 }) {
   const { necesidades, error } = useNecesidades();
-  const indice = useMemo(() => (datos ? indicePorId(datos.productos) : null), [datos]);
+  const { productos: lidl } = useLidl();
+  // Los precios de Lidl apuntados a mano, en el mismo formato que los de app.json.
+  const productosLidl = useMemo(() => (lidl ? lidl.map(aProductoApp) : null), [lidl]);
+  const indice = useMemo(
+    () => (datos && productosLidl ? indicePorId([...datos.productos, ...productosLidl]) : null),
+    [datos, productosLidl],
+  );
   const buscarProducto = useMemo(
     () =>
       indice
@@ -72,14 +80,20 @@ export function PantallaNecesidades({
     if (existente && accion === 'editar') {
       return <FormNecesidad key={existente.id} existente={existente} />;
     }
-    if (existente && accion === 'elegir' && (tienda === 'mercadona' || tienda === 'consum')) {
-      if (!datos || !buscarProducto) return <p class="secundario">Cargando precios…</p>;
+    if (
+      existente &&
+      accion === 'elegir' &&
+      (tienda === 'mercadona' || tienda === 'consum' || tienda === 'lidl')
+    ) {
+      if (!datos || !productosLidl || !buscarProducto) {
+        return <p class="secundario">Cargando precios…</p>;
+      }
       return (
         <ElegirProducto
           key={`${existente.id}-${tienda}`}
           necesidad={existente}
           tienda={tienda}
-          productos={datos.productos}
+          productos={tienda === 'lidl' ? productosLidl : datos.productos}
           buscarProducto={buscarProducto}
         />
       );
@@ -174,19 +188,6 @@ const OPCIONES_FRECUENCIA = FRECUENCIAS.map((f) => ({
   valor: f,
   texto: { semana: 'Cada semana', quincena: 'Cada 2 semanas', mes: 'Cada mes' }[f],
 }));
-const OPCIONES_UNIDAD = UNIDADES_NECESIDAD.map((u) => ({
-  valor: u,
-  texto: {
-    kg: 'kg',
-    g: 'g',
-    l: 'litros',
-    ml: 'ml',
-    ud: 'unidades',
-    lavado: 'lavados',
-    m: 'metros',
-  }[u],
-}));
-
 function FormNecesidad({ existente }: { existente?: Necesidad }) {
   const [nombre, setNombre] = useState(existente?.nombre ?? '');
   const [categoria, setCategoria] = useState<Categoria>(existente?.categoria ?? 'alimentacion');

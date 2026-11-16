@@ -3,6 +3,7 @@
  * donde quiera (Archivos, iCloud, correo...) y puede volver a importar.
  */
 import type { ContenidoBD } from './almacen.ts';
+import { problemaProductoLidl, type ProductoLidl } from './lidl/modelo.ts';
 import {
   CATEGORIAS,
   FRECUENCIAS,
@@ -19,7 +20,7 @@ export type Copia = {
   version: number;
   exportada: string;
   necesidades: Necesidad[];
-  lidl: unknown[];
+  lidl: ProductoLidl[];
   ajustes: Record<string, unknown>;
 };
 
@@ -130,6 +131,22 @@ export function leerCopia(texto: string): ResultadoLectura {
   if (!Array.isArray(lidl) || !esObjeto(ajustes)) {
     return { ok: false, error: 'La copia tiene partes dañadas y no se puede importar.' };
   }
+  const idsLidl = new Set<string>();
+  for (const [i, p] of lidl.entries()) {
+    const nombre = esObjeto(p) && typeof p.nombre === 'string' ? ` («${p.nombre}»)` : '';
+    const problema = esObjeto(p) ? problemaProductoLidl(p) : 'no tiene el formato esperado';
+    if (problema) {
+      return {
+        ok: false,
+        error: `El producto de Lidl n.º ${i + 1}${nombre} no es válido: ${problema}.`,
+      };
+    }
+    const id = (p as ProductoLidl).id;
+    if (idsLidl.has(id)) {
+      return { ok: false, error: `El producto de Lidl n.º ${i + 1}${nombre} está repetido.` };
+    }
+    idsLidl.add(id);
+  }
 
   return {
     ok: true,
@@ -138,7 +155,7 @@ export function leerCopia(texto: string): ResultadoLectura {
       version: datos.version,
       exportada: esFecha(datos.exportada) ? datos.exportada : new Date(0).toISOString(),
       necesidades: datos.necesidades as Necesidad[],
-      lidl,
+      lidl: lidl as ProductoLidl[],
       ajustes,
     },
   };

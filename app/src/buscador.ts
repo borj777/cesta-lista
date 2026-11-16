@@ -84,12 +84,14 @@ export function buscar(
     unidad: Unidad;
     eans?: ReadonlySet<string>;
     limite?: number;
+    /** Con la búsqueda vacía, devuelve todos los productos de la tienda (para Lidl, que son pocos). */
+    todosSiVacia?: boolean;
   },
 ): ResultadoBusqueda {
-  const { consulta, tienda, unidad, eans, limite = 40 } = opciones;
+  const { consulta, tienda, unidad, eans, limite = 40, todosSiVacia = false } = opciones;
   const buscadas = palabras(consulta);
   const vacio = { mismoCodigo: [], comparables: [], otros: [], total: 0 };
-  if (buscadas.length === 0) return vacio;
+  if (buscadas.length === 0 && !todosSiVacia) return vacio;
 
   const encajan = productos.filter((p) => {
     if (p.tienda !== tienda) return false;

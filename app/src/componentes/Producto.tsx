@@ -33,19 +33,22 @@ export function FotoProducto({ producto }: { producto: ProductoApp }) {
 
 /**
  * Datos de un producto: foto, nombre, marca, formato, precio y precio por unidad.
- * El formato se muestra siempre (regla de la fase 2).
+ * El formato se muestra siempre (regla de la fase 2). Los de Lidl, apuntados a mano, no
+ * tienen foto; `nota` añade una línea, por ejemplo cuándo se comprobó su precio.
  */
 export function InfoProducto({
   producto,
   comparable = true,
+  nota,
 }: {
   producto: ProductoApp;
   comparable?: boolean;
+  nota?: { texto: string; atencion?: boolean };
 }) {
   const vigente = precioVigente(producto, hoyEnEspana());
   return (
     <>
-      <FotoProducto producto={producto} />
+      {producto.tienda !== 'lidl' && <FotoProducto producto={producto} />}
       <span class="producto__texto">
         <span class="producto__nombre">{producto.nombre}</span>
         <span class="secundario">
@@ -54,6 +57,11 @@ export function InfoProducto({
             .join(' · ')}
         </span>
         {vigente.oferta && <span class="etiqueta-oferta">{vigente.oferta}</span>}
+        {nota && (
+          <span class={nota.atencion ? 'producto__nota texto--atencion' : 'producto__nota'}>
+            {nota.texto}
+          </span>
+        )}
       </span>
       <span class={comparable ? 'producto__ref' : 'producto__ref producto__ref--otra'}>
         {textoPrecioRef(vigente.precioRef, producto.formato.unidad)}

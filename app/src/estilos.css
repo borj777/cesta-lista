@@ -645,3 +645,8 @@ p {
   font-weight: 600;
   color: var(--atencion);
 }
+
+.producto__nota {
+  font-size: 13px;
+  color: var(--texto-3);
+}

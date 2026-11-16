@@ -2,12 +2,13 @@
  * Almacenamiento en el iPhone (IndexedDB). Los datos personales nunca salen del dispositivo,
  * salvo en la copia de seguridad que exporta el usuario.
  */
+import type { ProductoLidl } from './lidl/modelo.ts';
 import type { Necesidad } from './necesidades/modelo.ts';
 
 const NOMBRE_BD = 'cesta-lista';
 const VERSION_BD = 1;
 
-/** Almacenes de la base de datos. lidl se usará en el paso 4. */
+/** Almacenes de la base de datos. lidl guarda los precios de Lidl apuntados a mano. */
 export const ALMACENES = ['necesidades', 'lidl', 'ajustes'] as const;
 export type NombreAlmacen = (typeof ALMACENES)[number];
 
@@ -76,6 +77,28 @@ export async function borrarNecesidad(id: string): Promise<void> {
   await terminada(tx);
 }
 
+export async function listarLidl(): Promise<ProductoLidl[]> {
+  const bd = await abrir();
+  return promesa<ProductoLidl[]>(
+    bd.transaction('lidl').objectStore('lidl').getAll() as IDBRequest<ProductoLidl[]>,
+  );
+}
+
+export async function guardarProductoLidl(p: ProductoLidl): Promise<void> {
+  const bd = await abrir();
+  const tx = bd.transaction('lidl', 'readwrite');
+  tx.objectStore('lidl').put(p);
+  await terminada(tx);
+  void pedirAlmacenamientoPersistente();
+}
+
+export async function borrarProductoLidl(id: string): Promise<void> {
+  const bd = await abrir();
+  const tx = bd.transaction('lidl', 'readwrite');
+  tx.objectStore('lidl').delete(id);
+  await terminada(tx);
+}
+
 export async function leerAjuste<T>(clave: string): Promise<T | undefined> {
   const bd = await abrir();
   return promesa<T | undefined>(
@@ -93,7 +116,7 @@ export async function guardarAjuste(clave: string, valor: unknown): Promise<void
 /** Todo lo guardado, para la copia de seguridad. */
 export type ContenidoBD = {
   necesidades: Necesidad[];
-  lidl: unknown[];
+  lidl: ProductoLidl[];
   ajustes: Record<string, unknown>;
 };
 
@@ -103,7 +126,7 @@ export async function leerTodo(): Promise<ContenidoBD> {
   const ajustes = tx.objectStore('ajustes');
   const [necesidades, lidl, claves, valores] = await Promise.all([
     promesa(tx.objectStore('necesidades').getAll() as IDBRequest<Necesidad[]>),
-    promesa(tx.objectStore('lidl').getAll()),
+    promesa(tx.objectStore('lidl').getAll() as IDBRequest<ProductoLidl[]>),
     promesa(ajustes.getAllKeys()),
     promesa(ajustes.getAll()),
   ]);
