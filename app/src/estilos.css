@@ -10,6 +10,7 @@
   --borde-fuerte: rgb(24 32 27 / 0.2);
   --marca: #1e6b45;
   --marca-suave: #e3f1e8;
+  --sobre-marca: #ffffff;
   --atencion: #8a5300;
   --atencion-fondo: #fdf0d7;
   --error: #a32d2d;
@@ -37,6 +38,7 @@
     --borde-fuerte: rgb(238 242 238 / 0.22);
     --marca: #6fcf97;
     --marca-suave: #16301f;
+    --sobre-marca: #0b1f12;
     --atencion: #f5c26b;
     --atencion-fondo: #3a2a0c;
     --error: #f09595;
@@ -300,4 +302,180 @@ p {
 
 .pasos li {
   margin-bottom: 6px;
+}
+
+/* Botones principales, anchos y de borrar */
+.boton--principal {
+  background: var(--marca);
+  border-color: var(--marca);
+  color: var(--sobre-marca);
+}
+
+.boton--peligro {
+  color: var(--error);
+  border-color: color-mix(in srgb, var(--error) 40%, transparent);
+  background: transparent;
+}
+
+.boton--ancho {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  text-decoration: none;
+}
+
+.boton:disabled {
+  opacity: 0.6;
+}
+
+.acciones {
+  display: grid;
+  gap: 10px;
+  margin: 20px 0 8px;
+}
+
+.aviso--bien {
+  background: var(--marca-suave);
+  color: var(--bien);
+}
+
+/* Grupos de la lista de necesidades */
+.grupo {
+  margin: 20px 0;
+}
+
+.grupo__titulo {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--texto-2);
+  text-transform: none;
+  margin: 0 4px 6px;
+}
+
+.tarjeta--lista {
+  padding: 0 16px;
+  margin: 0;
+}
+
+.fila--enlace {
+  color: inherit;
+  text-decoration: none;
+}
+
+.fila--enlace:active {
+  background: var(--superficie-2);
+}
+
+.tarjeta--lista li:last-child .fila {
+  border-bottom: none;
+}
+
+.chevron {
+  font-size: 26px;
+  color: var(--texto-3);
+  line-height: 1;
+}
+
+.volver {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--marca);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+/* Formulario */
+.campo {
+  border: none;
+  margin: 18px 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.campo__etiqueta {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--texto-2);
+  margin: 0 0 8px;
+  padding: 0;
+}
+
+.campo__error {
+  color: var(--error);
+  font-size: 15px;
+  margin: 6px 0 0;
+}
+
+/* 17 px para que el iPhone no amplíe la pantalla al escribir. */
+.entrada {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 17px;
+  color: var(--texto);
+  background: var(--superficie);
+  border: 1px solid var(--borde-fuerte);
+  border-radius: 12px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.entrada:focus {
+  outline: 2px solid var(--marca);
+  outline-offset: 1px;
+}
+
+.entrada--error {
+  border-color: var(--error);
+}
+
+.opciones {
+  display: grid;
+  gap: 8px;
+}
+
+.opcion {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 6px 8px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.2;
+  background: var(--superficie);
+  border: 1px solid var(--borde-fuerte);
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.opcion input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.opcion--elegida {
+  background: var(--marca-suave);
+  border-color: var(--marca);
+  color: var(--marca);
+  font-weight: 600;
+}
+
+.opcion:has(input:focus-visible) {
+  outline: 2px solid var(--marca);
+  outline-offset: 2px;
+}
+
+.resumen-necesidad {
+  background: var(--superficie-2);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 15px;
 }

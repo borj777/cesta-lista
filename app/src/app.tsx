@@ -4,7 +4,8 @@ import { AvisosPrecios } from './componentes/EstadoPrecios.tsx';
 import { Icono, type NombreIcono } from './componentes/Icono.tsx';
 import { cargarDatos } from './datos.ts';
 import { avisosPrecios } from './estado.ts';
-import { PantallaAjustes, PantallaLidl, PantallaLista, PantallaNecesidades } from './pantallas.tsx';
+import { PantallaNecesidades } from './necesidades/PantallaNecesidades.tsx';
+import { PantallaAjustes, PantallaLidl, PantallaLista } from './pantallas.tsx';
 import type { DatosApp } from './tipos.ts';
 
 const PESTANAS = [
@@ -15,14 +16,18 @@ const PESTANAS = [
 ] as const satisfies readonly { id: string; nombre: string; icono: NombreIcono }[];
 type IdPestana = (typeof PESTANAS)[number]['id'];
 
-/** La pestaña activa se guarda en la dirección (#lista, #ajustes...). */
-function pestanaDeLaDireccion(): IdPestana {
-  const id = location.hash.replace('#', '');
-  return PESTANAS.find((p) => p.id === id)?.id ?? 'lista';
+type Ruta = { pestana: IdPestana; sub: string | null };
+
+/** La pantalla se guarda en la dirección: #lista, #necesidades/nueva, #necesidades/<id>... */
+function rutaDeLaDireccion(): Ruta {
+  const [id = '', sub] = location.hash.replace('#', '').split('/');
+  const pestana = PESTANAS.find((p) => p.id === id)?.id ?? 'lista';
+  return { pestana, sub: sub ? decodeURIComponent(sub) : null };
 }
 
 export function App() {
-  const [pestana, setPestana] = useState<IdPestana>(pestanaDeLaDireccion);
+  const [ruta, setRuta] = useState<Ruta>(rutaDeLaDireccion);
+  const { pestana, sub } = ruta;
   const [datos, setDatos] = useState<DatosApp | null>(null);
   const [guardados, setGuardados] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,14 +48,14 @@ export function App() {
 
   useEffect(() => {
     cargar();
-    const alCambiar = () => setPestana(pestanaDeLaDireccion());
+    const alCambiar = () => setRuta(rutaDeLaDireccion());
     window.addEventListener('hashchange', alCambiar);
     return () => window.removeEventListener('hashchange', alCambiar);
   }, []);
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [pestana]);
+  }, [pestana, sub]);
 
   return (
     <>
@@ -83,7 +88,7 @@ export function App() {
         )}
         {datos && <AvisosPrecios avisos={avisosPrecios(datos, ahora)} />}
         {pestana === 'lista' && <PantallaLista datos={datos} ahora={ahora} />}
-        {pestana === 'necesidades' && <PantallaNecesidades />}
+        {pestana === 'necesidades' && <PantallaNecesidades sub={sub} />}
         {pestana === 'lidl' && <PantallaLidl />}
         {pestana === 'ajustes' && (
           <PantallaAjustes datos={datos} ahora={ahora} guardados={guardados} error={error} />

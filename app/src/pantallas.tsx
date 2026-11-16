@@ -1,4 +1,5 @@
 import { ComoInstalar } from './componentes/Banderas.tsx';
+import { CopiaSeguridad } from './componentes/CopiaSeguridad.tsx';
 import { Diagnostico } from './componentes/Diagnostico.tsx';
 import { DetallePrecios, FechaPrecios } from './componentes/EstadoPrecios.tsx';
 import { fechaHora } from './estado.ts';
@@ -24,18 +25,6 @@ export function PantallaLista({ datos, ahora }: Props) {
       <Proximamente titulo="Tu lista aparecerá aquí">
         Cuando añadas tus necesidades y elijas qué producto compras en cada tienda, Cesta Lista
         repartirá la compra entre Mercadona, Consum y Lidl para que gastes lo mínimo.
-      </Proximamente>
-    </>
-  );
-}
-
-export function PantallaNecesidades() {
-  return (
-    <>
-      <h1>Mis necesidades</h1>
-      <Proximamente titulo="Próximamente">
-        Aquí apuntarás lo que compras, con su cantidad y cada cuánto: por ejemplo, pechuga de pollo,
-        1,5 kg a la semana.
       </Proximamente>
     </>
   );
@@ -76,6 +65,7 @@ export function PantallaAjustes({
           <p class="secundario">{error ?? 'Cargando precios…'}</p>
         )}
       </section>
+      <CopiaSeguridad />
       <ComoInstalar />
       <Diagnostico guardados={guardados} error={error} />
       <section class="tarjeta">
