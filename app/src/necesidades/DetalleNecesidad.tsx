@@ -1,11 +1,11 @@
 import { useState } from 'preact/hooks';
 import { Icono } from '../componentes/Icono.tsx';
 import { InfoProducto } from '../componentes/Producto.tsx';
-import { NOMBRE_TIENDA } from '../estado.ts';
+import { Punto } from '../componentes/Tienda.tsx';
 import { unidadDeComparacion } from '../formato.ts';
-import { useLidl } from '../lidl/estado.ts';
-import { notaLidl } from '../lidl/PantallaLidl.tsx';
-import { precioAntiguo } from '../lidl/modelo.ts';
+import { useTiendas } from '../tiendas/estado.ts';
+import type { IdTienda, InfoTienda } from '../tiendas/modelo.ts';
+import { notaPrecio, precioAntiguo } from '../tiendas/productos.ts';
 import type { ProductoApp } from '../tipos.ts';
 import { guardar } from './estado.ts';
 import {
@@ -14,25 +14,27 @@ import {
   noComprarEn,
   quitarEquivalencia,
   textoNecesidad,
-  TIENDAS_EQUIVALENCIA,
   type Necesidad,
-  type TiendaEquivalencia,
 } from './modelo.ts';
 
 const ir = (ruta: string) => {
   location.hash = ruta;
 };
 
-/** Detalle de una necesidad: el producto elegido en cada tienda. */
+/** Detalle de una necesidad: el producto elegido en cada tienda encendida. */
 export function DetalleNecesidad({
   necesidad,
   buscarProducto,
+  tiendas,
 }: {
   necesidad: Necesidad;
-  buscarProducto: ((tienda: TiendaEquivalencia, id: string) => ProductoApp | undefined) | null;
+  buscarProducto: ((tienda: IdTienda, id: string) => ProductoApp | undefined) | null;
+  tiendas: InfoTienda[] | null;
 }) {
   const [fallo, setFallo] = useState<string | null>(null);
-  const { productos: lidl } = useLidl();
+  const { productos: propios } = useTiendas();
+  const activas = (tiendas ?? []).filter((t) => t.activa);
+  const apagadas = (tiendas ?? []).filter((t) => !t.activa);
   const hoy = new Date();
   const cambiar = async (nueva: Necesidad) => {
     try {
@@ -65,20 +67,21 @@ export function DetalleNecesidad({
           <span>{fallo}</span>
         </p>
       )}
-      {!buscarProducto && <p class="secundario">Cargando precios…</p>}
+      {(!buscarProducto || !tiendas) && <p class="secundario">Cargando precios…</p>}
       {buscarProducto &&
-        TIENDAS_EQUIVALENCIA.map((tienda) => {
-          const nombre = NOMBRE_TIENDA[tienda];
+        activas.map((info) => {
+          const tienda = info.id;
+          const nombre = info.nombre;
           const elegir = `#necesidades/${necesidad.id}/elegir/${tienda}`;
           const estado = estadoEquivalencia(necesidad, tienda, buscarProducto);
-          const precioLidl =
-            tienda === 'lidl' && estado.tipo === 'elegido'
-              ? lidl?.find((p) => p.id === estado.producto.id)
+          const apuntado =
+            !info.automatica && estado.tipo === 'elegido'
+              ? propios?.find((p) => p.id === estado.producto.id)
               : undefined;
           return (
             <section key={tienda} class="tarjeta tienda">
               <h3 class="tienda__titulo">
-                <span class={`punto punto--${tienda}`} aria-hidden="true" /> {nombre}
+                <Punto color={info.color} /> {nombre}
               </h3>
               {estado.tipo === 'elegido' && (
                 <>
@@ -88,12 +91,15 @@ export function DetalleNecesidad({
                       comparable={
                         estado.producto.formato.unidad === unidadDeComparacion(necesidad.unidad)
                       }
-                      nota={precioLidl ? notaLidl(precioLidl, hoy) : undefined}
+                      nota={apuntado ? notaPrecio(apuntado, hoy) : undefined}
                     />
                   </div>
-                  {precioLidl && precioAntiguo(precioLidl, hoy) && (
-                    <a class="boton boton--ancho" href={`#lidl/${precioLidl.id}/${necesidad.id}`}>
-                      Actualizar el precio de Lidl
+                  {apuntado && precioAntiguo(apuntado, hoy) && (
+                    <a
+                      class="boton boton--ancho"
+                      href={`#tiendas/${tienda}/p/${apuntado.id}/${necesidad.id}`}
+                    >
+                      Actualizar el precio de {nombre}
                     </a>
                   )}
                   {estado.producto.formato.unidad !== unidadDeComparacion(necesidad.unidad) && (
@@ -124,8 +130,8 @@ export function DetalleNecesidad({
                   <p class="aviso aviso--atencion">
                     <Icono nombre="alerta" tamano={20} />
                     <span>
-                      {tienda === 'lidl'
-                        ? 'Has borrado de tus precios de Lidl el producto que elegiste. Elige otro.'
+                      {!info.automatica
+                        ? `Has borrado de ${nombre} el producto que elegiste. Elige otro.`
                         : `El producto que elegiste ya no está en ${nombre}. Elige otro: no se cambia solo por uno que se llame igual.`}
                     </span>
                   </p>
@@ -167,6 +173,12 @@ export function DetalleNecesidad({
             </section>
           );
         })}
+      {apagadas.length > 0 && (
+        <p class="secundario">
+          No salen las tiendas que has apagado ({apagadas.map((t) => t.nombre).join(', ')}). Las
+          puedes encender en <a href="#tiendas">Tiendas</a>.
+        </p>
+      )}
     </>
   );
 }

@@ -1,12 +1,11 @@
 import type { DatosApp, EstadoTienda, Tienda } from './tipos.ts';
 
-/** Tiendas cuyos precios llegan en app.json (Lidl va a mano). */
+/** Tiendas cuyos precios llegan en app.json (las demás van a mano). */
 export const TIENDAS_AUTOMATICAS = ['mercadona', 'consum'] as const satisfies readonly Tienda[];
 
 export const NOMBRE_TIENDA: Record<Tienda, string> = {
   mercadona: 'Mercadona',
   consum: 'Consum',
-  lidl: 'Lidl',
 };
 
 /** A partir de este tiempo, los precios de una tienda se consideran antiguos. */

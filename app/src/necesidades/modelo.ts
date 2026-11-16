@@ -1,4 +1,5 @@
 /** Necesidades: lo que hace falta comprar, con su cantidad y cada cuánto. */
+import type { IdTienda } from '../tiendas/modelo.ts';
 
 export const CATEGORIAS = ['alimentacion', 'limpieza', 'higiene', 'mascota'] as const;
 export type Categoria = (typeof CATEGORIAS)[number];
@@ -68,11 +69,12 @@ export type Necesidad = {
   actualizada: string;
 };
 
-export const TIENDAS_EQUIVALENCIA = ['mercadona', 'consum', 'lidl'] as const;
-export type TiendaEquivalencia = (typeof TIENDAS_EQUIVALENCIA)[number];
-
+/**
+ * Lo elegido en cada tienda, por el id de la tienda ('mercadona', 'consum' o el de una tienda
+ * propia, como 'lidl').
+ */
 export type Equivalencia = { id: string } | { noCompro: true };
-export type Equivalencias = Partial<Record<TiendaEquivalencia, Equivalencia>>;
+export type Equivalencias = Partial<Record<IdTienda, Equivalencia>>;
 
 /** Datos que rellena el usuario en el formulario. */
 export type BorradorNecesidad = Pick<
@@ -152,7 +154,7 @@ function limpiar(n: Necesidad): Necesidad {
 /** Elige un producto de una tienda para una necesidad (se guarda por id). */
 export function elegirProducto(
   n: Necesidad,
-  tienda: TiendaEquivalencia,
+  tienda: IdTienda,
   id: string,
   ahora: string,
 ): Necesidad {
@@ -160,7 +162,7 @@ export function elegirProducto(
 }
 
 /** Marca que esta necesidad no se compra en una tienda. */
-export function noComprarEn(n: Necesidad, tienda: TiendaEquivalencia, ahora: string): Necesidad {
+export function noComprarEn(n: Necesidad, tienda: IdTienda, ahora: string): Necesidad {
   return {
     ...n,
     equivalencias: { ...n.equivalencias, [tienda]: { noCompro: true } },
@@ -169,11 +171,7 @@ export function noComprarEn(n: Necesidad, tienda: TiendaEquivalencia, ahora: str
 }
 
 /** Quita la elección de una tienda (vuelve a «sin elegir»). */
-export function quitarEquivalencia(
-  n: Necesidad,
-  tienda: TiendaEquivalencia,
-  ahora: string,
-): Necesidad {
+export function quitarEquivalencia(n: Necesidad, tienda: IdTienda, ahora: string): Necesidad {
   const equivalencias = Object.fromEntries(
     Object.entries(n.equivalencias ?? {}).filter(([t]) => t !== tienda),
   ) as Equivalencias;
@@ -192,8 +190,8 @@ export type EstadoEquivalencia<P> =
 /** Estado de la equivalencia de una tienda, buscando el producto elegido por su id. */
 export function estadoEquivalencia<P>(
   n: Necesidad,
-  tienda: TiendaEquivalencia,
-  buscarProducto: (tienda: TiendaEquivalencia, id: string) => P | undefined,
+  tienda: IdTienda,
+  buscarProducto: (tienda: IdTienda, id: string) => P | undefined,
 ): EstadoEquivalencia<P> {
   const e = n.equivalencias?.[tienda];
   if (!e) return { tipo: 'sin-elegir' };

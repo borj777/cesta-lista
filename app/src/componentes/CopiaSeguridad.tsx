@@ -3,22 +3,22 @@ import { recargarAjustesCompra } from '../ajustes.ts';
 import { guardarAjuste, leerAjuste, leerTodo, reemplazarTodo } from '../almacen.ts';
 import { crearCopia, leerCopia, nombreArchivo, ofrecerArchivo, textoCopia } from '../copia.ts';
 import { fechaHora } from '../estado.ts';
-import { recargarLidl, useLidl } from '../lidl/estado.ts';
 import { recargarNecesidades, useNecesidades } from '../necesidades/estado.ts';
+import { recargarTiendas, useTiendas } from '../tiendas/estado.ts';
 import { Icono } from './Icono.tsx';
 
 type Mensaje = { tipo: 'bien' | 'error'; texto: string };
 const cosas = (n: number) => (n === 1 ? '1 necesidad' : `${n} necesidades`);
-/** "4 necesidades y 3 precios de Lidl" (sin la parte de Lidl si no hay ninguno). */
-const contenido = (necesidades: number, lidl: number) =>
-  lidl === 0
+/** "4 necesidades y 3 precios apuntados a mano" (sin la segunda parte si no hay ninguno). */
+const contenido = (necesidades: number, precios: number) =>
+  precios === 0
     ? cosas(necesidades)
-    : `${cosas(necesidades)} y ${lidl === 1 ? '1 precio' : `${lidl} precios`} de Lidl`;
+    : `${cosas(necesidades)} y ${precios === 1 ? '1 precio apuntado' : `${precios} precios apuntados`} a mano`;
 
 /** Ajustes → Copia de seguridad: exportar e importar todos los datos en un archivo. */
 export function CopiaSeguridad() {
   const { necesidades } = useNecesidades();
-  const { productos: lidl } = useLidl();
+  const { productos: propios } = useTiendas();
   const [ultima, setUltima] = useState<string | null>(null);
   const [mensaje, setMensaje] = useState<Mensaje | null>(null);
   const [ocupado, setOcupado] = useState(false);
@@ -40,7 +40,7 @@ export function CopiaSeguridad() {
         setUltima(copia.exportada);
         setMensaje({
           tipo: 'bien',
-          texto: `Copia creada con ${contenido(copia.necesidades.length, copia.lidl.length)}. Guárdala en Archivos o en iCloud.`,
+          texto: `Copia creada con ${contenido(copia.necesidades.length, copia.productos.length)}. Guárdala en Archivos o en iCloud.`,
         });
       }
     } catch (error) {
@@ -61,9 +61,9 @@ export function CopiaSeguridad() {
       return;
     }
     const { copia } = lectura;
-    const actuales = contenido(necesidades?.length ?? 0, lidl?.length ?? 0);
+    const actuales = contenido(necesidades?.length ?? 0, propios?.length ?? 0);
     const confirmado = confirm(
-      `La copia del ${fechaHora(copia.exportada)} tiene ${contenido(copia.necesidades.length, copia.lidl.length)}. ` +
+      `La copia del ${fechaHora(copia.exportada)} tiene ${contenido(copia.necesidades.length, copia.productos.length)}. ` +
         `Sustituirá lo que tienes ahora en este iPhone (${actuales}). ¿Continuar?`,
     );
     if (!confirmado) return;
@@ -75,11 +75,11 @@ export function CopiaSeguridad() {
         ...copia,
         ajustes: { ...copia.ajustes, ultimaCopia: copia.exportada },
       });
-      await Promise.all([recargarNecesidades(), recargarLidl(), recargarAjustesCompra()]);
+      await Promise.all([recargarNecesidades(), recargarTiendas(), recargarAjustesCompra()]);
       setUltima(copia.exportada);
       setMensaje({
         tipo: 'bien',
-        texto: `Copia importada: ${contenido(copia.necesidades.length, copia.lidl.length)}.`,
+        texto: `Copia importada: ${contenido(copia.necesidades.length, copia.productos.length)}.`,
       });
     } catch (error) {
       setMensaje({
@@ -96,8 +96,9 @@ export function CopiaSeguridad() {
       <h2>Copia de seguridad</h2>
       <p class="secundario">
         Tus datos se guardan solo en este iPhone
-        {necesidades ? ` (${contenido(necesidades.length, lidl?.length ?? 0)})` : ''}. Haz una copia
-        de vez en cuando y guárdala en Archivos o en iCloud por si cambias de móvil o borras la app.
+        {necesidades ? ` (${contenido(necesidades.length, propios?.length ?? 0)})` : ''}. Haz una
+        copia de vez en cuando y guárdala en Archivos o en iCloud por si cambias de móvil o borras
+        la app.
       </p>
       <p class="secundario">Última copia: {ultima ? fechaHora(ultima) : 'todavía ninguna'}.</p>
       {mensaje && (

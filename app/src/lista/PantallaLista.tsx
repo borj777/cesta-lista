@@ -4,11 +4,12 @@ import { useCatalogo } from '../catalogo.ts';
 import { ComoInstalar } from '../componentes/Banderas.tsx';
 import { FechaPrecios } from '../componentes/EstadoPrecios.tsx';
 import { Icono } from '../componentes/Icono.tsx';
-import { NOMBRE_TIENDA } from '../estado.ts';
+import { NombreTienda } from '../componentes/Tienda.tsx';
 import { hoyEnEspana, textoFormato, textoPrecio } from '../formato.ts';
-import { useLidl } from '../lidl/estado.ts';
-import { precioAntiguo } from '../lidl/modelo.ts';
 import { useNecesidades } from '../necesidades/estado.ts';
+import { useTiendas } from '../tiendas/estado.ts';
+import type { InfoTienda } from '../tiendas/modelo.ts';
+import { precioAntiguo } from '../tiendas/productos.ts';
 import type { Necesidad } from '../necesidades/modelo.ts';
 import {
   planificar,
@@ -20,8 +21,8 @@ import {
 import type { DatosApp } from '../tipos.ts';
 
 /** "Consum", "Consum y Lidl", "Mercadona, Consum y Lidl". */
-export function nombresTiendas(tiendas: Tiendas): string {
-  const nombres = tiendas.map((t) => NOMBRE_TIENDA[t]);
+export function nombresTiendas(tiendas: Tiendas, info: readonly InfoTienda[]): string {
+  const nombres = tiendas.map((t) => info.find((i) => i.id === t)?.nombre ?? t);
   return nombres.length === 1
     ? (nombres[0] ?? '')
     : `${nombres.slice(0, -1).join(', ')} y ${nombres.at(-1) ?? ''}`;
@@ -32,32 +33,37 @@ const euros = textoPrecio;
 /** Lista de compra: en qué tiendas comprar y qué comprar en cada una. */
 export function PantallaLista({ datos, ahora }: { datos: DatosApp | null; ahora: Date }) {
   const { necesidades } = useNecesidades();
-  const { productos: lidl } = useLidl();
+  const { productos: propios, lista: tiendas } = useTiendas();
   const ajustes = useAjustesCompra();
   const { buscarProducto } = useCatalogo(datos);
   const hoy = hoyEnEspana(ahora);
 
   const plan = useMemo(
     () =>
-      necesidades && buscarProducto && ajustes
+      necesidades && buscarProducto && ajustes && tiendas
         ? planificar(necesidades, buscarProducto, {
             semanas: semanasDe(ajustes.periodo),
             costeVisita: ajustes.costeVisita,
             hoy,
+            tiendas: tiendas.filter((t) => t.activa).map((t) => t.id),
           })
         : null,
-    [necesidades, buscarProducto, ajustes, hoy],
+    [necesidades, buscarProducto, ajustes, hoy, tiendas],
   );
 
-  // Precios de Lidl con más de 30 días que se usan en la compra elegida.
-  const lidlAntiguos = useMemo(() => {
+  // Precios apuntados a mano con más de 30 días que se usan en la compra elegida.
+  const antiguos = useMemo(() => {
     const ids = new Set(
-      plan?.mejor?.compras
-        .filter((c) => c.opcion.tienda === 'lidl')
-        .map((c) => c.opcion.producto.id),
+      plan?.mejor?.compras.map((c) => `${c.opcion.tienda}:${c.opcion.producto.id}`),
     );
-    return (lidl ?? []).filter((p) => ids.has(p.id) && precioAntiguo(p, ahora));
-  }, [plan, lidl, ahora]);
+    return (propios ?? [])
+      .filter((p) => ids.has(`${p.tienda}:${p.id}`) && precioAntiguo(p, ahora))
+      .map((p) => ({
+        nombre: p.nombre,
+        tienda: tiendas?.find((t) => t.id === p.tienda)?.nombre ?? '',
+        enlace: `#tiendas/${p.tienda}/p/${p.id}`,
+      }));
+  }, [plan, propios, tiendas, ahora]);
 
   return (
     <>
@@ -69,7 +75,8 @@ export function PantallaLista({ datos, ahora }: { datos: DatosApp | null; ahora:
           <h2>Apunta lo que compras</h2>
           <p class="secundario">
             Añade tus necesidades y elige qué producto compras en cada tienda. Cesta Lista repartirá
-            la compra entre Mercadona, Consum y Lidl para que gastes lo mínimo.
+            la compra entre Mercadona, Consum, Lidl y las tiendas que añadas para que gastes lo
+            mínimo.
           </p>
           <a class="boton boton--principal boton--ancho" href="#necesidades/nueva">
             Añadir la primera
@@ -79,10 +86,15 @@ export function PantallaLista({ datos, ahora }: { datos: DatosApp | null; ahora:
       {necesidades && necesidades.length > 0 && !plan && (
         <p class="secundario">Calculando la compra más barata…</p>
       )}
-      {plan && ajustes && (
+      {plan && ajustes && tiendas && (
         <>
           {plan.mejor ? (
-            <ResumenPlan plan={plan} mejor={plan.mejor} periodo={NOMBRE_PERIODO[ajustes.periodo]} />
+            <ResumenPlan
+              plan={plan}
+              mejor={plan.mejor}
+              periodo={NOMBRE_PERIODO[ajustes.periodo]}
+              tiendas={tiendas}
+            />
           ) : (
             <section class="tarjeta">
               <h2>Elige qué compras en cada tienda</h2>
@@ -95,31 +107,42 @@ export function PantallaLista({ datos, ahora }: { datos: DatosApp | null; ahora:
               </a>
             </section>
           )}
-          <Avisos plan={plan} lidlAntiguos={lidlAntiguos.map((p) => p.nombre)} />
-          {plan.mejor && <ComprasPorTienda mejor={plan.mejor} />}
-          {plan.mejor && <OtrasOpciones plan={plan} mejor={plan.mejor} />}
+          <Avisos plan={plan} antiguos={antiguos} tiendas={tiendas} />
+          {plan.mejor && <ComprasPorTienda mejor={plan.mejor} tiendas={tiendas} />}
+          {plan.mejor && <OtrasOpciones plan={plan} mejor={plan.mejor} tiendas={tiendas} />}
         </>
       )}
     </>
   );
 }
 
-function ResumenPlan({ plan, mejor, periodo }: { plan: Plan; mejor: Resultado; periodo: string }) {
+function ResumenPlan({
+  plan,
+  mejor,
+  periodo,
+  tiendas,
+}: {
+  plan: Plan;
+  mejor: Resultado;
+  periodo: string;
+  tiendas: InfoTienda[];
+}) {
   const { unaTienda, ahorro } = plan;
+  const nombres = (t: Tiendas) => nombresTiendas(t, tiendas);
   return (
     <section class="tarjeta tarjeta--destacada plan">
       <p class="plan__periodo">Compra para {periodo}</p>
       <h2 class="plan__titulo">
         {mejor.tiendas.length === 1 ? 'Ve solo a ' : 'Ve a '}
-        {nombresTiendas(mejor.tiendas)}
+        {nombres(mejor.tiendas)}
       </h2>
       <p class="plan__total">{euros(mejor.costeProductos)}</p>
       <p>
         {unaTienda === null
           ? 'Ninguna tienda tiene todo lo que compras: hace falta ir a varias.'
           : unaTienda === mejor || !ahorro
-            ? `Es lo más barato: comprarlo todo en ${NOMBRE_TIENDA[mejor.tiendas[0] ?? 'mercadona']}.`
-            : `Ahorras ${euros(ahorro)} frente a comprarlo todo en ${nombresTiendas(unaTienda.tiendas)}.`}
+            ? `Es lo más barato: comprarlo todo en ${nombres(mejor.tiendas)}.`
+            : `Ahorras ${euros(ahorro)} frente a comprarlo todo en ${nombres(unaTienda.tiendas)}.`}
       </p>
       {mejor.costeVisitas > 0 && (
         <p class="secundario">
@@ -131,7 +154,16 @@ function ResumenPlan({ plan, mejor, periodo }: { plan: Plan; mejor: Resultado; p
   );
 }
 
-function Avisos({ plan, lidlAntiguos }: { plan: Plan; lidlAntiguos: string[] }) {
+function Avisos({
+  plan,
+  antiguos,
+  tiendas,
+}: {
+  plan: Plan;
+  antiguos: { nombre: string; tienda: string; enlace: string }[];
+  tiendas: InfoTienda[];
+}) {
+  const apagadas = tiendas.filter((t) => !t.activa);
   const enlaces = (necesidades: Necesidad[]) =>
     necesidades.map((n, i) => (
       <span key={n.id}>
@@ -152,7 +184,8 @@ function Avisos({ plan, lidlAntiguos }: { plan: Plan; lidlAntiguos: string[] }) 
         <p class="aviso aviso--atencion">
           <Icono nombre="alerta" tamano={20} />
           <span>
-            Sin producto elegido en ninguna tienda (no se cuentan): {enlaces(plan.sinProducto)}.
+            Sin producto elegido en ninguna tienda
+            {apagadas.length > 0 ? ' encendida' : ''} (no se cuentan): {enlaces(plan.sinProducto)}.
           </span>
         </p>
       )}
@@ -174,12 +207,20 @@ function Avisos({ plan, lidlAntiguos }: { plan: Plan; lidlAntiguos: string[] }) 
           </span>
         </p>
       )}
-      {lidlAntiguos.length > 0 && (
+      {antiguos.length > 0 && (
         <p class="aviso aviso--atencion">
           <Icono nombre="alerta" tamano={20} />
           <span>
-            Precios de Lidl con más de 30 días: {lidlAntiguos.join(', ')}.{' '}
-            <a href="#lidl">Compruébalos</a>.
+            Precios con más de 30 días; compruébalos:{' '}
+            {antiguos.map((p, i) => (
+              <span key={p.enlace}>
+                {i > 0 && ', '}
+                <a href={p.enlace}>
+                  {p.nombre} ({p.tienda})
+                </a>
+              </span>
+            ))}
+            .
           </span>
         </p>
       )}
@@ -210,19 +251,18 @@ function FilaCompra({ compra }: { compra: Compra }) {
   );
 }
 
-function ComprasPorTienda({ mejor }: { mejor: Resultado }) {
+function ComprasPorTienda({ mejor, tiendas }: { mejor: Resultado; tiendas: InfoTienda[] }) {
   return (
     <>
       {mejor.tiendas.map((tienda) => {
+        const info = tiendas.find((t) => t.id === tienda);
         const compras = mejor.compras.filter((c) => c.opcion.tienda === tienda);
         if (compras.length === 0) return null;
         const total = compras.reduce((suma, c) => suma + c.opcion.coste, 0);
         return (
           <section key={tienda} class="grupo">
             <h2 class="grupo__titulo grupo__titulo--tienda">
-              <span>
-                <span class={`punto punto--${tienda}`} aria-hidden="true" /> {NOMBRE_TIENDA[tienda]}
-              </span>
+              <span>{info ? <NombreTienda tienda={info} /> : tienda}</span>
               <span>{euros(total)}</span>
             </h2>
             <ul class="filas tarjeta tarjeta--lista">
@@ -237,8 +277,17 @@ function ComprasPorTienda({ mejor }: { mejor: Resultado }) {
   );
 }
 
-function OtrasOpciones({ plan, mejor }: { plan: Plan; mejor: Resultado }) {
+function OtrasOpciones({
+  plan,
+  mejor,
+  tiendas,
+}: {
+  plan: Plan;
+  mejor: Resultado;
+  tiendas: InfoTienda[];
+}) {
   const otras = plan.combinaciones.filter((r) => r !== mejor);
+  if (otras.length === 0) return null;
   return (
     <section class="grupo">
       <h2 class="grupo__titulo grupo__titulo--separado">Otras formas de repartir la compra</h2>
@@ -246,7 +295,7 @@ function OtrasOpciones({ plan, mejor }: { plan: Plan; mejor: Resultado }) {
         {otras.map((r) => (
           <li key={r.tiendas.join()} class="fila">
             <div class="fila__texto">
-              <span>{nombresTiendas(r.tiendas)}</span>
+              <span>{nombresTiendas(r.tiendas, tiendas)}</span>
               <span class="secundario">
                 {r.completa
                   ? r.costeVisitas > 0

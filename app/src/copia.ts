@@ -3,24 +3,29 @@
  * donde quiera (Archivos, iCloud, correo...) y puede volver a importar.
  */
 import type { ContenidoBD } from './almacen.ts';
-import { problemaProductoLidl, type ProductoLidl } from './lidl/modelo.ts';
 import {
   CATEGORIAS,
   FRECUENCIAS,
-  TIENDAS_EQUIVALENCIA,
   UNIDADES_NECESIDAD,
   type Necesidad,
 } from './necesidades/modelo.ts';
+import { crearLidl, esAutomatica, problemaTienda, type TiendaPropia } from './tiendas/modelo.ts';
+import { problemaProducto, type ProductoPropio } from './tiendas/productos.ts';
 
-/** Sube cuando cambie el formato de la copia, para poder convertir las antiguas. */
-export const VERSION_COPIA = 1;
+/**
+ * Sube cuando cambie el formato de la copia, para poder convertir las antiguas.
+ * Versión 1: necesidades, lidl (precios de Lidl) y ajustes.
+ * Versión 2: necesidades, tiendas (las propias), productos (de las tiendas propias) y ajustes.
+ */
+export const VERSION_COPIA = 2;
 
 export type Copia = {
   app: 'cesta-lista';
   version: number;
   exportada: string;
   necesidades: Necesidad[];
-  lidl: ProductoLidl[];
+  tiendas: TiendaPropia[];
+  productos: ProductoPropio[];
   ajustes: Record<string, unknown>;
 };
 
@@ -30,7 +35,8 @@ export function crearCopia(contenido: ContenidoBD, ahora: string): Copia {
     version: VERSION_COPIA,
     exportada: ahora,
     necesidades: contenido.necesidades,
-    lidl: contenido.lidl,
+    tiendas: contenido.tiendas,
+    productos: contenido.productos,
     ajustes: contenido.ajustes,
   };
 }
@@ -57,7 +63,10 @@ const esObjeto = (v: unknown): v is Record<string, unknown> =>
 const esFecha = (v: unknown): v is string => typeof v === 'string' && !Number.isNaN(Date.parse(v));
 
 /** Motivo por el que una necesidad de la copia no es válida, o null si lo es. */
-function problemaNecesidad(n: Record<string, unknown>): string | null {
+function problemaNecesidad(
+  n: Record<string, unknown>,
+  tiendas: ReadonlySet<string>,
+): string | null {
   if (typeof n.id !== 'string' || !n.id) return 'le falta el identificador';
   if (typeof n.nombre !== 'string' || !n.nombre.trim()) return 'le falta el nombre';
   if (!CATEGORIAS.includes(n.categoria as never)) return 'la categoría no es válida';
@@ -71,8 +80,8 @@ function problemaNecesidad(n: Record<string, unknown>): string | null {
   if (n.equivalencias !== undefined) {
     if (!esObjeto(n.equivalencias)) return 'los productos elegidos no son válidos';
     for (const [tienda, e] of Object.entries(n.equivalencias)) {
-      if (!TIENDAS_EQUIVALENCIA.includes(tienda as never)) {
-        return `la tienda «${tienda}» no es válida`;
+      if (!esAutomatica(tienda) && !tiendas.has(tienda)) {
+        return `la tienda «${tienda}» no existe`;
       }
       const valida =
         esObjeto(e) &&
@@ -111,41 +120,88 @@ export function leerCopia(texto: string): ResultadoLectura {
       error: 'La copia no contiene la lista de necesidades: puede estar dañada.',
     };
   }
+  const ajustes = datos.ajustes === undefined ? {} : datos.ajustes;
+  if (!esObjeto(ajustes)) {
+    return { ok: false, error: 'La copia tiene partes dañadas y no se puede importar.' };
+  }
+
+  // Las copias de la versión 1 solo tenían los precios de Lidl: pasan a la tienda «Lidl».
+  let tiendas: unknown;
+  let productos: unknown;
+  if (datos.version === 1) {
+    const lidl = datos.lidl === undefined ? [] : datos.lidl;
+    if (!Array.isArray(lidl)) {
+      return { ok: false, error: 'La copia tiene partes dañadas y no se puede importar.' };
+    }
+    const exportada = esFecha(datos.exportada) ? datos.exportada : new Date(0).toISOString();
+    tiendas = [crearLidl(exportada)];
+    productos = lidl.map((p: unknown) => (esObjeto(p) ? { ...p, tienda: 'lidl' } : p));
+  } else {
+    tiendas = datos.tiendas;
+    productos = datos.productos;
+  }
+  if (!Array.isArray(tiendas) || !Array.isArray(productos)) {
+    return { ok: false, error: 'La copia tiene partes dañadas y no se puede importar.' };
+  }
+
+  const nombreDe = (x: unknown) =>
+    esObjeto(x) && typeof x.nombre === 'string' && x.nombre.trim() ? ` («${x.nombre}»)` : '';
+
+  const idsTiendas = new Set<string>();
+  for (const [i, t] of tiendas.entries()) {
+    const problema = esObjeto(t) ? problemaTienda(t) : 'no tiene el formato esperado';
+    if (problema) {
+      return {
+        ok: false,
+        error: `La tienda n.º ${i + 1}${nombreDe(t)} no es válida: ${problema}.`,
+      };
+    }
+    const id = (t as TiendaPropia).id;
+    if (idsTiendas.has(id)) {
+      return { ok: false, error: `La tienda n.º ${i + 1}${nombreDe(t)} está repetida.` };
+    }
+    idsTiendas.add(id);
+  }
+  const nombreTienda = new Map((tiendas as TiendaPropia[]).map((t) => [t.id, t.nombre]));
 
   const ids = new Set<string>();
   for (const [i, n] of datos.necesidades.entries()) {
-    const nombre = esObjeto(n) && typeof n.nombre === 'string' ? ` («${n.nombre}»)` : '';
-    const problema = esObjeto(n) ? problemaNecesidad(n) : 'no tiene el formato esperado';
+    const problema = esObjeto(n)
+      ? problemaNecesidad(n, idsTiendas)
+      : 'no tiene el formato esperado';
     if (problema) {
-      return { ok: false, error: `La necesidad n.º ${i + 1}${nombre} no es válida: ${problema}.` };
+      return {
+        ok: false,
+        error: `La necesidad n.º ${i + 1}${nombreDe(n)} no es válida: ${problema}.`,
+      };
     }
     const id = (n as Necesidad).id;
     if (ids.has(id)) {
-      return { ok: false, error: `La necesidad n.º ${i + 1}${nombre} está repetida.` };
+      return { ok: false, error: `La necesidad n.º ${i + 1}${nombreDe(n)} está repetida.` };
     }
     ids.add(id);
   }
 
-  const lidl = datos.lidl === undefined ? [] : datos.lidl;
-  const ajustes = datos.ajustes === undefined ? {} : datos.ajustes;
-  if (!Array.isArray(lidl) || !esObjeto(ajustes)) {
-    return { ok: false, error: 'La copia tiene partes dañadas y no se puede importar.' };
-  }
-  const idsLidl = new Set<string>();
-  for (const [i, p] of lidl.entries()) {
-    const nombre = esObjeto(p) && typeof p.nombre === 'string' ? ` («${p.nombre}»)` : '';
-    const problema = esObjeto(p) ? problemaProductoLidl(p) : 'no tiene el formato esperado';
+  const idsProductos = new Set<string>();
+  for (const [i, p] of productos.entries()) {
+    const tienda = esObjeto(p) && typeof p.tienda === 'string' ? p.tienda : '';
+    const deTienda = nombreTienda.get(tienda) ?? 'tus tiendas';
+    let problema = esObjeto(p) ? problemaProducto(p) : 'no tiene el formato esperado';
+    if (!problema && !idsTiendas.has(tienda)) problema = `la tienda «${tienda}» no existe`;
     if (problema) {
       return {
         ok: false,
-        error: `El producto de Lidl n.º ${i + 1}${nombre} no es válido: ${problema}.`,
+        error: `El producto de ${deTienda} n.º ${i + 1}${nombreDe(p)} no es válido: ${problema}.`,
       };
     }
-    const id = (p as ProductoLidl).id;
-    if (idsLidl.has(id)) {
-      return { ok: false, error: `El producto de Lidl n.º ${i + 1}${nombre} está repetido.` };
+    const id = (p as ProductoPropio).id;
+    if (idsProductos.has(id)) {
+      return {
+        ok: false,
+        error: `El producto de ${deTienda} n.º ${i + 1}${nombreDe(p)} está repetido.`,
+      };
     }
-    idsLidl.add(id);
+    idsProductos.add(id);
   }
 
   return {
@@ -155,7 +211,8 @@ export function leerCopia(texto: string): ResultadoLectura {
       version: datos.version,
       exportada: esFecha(datos.exportada) ? datos.exportada : new Date(0).toISOString(),
       necesidades: datos.necesidades as Necesidad[],
-      lidl: lidl as ProductoLidl[],
+      tiendas: tiendas as TiendaPropia[],
+      productos: productos as ProductoPropio[],
       ajustes,
     },
   };

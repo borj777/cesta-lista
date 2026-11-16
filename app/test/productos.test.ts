@@ -4,21 +4,23 @@ import {
   aFormato,
   aProductoApp,
   confirmarPrecio,
-  crearProductoLidl,
+  crearProducto,
   deFormato,
   diasDesde,
-  editarProductoLidl,
+  editarProducto,
   leerPrecio,
+  notaPrecio,
   precioAntiguo,
-  problemaProductoLidl,
+  problemaProducto,
   textoAntiguedad,
-  validarBorradorLidl,
-} from '../src/lidl/modelo.ts';
+  validarBorradorProducto,
+} from '../src/tiendas/productos.ts';
 
 const AHORA = '2026-11-16T10:00:00.000Z';
 const LUEGO = '2026-11-20T10:00:00.000Z';
 
-const leche = crearProductoLidl(
+const leche = crearProducto(
+  'lidl',
   { nombre: ' Leche semidesnatada ', marca: 'Milbona', cantidad: 6, unidad: 'l', precio: 4.74 },
   AHORA,
   'leche',
@@ -58,6 +60,7 @@ describe('crear y editar', () => {
   it('limpia espacios y guarda la fecha del precio', () => {
     expect(leche).toEqual({
       id: 'leche',
+      tienda: 'lidl',
       nombre: 'Leche semidesnatada',
       marca: 'Milbona',
       formato: { cantidad: 6, unidad: 'l' },
@@ -68,7 +71,7 @@ describe('crear y editar', () => {
   });
 
   it('pide nombre, cantidad y precio', () => {
-    expect(validarBorradorLidl({ nombre: '', cantidad: null, precio: null })).toEqual({
+    expect(validarBorradorProducto({ nombre: '', cantidad: null, precio: null })).toEqual({
       nombre: 'Escribe el nombre del producto.',
       cantidad: 'Escribe cuánto trae el envase, por ejemplo 500 (g) o 1 (litro).',
       precio: 'Escribe el precio del envase con 2 decimales como mucho, por ejemplo 1,29.',
@@ -76,7 +79,7 @@ describe('crear y editar', () => {
   });
 
   it('cambiar el precio actualiza la fecha', () => {
-    const p = editarProductoLidl(
+    const p = editarProducto(
       leche,
       { nombre: 'Leche semidesnatada', marca: 'Milbona', cantidad: 6, unidad: 'l', precio: 4.98 },
       LUEGO,
@@ -85,7 +88,7 @@ describe('crear y editar', () => {
   });
 
   it('corregir solo el nombre no hace que un precio antiguo parezca nuevo', () => {
-    const p = editarProductoLidl(
+    const p = editarProducto(
       leche,
       { nombre: 'Leche semi', marca: '', cantidad: 6, unidad: 'l', precio: 4.74 },
       LUEGO,
@@ -113,6 +116,20 @@ describe('antigüedad del precio', () => {
   it('avisa cuando el precio tiene más de 30 días', () => {
     expect(precioAntiguo(leche, new Date('2026-12-16T10:00:00Z'))).toBe(false); // 30 días
     expect(precioAntiguo(leche, new Date('2026-12-17T10:00:00Z'))).toBe(true); // 31 días
+    expect(notaPrecio(leche, new Date('2026-12-17T10:00:00Z'))).toEqual({
+      texto: 'Precio comprobado hace 31 días: compruébalo',
+      atencion: true,
+    });
+  });
+
+  it('los productos de otras tiendas propias funcionan igual', () => {
+    const fruteria = crearProducto(
+      'fruteria',
+      { nombre: 'Naranjas', cantidad: 2, unidad: 'kg', precio: 2.5 },
+      AHORA,
+      'naranjas',
+    );
+    expect(aProductoApp(fruteria)).toMatchObject({ tienda: 'fruteria', precioRef: 1.25 });
   });
 });
 
@@ -131,7 +148,8 @@ describe('comparar con las otras tiendas', () => {
 
   it('se puede buscar entre los productos de Lidl, y sin búsqueda salen todos', () => {
     const huevos = aProductoApp(
-      crearProductoLidl(
+      crearProducto(
+        'lidl',
         { nombre: 'Huevos camperos', cantidad: 12, unidad: 'ud', precio: 3.19 },
         AHORA,
         'h',
@@ -153,13 +171,14 @@ describe('comparar con las otras tiendas', () => {
   });
 });
 
-describe('problemaProductoLidl (copias de seguridad)', () => {
+describe('problemaProducto (copias de seguridad)', () => {
   it('acepta un producto creado por la app', () => {
-    expect(problemaProductoLidl(leche)).toBeNull();
+    expect(problemaProducto(leche)).toBeNull();
   });
 
   it.each([
     ['sin nombre', { ...leche, nombre: '' }, 'le falta el nombre'],
+    ['sin tienda', { ...leche, tienda: undefined }, 'le falta la tienda'],
     ['sin formato', { ...leche, formato: null }, 'el formato no es válido'],
     [
       'con cantidad cero',
@@ -170,6 +189,6 @@ describe('problemaProductoLidl (copias de seguridad)', () => {
     ['con precio en texto', { ...leche, precio: '4,74' }, 'el precio no es válido'],
     ['sin fecha', { ...leche, actualizado: 'ayer' }, 'las fechas no son válidas'],
   ])('rechaza un producto %s', (_caso, malo, motivo) => {
-    expect(problemaProductoLidl(malo as Record<string, unknown>)).toBe(motivo);
+    expect(problemaProducto(malo as Record<string, unknown>)).toBe(motivo);
   });
 });

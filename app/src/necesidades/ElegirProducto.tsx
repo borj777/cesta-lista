@@ -2,38 +2,39 @@ import { useMemo, useState } from 'preact/hooks';
 import { buscar } from '../buscador.ts';
 import { Icono } from '../componentes/Icono.tsx';
 import { InfoProducto } from '../componentes/Producto.tsx';
-import { NOMBRE_TIENDA } from '../estado.ts';
 import { unidadDeComparacion } from '../formato.ts';
-import { useLidl } from '../lidl/estado.ts';
-import { notaLidl } from '../lidl/PantallaLidl.tsx';
+import { useTiendas } from '../tiendas/estado.ts';
+import type { IdTienda, InfoTienda } from '../tiendas/modelo.ts';
+import { notaPrecio } from '../tiendas/productos.ts';
 import type { ProductoApp } from '../tipos.ts';
 import { guardar } from './estado.ts';
-import { elegirProducto, noComprarEn, type Necesidad, type TiendaEquivalencia } from './modelo.ts';
+import { elegirProducto, noComprarEn, type Necesidad } from './modelo.ts';
 
 const UNIDAD_TEXTO = { kg: '€/kg', l: '€/l', ud: '€/unidad', lavado: '€/lavado', m: '€/metro' };
 
 /**
- * Buscador para elegir qué producto de una tienda corresponde a una necesidad. En Lidl busca
- * entre los precios apuntados a mano y permite añadir uno nuevo.
+ * Buscador para elegir qué producto de una tienda corresponde a una necesidad. En las tiendas
+ * propias busca entre los precios apuntados a mano y permite añadir uno nuevo.
  */
 export function ElegirProducto({
   necesidad,
-  tienda,
+  info,
   productos,
   buscarProducto,
 }: {
   necesidad: Necesidad;
-  tienda: TiendaEquivalencia;
+  info: InfoTienda;
   productos: ProductoApp[];
-  buscarProducto: (tienda: TiendaEquivalencia, id: string) => ProductoApp | undefined;
+  buscarProducto: (tienda: IdTienda, id: string) => ProductoApp | undefined;
 }) {
+  const tienda = info.id;
   const [consulta, setConsulta] = useState(necesidad.nombre);
-  const esLidl = tienda === 'lidl';
-  const { productos: lidl } = useLidl();
-  const lidlPorId = useMemo(() => new Map((lidl ?? []).map((p) => [p.id, p])), [lidl]);
+  const esPropia = !info.automatica;
+  const { productos: propios } = useTiendas();
+  const propiosPorId = useMemo(() => new Map((propios ?? []).map((p) => [p.id, p])), [propios]);
   const ahora = new Date();
   const [fallo, setFallo] = useState<string | null>(null);
-  const nombreTienda = NOMBRE_TIENDA[tienda];
+  const nombreTienda = info.nombre;
   const unidad = unidadDeComparacion(necesidad.unidad);
   const volver = `necesidades/${necesidad.id}`;
   const elegidoAhora = necesidad.equivalencias?.[tienda];
@@ -44,23 +45,23 @@ export function ElegirProducto({
     const codigos = new Set<string>();
     for (const [otra, e] of Object.entries(necesidad.equivalencias ?? {})) {
       if (otra === tienda || !e || !('id' in e)) continue;
-      const ean = buscarProducto(otra as TiendaEquivalencia, e.id)?.ean;
+      const ean = buscarProducto(otra, e.id)?.ean;
       if (ean) codigos.add(ean);
     }
     return codigos;
   }, [necesidad, tienda, buscarProducto]);
 
   const resultado = useMemo(
-    () => buscar(productos, { consulta, tienda, unidad, eans, todosSiVacia: esLidl }),
-    [productos, consulta, tienda, unidad, eans, esLidl],
+    () => buscar(productos, { consulta, tienda, unidad, eans, todosSiVacia: esPropia }),
+    [productos, consulta, tienda, unidad, eans, esPropia],
   );
-  // En Lidl hay pocos productos: si la búsqueda no encuentra nada, se enseñan todos.
-  const todosLidl = useMemo(
+  // En las tiendas propias hay pocos productos: si la búsqueda no encuentra nada, salen todos.
+  const todosPropios = useMemo(
     () =>
-      esLidl
+      esPropia
         ? buscar(productos, { consulta: '', tienda, unidad, todosSiVacia: true, limite: 500 })
         : null,
-    [esLidl, productos, tienda, unidad],
+    [esPropia, productos, tienda, unidad],
   );
 
   const guardarYVolver = async (nueva: Necesidad) => {
@@ -75,7 +76,7 @@ export function ElegirProducto({
     void guardarYVolver(elegirProducto(necesidad, tienda, p.id, new Date().toISOString()));
 
   const fila = (p: ProductoApp, comparable: boolean) => {
-    const apuntado = esLidl ? lidlPorId.get(p.id) : undefined;
+    const apuntado = esPropia ? propiosPorId.get(p.id) : undefined;
     return (
       <li key={p.id}>
         <button
@@ -90,7 +91,7 @@ export function ElegirProducto({
           <InfoProducto
             producto={p}
             comparable={comparable}
-            nota={apuntado ? notaLidl(apuntado, ahora) : undefined}
+            nota={apuntado ? notaPrecio(apuntado, ahora) : undefined}
           />
         </button>
       </li>
@@ -99,23 +100,21 @@ export function ElegirProducto({
 
   const hayResultados =
     resultado.mismoCodigo.length + resultado.comparables.length + resultado.otros.length > 0;
-  const mostrarTodosLidl =
-    todosLidl !== null &&
+  const mostrarTodos =
+    todosPropios !== null &&
     !hayResultados &&
-    todosLidl.comparables.length + todosLidl.otros.length > 0;
-  const anadirLidl = (
+    todosPropios.comparables.length + todosPropios.otros.length > 0;
+  const anadirPropio = (
     <button
       type="button"
       class={
-        hayResultados || mostrarTodosLidl
-          ? 'boton boton--ancho'
-          : 'boton boton--principal boton--ancho'
+        hayResultados || mostrarTodos ? 'boton boton--ancho' : 'boton boton--principal boton--ancho'
       }
       onClick={() => {
-        location.hash = `lidl/nuevo/${necesidad.id}`;
+        location.hash = `tiendas/${tienda}/nuevo/${necesidad.id}`;
       }}
     >
-      Añadir un producto de Lidl
+      Añadir un producto de {nombreTienda}
     </button>
   );
 
@@ -139,13 +138,13 @@ export function ElegirProducto({
         />
       </div>
       <p class="secundario">
-        {esLidl && productos.length === 0
-          ? 'Todavía no has apuntado ningún precio de Lidl. Añade el producto que compras allí con su formato y su precio.'
+        {esPropia && !productos.some((p) => p.tienda === tienda)
+          ? `Todavía no has apuntado ningún precio de ${nombreTienda}. Añade el producto que compras allí con su formato y su precio.`
           : hayResultados
             ? `Ordenado por ${UNIDAD_TEXTO[unidad]}, del más barato al más caro. Toca uno para elegirlo.`
             : consulta.trim()
-              ? esLidl
-                ? 'Ninguno de tus productos de Lidl tiene esas palabras.'
+              ? esPropia
+                ? `Ninguno de tus productos de ${nombreTienda} tiene esas palabras.`
                 : 'No hay productos con esas palabras. Prueba con menos palabras o con otras.'
               : 'Escribe qué buscas, por ejemplo «leche semidesnatada».'}
       </p>
@@ -184,18 +183,20 @@ export function ElegirProducto({
         </p>
       )}
 
-      {mostrarTodosLidl && todosLidl && (
+      {mostrarTodos && todosPropios && (
         <>
-          <h2 class="grupo__titulo grupo__titulo--separado">Todos tus productos de Lidl</h2>
+          <h2 class="grupo__titulo grupo__titulo--separado">
+            Todos tus productos de {nombreTienda}
+          </h2>
           <ul class="filas tarjeta tarjeta--lista">
-            {todosLidl.comparables.map((p) => fila(p, true))}
-            {todosLidl.otros.map((p) => fila(p, false))}
+            {todosPropios.comparables.map((p) => fila(p, true))}
+            {todosPropios.otros.map((p) => fila(p, false))}
           </ul>
         </>
       )}
 
       <div class="acciones">
-        {esLidl && anadirLidl}
+        {esPropia && anadirPropio}
         <button
           type="button"
           class="boton boton--ancho"

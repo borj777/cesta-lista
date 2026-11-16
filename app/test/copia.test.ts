@@ -3,15 +3,18 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   cerrar,
   guardarAjuste,
-  guardarProductoLidl,
   guardarNecesidad,
+  guardarProducto,
+  guardarTiendaPropia,
   leerTodo,
   listarNecesidades,
   reemplazarTodo,
+  type ContenidoBD,
 } from '../src/almacen.ts';
 import { crearCopia, leerCopia, nombreArchivo, textoCopia, VERSION_COPIA } from '../src/copia.ts';
-import { crearProductoLidl } from '../src/lidl/modelo.ts';
 import { crearNecesidad, type Necesidad } from '../src/necesidades/modelo.ts';
+import { crearLidl, crearTienda } from '../src/tiendas/modelo.ts';
+import { crearProducto } from '../src/tiendas/productos.ts';
 
 const AHORA = '2026-11-16T10:00:00.000Z';
 
@@ -39,29 +42,79 @@ const detergente = crearNecesidad(
   'detergente',
 );
 
-const lecheLidl = crearProductoLidl(
+const lidl = crearLidl(AHORA);
+const fruteria = crearTienda('Frutería', [lidl], AHORA, 'fruteria');
+const lecheLidl = crearProducto(
+  'lidl',
   { nombre: 'Leche semidesnatada', marca: 'Milbona', cantidad: 6, unidad: 'l', precio: 4.74 },
   AHORA,
   'leche-lidl',
 );
+const naranjas = crearProducto(
+  'fruteria',
+  { nombre: 'Naranjas', cantidad: 2, unidad: 'kg', precio: 2.5 },
+  AHORA,
+  'naranjas',
+);
+/** Un producto de Lidl tal como se guardaba en las copias de la versión 1 (sin tienda). */
+const lecheLidlV1 = Object.fromEntries(
+  Object.entries(lecheLidl).filter(([clave]) => clave !== 'tienda'),
+);
 
-/** Copia válida con las necesidades dadas, como texto. */
+/** Copia válida (versión 2) con las necesidades dadas, como texto. */
 const copiaTexto = (necesidades: unknown[], extra: Record<string, unknown> = {}) =>
+  JSON.stringify({
+    app: 'cesta-lista',
+    version: 2,
+    exportada: AHORA,
+    necesidades,
+    tiendas: [lidl, fruteria],
+    productos: [],
+    ajustes: {},
+    ...extra,
+  });
+
+/** Copia de la versión 1 (solo con precios de Lidl), como texto. */
+const copiaV1 = (extra: Record<string, unknown> = {}) =>
   JSON.stringify({
     app: 'cesta-lista',
     version: 1,
     exportada: AHORA,
-    necesidades,
+    necesidades: [],
     lidl: [],
     ajustes: {},
     ...extra,
   });
 
+const vacio: ContenidoBD = { necesidades: [], tiendas: [], productos: [], ajustes: {} };
+
 describe('leerCopia', () => {
   it('acepta una copia creada por la app', () => {
-    const copia = crearCopia({ necesidades: [pollo, detergente], lidl: [], ajustes: {} }, AHORA);
+    const copia = crearCopia(
+      {
+        necesidades: [pollo, detergente],
+        tiendas: [lidl, fruteria],
+        productos: [lecheLidl, naranjas],
+        ajustes: { tiendasApagadas: ['consum'] },
+      },
+      AHORA,
+    );
+    expect(copia.version).toBe(2);
     const leida = leerCopia(textoCopia(copia));
     expect(leida).toEqual({ ok: true, copia });
+  });
+
+  it('una copia de la versión 1 pasa los precios de Lidl a la tienda «Lidl»', () => {
+    const conElegido = { ...pollo, equivalencias: { lidl: { id: 'leche-lidl' } } };
+    const r = leerCopia(copiaV1({ necesidades: [conElegido], lidl: [lecheLidlV1] }));
+    expect(r).toMatchObject({
+      ok: true,
+      copia: {
+        necesidades: [conElegido],
+        tiendas: [{ id: 'lidl', nombre: 'Lidl' }],
+        productos: [lecheLidl],
+      },
+    });
   });
 
   it('acepta una copia sin la parte de Lidl ni ajustes (versiones antiguas)', () => {
@@ -71,7 +124,10 @@ describe('leerCopia', () => {
       exportada: AHORA,
       necesidades: [pollo],
     });
-    expect(leerCopia(texto)).toMatchObject({ ok: true, copia: { lidl: [], ajustes: {} } });
+    expect(leerCopia(texto)).toMatchObject({
+      ok: true,
+      copia: { tiendas: [{ id: 'lidl' }], productos: [], ajustes: {} },
+    });
   });
 
   it.each([
@@ -104,23 +160,28 @@ describe('leerCopia', () => {
     ['sin fechas', { ...pollo, creada: 'ayer' }, 'las fechas no son válidas'],
   ])('rechaza una necesidad %s y dice cuál es', (_caso, mala, motivo) => {
     const r = leerCopia(copiaTexto([detergente, mala]));
+    const nombre = (mala as Necesidad).nombre.trim();
     expect(r).toEqual({
       ok: false,
-      error: `La necesidad n.º 2 («${(mala as Necesidad).nombre}») no es válida: ${motivo}.`,
+      error: `La necesidad n.º 2${nombre ? ` («${nombre}»)` : ''} no es válida: ${motivo}.`,
     });
   });
 
   it('acepta y conserva los productos elegidos en cada tienda', () => {
     const conElegidos = {
       ...pollo,
-      equivalencias: { mercadona: { id: '3819' }, consum: { noCompro: true } },
+      equivalencias: {
+        mercadona: { id: '3819' },
+        consum: { noCompro: true },
+        fruteria: { id: 'naranjas' },
+      },
     };
     const r = leerCopia(copiaTexto([conElegidos]));
     expect(r).toMatchObject({ ok: true, copia: { necesidades: [conElegidos] } });
   });
 
   it.each([
-    ['una tienda desconocida', { carrefour: { id: '1' } }, 'la tienda «carrefour» no es válida'],
+    ['una tienda que no existe', { carrefour: { id: '1' } }, 'la tienda «carrefour» no existe'],
     [
       'un producto sin id',
       { mercadona: { id: '' } },
@@ -136,15 +197,43 @@ describe('leerCopia', () => {
     });
   });
 
-  it('acepta y conserva los precios de Lidl', () => {
-    const r = leerCopia(copiaTexto([pollo], { lidl: [lecheLidl] }));
-    expect(r).toMatchObject({ ok: true, copia: { lidl: [lecheLidl] } });
+  it('acepta y conserva las tiendas propias y sus productos', () => {
+    const r = leerCopia(copiaTexto([pollo], { productos: [lecheLidl, naranjas] }));
+    expect(r).toMatchObject({
+      ok: true,
+      copia: { tiendas: [lidl, fruteria], productos: [lecheLidl, naranjas] },
+    });
   });
 
-  it('rechaza un precio de Lidl dañado y dice cuál es', () => {
+  it('rechaza un producto dañado y dice de qué tienda es', () => {
     const r = leerCopia(
-      copiaTexto([pollo], { lidl: [lecheLidl, { ...lecheLidl, id: 'x', precio: 0 }] }),
+      copiaTexto([pollo], { productos: [lecheLidl, { ...naranjas, precio: 0 }] }),
     );
+    expect(r).toEqual({
+      ok: false,
+      error: 'El producto de Frutería n.º 2 («Naranjas») no es válido: el precio no es válido.',
+    });
+  });
+
+  it('rechaza un producto de una tienda que no está en la copia', () => {
+    const r = leerCopia(copiaTexto([], { productos: [{ ...naranjas, tienda: 'aldi' }] }));
+    expect(r).toEqual({
+      ok: false,
+      error:
+        'El producto de tus tiendas n.º 1 («Naranjas») no es válido: la tienda «aldi» no existe.',
+    });
+  });
+
+  it('rechaza productos repetidos', () => {
+    const r = leerCopia(copiaTexto([], { productos: [lecheLidl, lecheLidl] }));
+    expect(r).toEqual({
+      ok: false,
+      error: 'El producto de Lidl n.º 2 («Leche semidesnatada») está repetido.',
+    });
+  });
+
+  it('rechaza un precio de Lidl dañado en una copia de la versión 1', () => {
+    const r = leerCopia(copiaV1({ lidl: [lecheLidlV1, { ...lecheLidlV1, id: 'x', precio: 0 }] }));
     expect(r).toEqual({
       ok: false,
       error:
@@ -152,12 +241,25 @@ describe('leerCopia', () => {
     });
   });
 
-  it('rechaza precios de Lidl repetidos', () => {
-    const r = leerCopia(copiaTexto([], { lidl: [lecheLidl, lecheLidl] }));
+  it.each([
+    ['sin nombre', { ...fruteria, nombre: '' }, 'le falta el nombre'],
+    [
+      'con el id de Mercadona',
+      { ...fruteria, id: 'mercadona' },
+      'usa el identificador de Mercadona o Consum',
+    ],
+    ['con un color raro', { ...fruteria, color: 'rojo' }, 'el color no es válido'],
+  ])('rechaza una tienda %s', (_caso, mala, motivo) => {
+    const r = leerCopia(copiaTexto([], { tiendas: [lidl, mala] }));
     expect(r).toEqual({
       ok: false,
-      error: 'El producto de Lidl n.º 2 («Leche semidesnatada») está repetido.',
+      error: `La tienda n.º 2${mala.nombre ? ` («${mala.nombre}»)` : ''} no es válida: ${motivo}.`,
     });
+  });
+
+  it('rechaza tiendas repetidas', () => {
+    const r = leerCopia(copiaTexto([], { tiendas: [lidl, lidl] }));
+    expect(r).toEqual({ ok: false, error: 'La tienda n.º 2 («Lidl») está repetida.' });
   });
 
   it('rechaza necesidades repetidas', () => {
@@ -188,11 +290,13 @@ describe('exportar e importar con la base de datos', () => {
     await guardarNecesidad(pollo);
     await guardarNecesidad(detergente);
     await guardarAjuste('costeVisita', 2);
-    await guardarProductoLidl(lecheLidl);
+    await guardarTiendaPropia(fruteria);
+    await guardarProducto(lecheLidl);
+    await guardarProducto(naranjas);
     const texto = textoCopia(crearCopia(await leerTodo(), AHORA));
 
     // Se borra todo, como en un iPhone nuevo, y se importa la copia.
-    await reemplazarTodo({ necesidades: [], lidl: [], ajustes: {} });
+    await reemplazarTodo(vacio);
     expect(await listarNecesidades()).toEqual([]);
 
     const leida = leerCopia(texto);
@@ -205,12 +309,16 @@ describe('exportar e importar con la base de datos', () => {
       pollo,
     ]);
     expect(contenido.ajustes).toEqual({ costeVisita: 2 });
-    expect(contenido.lidl).toEqual([lecheLidl]);
+    expect(contenido.tiendas.map((t) => t.id).sort()).toEqual(['fruteria', 'lidl']);
+    expect(contenido.productos.sort((a, b) => a.id.localeCompare(b.id))).toEqual([
+      lecheLidl,
+      naranjas,
+    ]);
   });
 
   it('importar sustituye lo que había', async () => {
     await guardarNecesidad(pollo);
-    await reemplazarTodo({ necesidades: [detergente], lidl: [], ajustes: {} });
+    await reemplazarTodo({ ...vacio, necesidades: [detergente] });
     expect(await listarNecesidades()).toEqual([detergente]);
   });
 
@@ -219,7 +327,7 @@ describe('exportar e importar con la base de datos', () => {
     // Una necesidad sin id hace fallar la operación a mitad.
     const rota = { ...detergente, id: undefined } as unknown as Necesidad;
     await expect(
-      reemplazarTodo({ necesidades: [detergente, rota], lidl: [], ajustes: {} }),
+      reemplazarTodo({ ...vacio, necesidades: [detergente, rota] }),
     ).rejects.toBeTruthy();
     expect(await listarNecesidades()).toEqual([pollo]);
   });

@@ -1,6 +1,7 @@
 /**
- * Productos de Lidl apuntados a mano. Lidl no publica sus precios en internet, así que el
- * usuario apunta los de lo que compra allí, con la fecha en que los vio.
+ * Productos apuntados a mano en las tiendas propias (Lidl, la frutería...). Esas tiendas no
+ * publican sus precios en internet, así que el usuario apunta los de lo que compra allí, con
+ * la fecha en que los vio.
  */
 import { hoyEnEspana } from '../formato.ts';
 import type { UnidadNecesidad } from '../necesidades/modelo.ts';
@@ -9,8 +10,10 @@ import type { ProductoApp, Unidad } from '../tipos.ts';
 /** Un precio con más días que estos se avisa como antiguo. */
 export const DIAS_PRECIO_ANTIGUO = 30;
 
-export type ProductoLidl = {
+export type ProductoPropio = {
   id: string;
+  /** Id de la tienda propia a la que pertenece. */
+  tienda: string;
   nombre: string;
   marca?: string;
   /** Formato del envase, siempre en kg, l, ud, lavado o m (los g y ml se pasan a kg y l). */
@@ -23,7 +26,7 @@ export type ProductoLidl = {
 };
 
 /** Lo que rellena el usuario: la cantidad del envase va en la unidad que elija (g, ml...). */
-export type BorradorLidl = {
+export type BorradorProducto = {
   nombre: string;
   marca?: string;
   cantidad: number;
@@ -32,14 +35,14 @@ export type BorradorLidl = {
 };
 
 /** Cantidad y unidad del envase tal como la escribe el usuario → formato del producto. */
-export function aFormato(cantidad: number, unidad: UnidadNecesidad): ProductoLidl['formato'] {
+export function aFormato(cantidad: number, unidad: UnidadNecesidad): ProductoPropio['formato'] {
   if (unidad === 'g') return { cantidad: redondear(cantidad / 1000), unidad: 'kg' };
   if (unidad === 'ml') return { cantidad: redondear(cantidad / 1000), unidad: 'l' };
   return { cantidad, unidad };
 }
 
 /** Formato del producto → cantidad y unidad para el formulario (0,5 kg → 500 g). */
-export function deFormato(formato: ProductoLidl['formato']): {
+export function deFormato(formato: ProductoPropio['formato']): {
   cantidad: number;
   unidad: UnidadNecesidad;
 } {
@@ -62,14 +65,14 @@ export function leerPrecio(texto: string): number | null {
   return Number.isFinite(n) && n > 0 && n < 1000 ? n : null;
 }
 
-export type ErroresLidl = Partial<Record<'nombre' | 'cantidad' | 'precio', string>>;
+export type ErroresProducto = Partial<Record<'nombre' | 'cantidad' | 'precio', string>>;
 
-export function validarBorradorLidl(b: {
+export function validarBorradorProducto(b: {
   nombre: string;
   cantidad: number | null;
   precio: number | null;
-}): ErroresLidl {
-  const errores: ErroresLidl = {};
+}): ErroresProducto {
+  const errores: ErroresProducto = {};
   if (!b.nombre.trim()) errores.nombre = 'Escribe el nombre del producto.';
   else if (b.nombre.trim().length > 80) errores.nombre = 'Usa un nombre más corto (80 letras).';
   if (b.cantidad === null) {
@@ -80,17 +83,23 @@ export function validarBorradorLidl(b: {
   return errores;
 }
 
-function limpiar(p: ProductoLidl): ProductoLidl {
-  const limpio: ProductoLidl = { ...p, nombre: p.nombre.trim() };
+function limpiar(p: ProductoPropio): ProductoPropio {
+  const limpio: ProductoPropio = { ...p, nombre: p.nombre.trim() };
   const marca = p.marca?.trim();
   if (marca) limpio.marca = marca;
   else delete limpio.marca;
   return limpio;
 }
 
-export function crearProductoLidl(b: BorradorLidl, ahora: string, id: string): ProductoLidl {
+export function crearProducto(
+  tienda: string,
+  b: BorradorProducto,
+  ahora: string,
+  id: string,
+): ProductoPropio {
   return limpiar({
     id,
+    tienda,
     nombre: b.nombre,
     marca: b.marca,
     formato: aFormato(b.cantidad, b.unidad),
@@ -104,7 +113,11 @@ export function crearProductoLidl(b: BorradorLidl, ahora: string, id: string): P
  * Aplica los cambios del formulario. La fecha del precio solo cambia si cambia el precio o el
  * formato: corregir una falta en el nombre no hace que un precio antiguo parezca nuevo.
  */
-export function editarProductoLidl(p: ProductoLidl, b: BorradorLidl, ahora: string): ProductoLidl {
+export function editarProducto(
+  p: ProductoPropio,
+  b: BorradorProducto,
+  ahora: string,
+): ProductoPropio {
   const formato = aFormato(b.cantidad, b.unidad);
   const cambiaPrecio =
     b.precio !== p.precio ||
@@ -121,7 +134,7 @@ export function editarProductoLidl(p: ProductoLidl, b: BorradorLidl, ahora: stri
 }
 
 /** «Sigue al mismo precio»: el precio se ha comprobado hoy. */
-export function confirmarPrecio(p: ProductoLidl, ahora: string): ProductoLidl {
+export function confirmarPrecio(p: ProductoPropio, ahora: string): ProductoPropio {
   return { ...p, actualizado: ahora };
 }
 
@@ -131,7 +144,7 @@ export function diasDesde(actualizado: string, ahora: Date): number {
   return Math.max(0, Math.round((dia(ahora) - dia(new Date(actualizado))) / 86_400_000));
 }
 
-export function precioAntiguo(p: ProductoLidl, ahora: Date): boolean {
+export function precioAntiguo(p: ProductoPropio, ahora: Date): boolean {
   return diasDesde(p.actualizado, ahora) > DIAS_PRECIO_ANTIGUO;
 }
 
@@ -143,10 +156,19 @@ export function textoAntiguedad(actualizado: string, ahora: Date): string {
   return `hace ${dias} días`;
 }
 
+/** Nota de un producto: cuándo se comprobó su precio, en naranja si es antiguo. */
+export function notaPrecio(p: ProductoPropio, ahora: Date): { texto: string; atencion: boolean } {
+  const antiguo = precioAntiguo(p, ahora);
+  return {
+    texto: `Precio comprobado ${textoAntiguedad(p.actualizado, ahora)}${antiguo ? ': compruébalo' : ''}`,
+    atencion: antiguo,
+  };
+}
+
 /** El producto en el mismo formato que los de Mercadona y Consum, para buscar y comparar. */
-export function aProductoApp(p: ProductoLidl): ProductoApp {
+export function aProductoApp(p: ProductoPropio): ProductoApp {
   const producto: ProductoApp = {
-    tienda: 'lidl',
+    tienda: p.tienda,
     id: p.id,
     nombre: p.nombre,
     formato: p.formato,
@@ -161,9 +183,10 @@ const UNIDADES_PRODUCTO: readonly string[] = ['kg', 'l', 'ud', 'lavado', 'm'];
 const esFecha = (v: unknown): v is string => typeof v === 'string' && !Number.isNaN(Date.parse(v));
 const positivo = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v > 0;
 
-/** Motivo por el que un producto de Lidl de una copia no es válido, o null si lo es. */
-export function problemaProductoLidl(p: Record<string, unknown>): string | null {
+/** Motivo por el que un producto apuntado a mano de una copia no es válido, o null si lo es. */
+export function problemaProducto(p: Record<string, unknown>): string | null {
   if (typeof p.id !== 'string' || !p.id) return 'le falta el identificador';
+  if (typeof p.tienda !== 'string' || !p.tienda) return 'le falta la tienda';
   if (typeof p.nombre !== 'string' || !p.nombre.trim()) return 'le falta el nombre';
   if (p.marca !== undefined && typeof p.marca !== 'string') return 'la marca no es texto';
   const f = p.formato as Record<string, unknown> | null;

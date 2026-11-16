@@ -7,6 +7,7 @@ import {
   textoPrecioRef,
 } from '../formato.ts';
 import { useImagen } from '../imagenes.ts';
+import { esAutomatica } from '../tiendas/modelo.ts';
 import type { ProductoApp } from '../tipos.ts';
 
 /** Foto del producto: se descarga solo cuando aparece en pantalla. */
@@ -34,8 +35,8 @@ export function FotoProducto({ producto }: { producto: ProductoApp }) {
 
 /**
  * Datos de un producto: foto, nombre, marca, formato, precio y precio por unidad.
- * El formato se muestra siempre (regla de la fase 2). Los de Lidl, apuntados a mano, no
- * tienen foto: llevan una etiqueta azul; `nota` añade una línea, por ejemplo cuándo se comprobó su precio.
+ * El formato se muestra siempre (regla de la fase 2). Los apuntados a mano no tienen foto:
+ * llevan una etiqueta; `nota` añade una línea, por ejemplo cuándo se comprobó su precio.
  */
 export function InfoProducto({
   producto,
@@ -49,8 +50,8 @@ export function InfoProducto({
   const vigente = precioVigente(producto, hoyEnEspana());
   return (
     <>
-      {producto.tienda === 'lidl' ? (
-        <span class="foto foto--lidl" aria-hidden="true">
+      {!esAutomatica(producto.tienda) ? (
+        <span class="foto foto--propia" aria-hidden="true">
           <Icono nombre="etiqueta" tamano={26} />
         </span>
       ) : (

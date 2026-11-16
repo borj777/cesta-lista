@@ -3,12 +3,14 @@ import { crearNecesidad, type Necesidad, type UnidadNecesidad } from '../src/nec
 import {
   analizar,
   cantidadEnPeriodo,
-  COMBINACIONES,
+  combinacionesDe,
   opcionDe,
   planificar,
   type OpcionesPlan,
 } from '../src/optimizador.ts';
-import type { ProductoApp, Tienda, Unidad } from '../src/tipos.ts';
+import type { ProductoApp, Unidad } from '../src/tipos.ts';
+
+type Tienda = string;
 
 const AHORA = '2026-11-16T10:00:00.000Z';
 const HOY = '2026-11-16';
@@ -59,10 +61,12 @@ function necesidad(
   };
 }
 
-const opciones = (costeVisita: number, semanas = 1): OpcionesPlan => ({
+const TRES = ['mercadona', 'consum', 'lidl'];
+const opciones = (costeVisita: number, semanas = 1, tiendas = TRES): OpcionesPlan => ({
   semanas,
   costeVisita,
   hoy: HOY,
+  tiendas,
 });
 
 // Leche: 6 l a la semana. Mercadona 0,83 €/l en pack de 6; Consum 0,83 €/l en brik; Lidl 0,79 €/l.
@@ -131,7 +135,7 @@ describe('cantidad y envases', () => {
       mercadona: { id: 'no-existe' },
       consum: { id: 'leche-c' },
     });
-    expect(analizar([rara], buscarProducto, 1, HOY)[0]?.problemas).toEqual([
+    expect(analizar([rara], buscarProducto, 1, HOY, TRES)[0]?.problemas).toEqual([
       { tienda: 'mercadona', tipo: 'desaparecido' },
       { tienda: 'consum', tipo: 'otra-unidad' },
     ]);
@@ -139,9 +143,67 @@ describe('cantidad y envases', () => {
 });
 
 describe('planificar', () => {
-  it('hay 7 combinaciones de tiendas', () => {
-    expect(COMBINACIONES).toHaveLength(7);
+  it('con 3 tiendas hay 7 combinaciones; con 4, 15', () => {
+    expect(combinacionesDe(TRES)).toEqual([
+      ['mercadona'],
+      ['consum'],
+      ['lidl'],
+      ['mercadona', 'consum'],
+      ['mercadona', 'lidl'],
+      ['consum', 'lidl'],
+      ['mercadona', 'consum', 'lidl'],
+    ]);
+    expect(combinacionesDe([...TRES, 'fruteria'])).toHaveLength(15);
+    expect(combinacionesDe([])).toEqual([]);
     expect(planificar([leche], buscarProducto, opciones(2)).combinaciones).toHaveLength(7);
+  });
+
+  it('solo combina las tiendas donde se puede comprar algo', () => {
+    // El pollo no tiene producto en Lidl ni en la frutería: solo cuentan Mercadona y Consum.
+    const plan = planificar([pollo], buscarProducto, opciones(2, 1, [...TRES, 'fruteria']));
+    expect(plan.combinaciones.map((r) => r.tiendas)).toEqual([
+      ['consum'],
+      ['mercadona'],
+      ['mercadona', 'consum'],
+    ]);
+  });
+
+  it('tiene en cuenta las tiendas propias que añade el usuario', () => {
+    // Frutería: naranjas a 1,25 €/kg, más baratas que en Mercadona (1,80 €/kg).
+    producto('mercadona', 'naranja-m', 3.6, 2, 'kg');
+    producto('fruteria', 'naranja-f', 2.5, 2, 'kg');
+    const naranjas = necesidad('naranjas', 2, 'kg', {
+      mercadona: { id: 'naranja-m' },
+      fruteria: { id: 'naranja-f' },
+    });
+    const tiendas = [...TRES, 'fruteria'];
+    const plan = planificar([leche, naranjas], buscarProducto, opciones(0, 1, tiendas));
+    expect(plan.mejor?.tiendas).toEqual(['lidl', 'fruteria']);
+    expect(plan.mejor?.total).toBe(7.24); // 4,74 + 2,50
+    // Con 2 € por tienda extra, ahorrar 1,10 € en naranjas no compensa.
+    const caro = planificar([leche, naranjas], buscarProducto, opciones(2, 1, tiendas));
+    expect(caro.mejor?.tiendas).toEqual(['mercadona']);
+  });
+
+  it('no tiene en cuenta lo elegido en las tiendas apagadas', () => {
+    // Con Lidl apagada, la leche se compra en Mercadona o Consum aunque Lidl sea más barata.
+    const plan = planificar(
+      [leche, pollo],
+      buscarProducto,
+      opciones(0, 1, ['mercadona', 'consum']),
+    );
+    expect(plan.mejor?.tiendas).toEqual(['consum']);
+    expect(plan.combinaciones.some((r) => r.tiendas.includes('lidl'))).toBe(false);
+    expect(plan.analisis[0]?.opciones.lidl).toBeUndefined();
+    expect(plan.analisis[0]?.problemas).toEqual([]);
+  });
+
+  it('una necesidad que solo se compra en una tienda apagada queda sin producto', () => {
+    producto('lidl', 'pan-l', 1, 0.5, 'kg');
+    const panLidl = necesidad('pan de Lidl', 0.5, 'kg', { lidl: { id: 'pan-l' } });
+    const plan = planificar([leche, panLidl], buscarProducto, opciones(2, 1, ['mercadona']));
+    expect(plan.sinProducto.map((n) => n.nombre)).toEqual(['pan de Lidl']);
+    expect(plan.mejor?.tiendas).toEqual(['mercadona']);
   });
 
   it('con coste por visita 0 compra cada cosa donde es más barata', () => {
@@ -196,8 +258,8 @@ describe('planificar', () => {
       consum: { id: 'pan-c' },
     });
     const plan = planificar([pan], buscarProducto, opciones(0));
-    const tres = plan.combinaciones.find((r) => r.tiendas.length === 3);
-    expect(tres?.compras[0]?.opcion.tienda).toBe('mercadona');
+    const ambas = plan.combinaciones.find((r) => r.tiendas.length === 2);
+    expect(ambas?.compras[0]?.opcion.tienda).toBe('mercadona');
   });
 
   it('no elige una combinación en la que falta algo, aunque sea más barata', () => {

@@ -2,7 +2,7 @@
  * Buscador de productos sobre app.json: encuentra los que contienen todas las palabras
  * buscadas (sin tildes, singular o plural) y los ordena por precio por unidad.
  */
-import type { ProductoApp, Tienda, Unidad } from './tipos.ts';
+import type { ProductoApp, Unidad } from './tipos.ts';
 
 /** Palabras que no ayudan a buscar. */
 const VACIAS = new Set([
@@ -80,11 +80,11 @@ export function buscar(
   productos: ProductoApp[],
   opciones: {
     consulta: string;
-    tienda: Tienda;
+    tienda: string;
     unidad: Unidad;
     eans?: ReadonlySet<string>;
     limite?: number;
-    /** Con la búsqueda vacía, devuelve todos los productos de la tienda (para Lidl, que son pocos). */
+    /** Con la búsqueda vacía, devuelve todos los productos de la tienda (para las tiendas propias, que tienen pocos). */
     todosSiVacia?: boolean;
   },
 ): ResultadoBusqueda {

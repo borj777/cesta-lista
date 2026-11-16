@@ -3,9 +3,7 @@
  * necesita (al elegir productos) y las fotos, solo cuando aparecen en pantalla.
  */
 import { useEffect, useState } from 'preact/hooks';
-import type { Tienda } from './tipos.ts';
-
-type Imagenes = Partial<Record<Tienda, Record<string, string>>>;
+type Imagenes = Partial<Record<string, Record<string, string>>>;
 
 let carga: Promise<Imagenes> | null = null;
 let cargadas: Imagenes | null = null;
@@ -31,7 +29,7 @@ function miniatura(url: string): string {
 }
 
 /** Dirección de la foto de un producto, o null si no hay (todavía). */
-export function useImagen(tienda: Tienda, id: string): string | null {
+export function useImagen(tienda: string, id: string): string | null {
   const [imagenes, setImagenes] = useState<Imagenes | null>(cargadas);
   useEffect(() => {
     if (!imagenes) void cargarImagenes().then(setImagenes);

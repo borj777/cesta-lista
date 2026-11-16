@@ -2,11 +2,13 @@
  * Tipos de data/app.json. Son los mismos que genera el scraper (scraper/src/app.ts);
  * si cambian allí, hay que cambiarlos aquí.
  */
-export type Tienda = 'mercadona' | 'consum' | 'lidl';
+/** Tiendas de app.json (las de precios automáticos). */
+export type Tienda = 'mercadona' | 'consum';
 export type Unidad = 'kg' | 'l' | 'ud' | 'lavado' | 'm';
 
 export type ProductoApp = {
-  tienda: Tienda;
+  /** 'mercadona', 'consum' o el id de una tienda propia (los apuntados a mano). */
+  tienda: string;
   id: string;
   ean?: string;
   nombre: string;

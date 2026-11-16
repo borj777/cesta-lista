@@ -1,8 +1,8 @@
 /**
  * Optimizador: decide en qué tiendas comprar para gastar lo mínimo.
  *
- * Con 3 tiendas hay 7 combinaciones posibles (cada tienda sola, las parejas y las tres).
- * Para cada una, cada necesidad se compra en la tienda más barata de la combinación y se suma
+ * Se prueban todas las combinaciones de las tiendas encendidas (con 3 tiendas son 7: cada una
+ * sola, las parejas y las tres; con 6, 63). Para cada una, cada necesidad se compra en la tienda más barata de la combinación y se suma
  * un coste por cada tienda extra (tiempo y desplazamiento). Gana la de menor coste total.
  * Es un cálculo exacto: se prueban todas las combinaciones.
  *
@@ -10,30 +10,34 @@
  * con la cantidad que se gasta en el periodo de la compra (por ejemplo, una semana).
  */
 import { precioVigente, unidadDeComparacion } from './formato.ts';
-import {
-  SEMANAS,
-  TIENDAS_EQUIVALENCIA,
-  type Necesidad,
-  type TiendaEquivalencia,
-} from './necesidades/modelo.ts';
+import { SEMANAS, type Necesidad } from './necesidades/modelo.ts';
+import type { IdTienda } from './tiendas/modelo.ts';
 import type { ProductoApp, Unidad } from './tipos.ts';
 
-export type Tiendas = readonly TiendaEquivalencia[];
+export type Tiendas = readonly IdTienda[];
 
-/** Las 7 combinaciones: primero cada tienda sola, luego las parejas y por último las tres. */
-export const COMBINACIONES: Tiendas[] = [
-  ['mercadona'],
-  ['consum'],
-  ['lidl'],
-  ['mercadona', 'consum'],
-  ['mercadona', 'lidl'],
-  ['consum', 'lidl'],
-  ['mercadona', 'consum', 'lidl'],
-];
+/**
+ * Todas las combinaciones de unas tiendas: primero cada una sola, luego las parejas, los tríos...
+ * Dentro de cada tamaño, en el orden de las tiendas. Con n tiendas hay 2ⁿ − 1.
+ */
+export function combinacionesDe(tiendas: Tiendas): Tiendas[] {
+  const todas: IdTienda[][] = [];
+  for (let mascara = 1; mascara < 2 ** tiendas.length; mascara++) {
+    todas.push(tiendas.filter((_, i) => mascara & (1 << i)));
+  }
+  const posicion = (c: Tiendas) => c.map((t) => tiendas.indexOf(t));
+  return todas.sort((a, b) => {
+    if (a.length !== b.length) return a.length - b.length;
+    const pa = posicion(a);
+    const pb = posicion(b);
+    const i = pa.findIndex((v, j) => v !== pb[j]);
+    return i === -1 ? 0 : (pa[i] ?? 0) - (pb[i] ?? 0);
+  });
+}
 
 /** Cómo se compra una necesidad en una tienda. */
 export type Opcion = {
-  tienda: TiendaEquivalencia;
+  tienda: IdTienda;
   producto: ProductoApp;
   /** Envases enteros que hay que comprar. */
   envases: number;
@@ -50,14 +54,14 @@ export type Opcion = {
   porEnvase: boolean;
 };
 
-export type ProblemaTienda = { tienda: TiendaEquivalencia; tipo: 'desaparecido' | 'otra-unidad' };
+export type ProblemaTienda = { tienda: IdTienda; tipo: 'desaparecido' | 'otra-unidad' };
 
 export type AnalisisNecesidad = {
   necesidad: Necesidad;
   /** Cantidad que se gasta en el periodo, en kg, l, ud, lavado o m. */
   cantidad: number;
   unidad: Unidad;
-  opciones: Partial<Record<TiendaEquivalencia, Opcion>>;
+  opciones: Partial<Record<IdTienda, Opcion>>;
   /** Tiendas con un producto elegido que no se puede usar. */
   problemas: ProblemaTienda[];
 };
@@ -81,7 +85,10 @@ export type Resultado = {
 export type Plan = {
   /** La combinación elegida, o null si no hay nada que comprar. */
   mejor: Resultado | null;
-  /** Las 7 combinaciones: primero las completas, de la más barata a la más cara. */
+  /**
+   * Las combinaciones de las tiendas con algún producto elegido: primero las completas, de la
+   * más barata a la más cara.
+   */
   combinaciones: Resultado[];
   /** La tienda sola más barata que tiene todo, para calcular el ahorro. */
   unaTienda: Resultado | null;
@@ -99,6 +106,11 @@ export type OpcionesPlan = {
   costeVisita: number;
   /** Fecha de hoy en España (AAAA-MM-DD), para no aplicar ofertas terminadas. */
   hoy: string;
+  /**
+   * Tiendas encendidas, en su orden (Mercadona, Consum y las propias). Lo elegido en las
+   * tiendas apagadas no se tiene en cuenta. El orden decide los empates.
+   */
+  tiendas: Tiendas;
 };
 
 const centimos = (n: number) => Math.round(n * 100) / 100;
@@ -113,7 +125,7 @@ export function cantidadEnPeriodo(n: Necesidad, semanas: number): number {
 
 /** Opción de compra de un producto para una cantidad, o null si no se puede calcular. */
 export function opcionDe(
-  tienda: TiendaEquivalencia,
+  tienda: IdTienda,
   producto: ProductoApp,
   cantidad: number,
   unidad: Unidad,
@@ -136,19 +148,20 @@ export function opcionDe(
   };
 }
 
-/** Opciones de compra de cada necesidad en cada tienda donde tiene producto elegido. */
+/** Opciones de compra de cada necesidad en cada tienda (encendida) con producto elegido. */
 export function analizar(
   necesidades: Necesidad[],
-  buscarProducto: (tienda: TiendaEquivalencia, id: string) => ProductoApp | undefined,
+  buscarProducto: (tienda: IdTienda, id: string) => ProductoApp | undefined,
   semanas: number,
   hoy: string,
+  tiendas: Tiendas,
 ): AnalisisNecesidad[] {
   return necesidades.map((necesidad) => {
     const cantidad = cantidadEnPeriodo(necesidad, semanas);
     const unidad = unidadDeComparacion(necesidad.unidad);
     const opciones: AnalisisNecesidad['opciones'] = {};
     const problemas: ProblemaTienda[] = [];
-    for (const tienda of TIENDAS_EQUIVALENCIA) {
+    for (const tienda of tiendas) {
       const e = necesidad.equivalencias?.[tienda];
       if (!e || 'noCompro' in e) continue;
       const producto = buscarProducto(tienda, e.id);
@@ -164,27 +177,33 @@ export function analizar(
   });
 }
 
-const orden = (t: TiendaEquivalencia) => TIENDAS_EQUIVALENCIA.indexOf(t);
-
-/** La opción más barata en caja; si empatan, la de menor precio por unidad y luego la primera. */
-function masBarata(opciones: Opcion[]): Opcion | undefined {
+/**
+ * La opción más barata en caja; si empatan, la de menor precio por unidad y luego la de la
+ * primera tienda (en el orden de `orden`).
+ */
+function masBarata(opciones: Opcion[], orden: Tiendas): Opcion | undefined {
+  const pos = (t: IdTienda) => orden.indexOf(t);
   return [...opciones].sort(
-    (a, b) => a.coste - b.coste || a.precioRef - b.precioRef || orden(a.tienda) - orden(b.tienda),
+    (a, b) => a.coste - b.coste || a.precioRef - b.precioRef || pos(a.tienda) - pos(b.tienda),
   )[0];
 }
 
-/** Coste de comprar en una combinación de tiendas. */
+/** Coste de comprar en una combinación de tiendas. `orden` decide los empates. */
 export function evaluar(
   analisis: AnalisisNecesidad[],
   tiendas: Tiendas,
   costeVisita: number,
+  orden: Tiendas = tiendas,
 ): Resultado {
   const compras: Compra[] = [];
   const faltan: Necesidad[] = [];
   for (const a of analisis) {
-    const posibles = Object.values(a.opciones);
+    const posibles = Object.values(a.opciones).filter((o): o is Opcion => o !== undefined);
     if (posibles.length === 0) continue; // No se puede comprar en ninguna tienda.
-    const opcion = masBarata(posibles.filter((o) => tiendas.includes(o.tienda)));
+    const opcion = masBarata(
+      posibles.filter((o) => tiendas.includes(o.tienda)),
+      orden,
+    );
     if (opcion) compras.push({ analisis: a, opcion });
     else faltan.push(a.necesidad);
   }
@@ -203,29 +222,32 @@ export function evaluar(
 
 /**
  * Orden de las combinaciones: primero las que tienen todo, luego la más barata; si cuestan lo
- * mismo, la de menos tiendas (menos viajes) y, por último, el orden de COMBINACIONES.
+ * mismo, la de menos tiendas (menos viajes) y, por último, el orden de `combinaciones`.
  */
-function comparar(a: Resultado, b: Resultado): number {
-  return (
+function comparador(combinaciones: Tiendas[]) {
+  return (a: Resultado, b: Resultado): number =>
     Number(b.completa) - Number(a.completa) ||
     a.total - b.total ||
     a.tiendas.length - b.tiendas.length ||
-    COMBINACIONES.indexOf(a.tiendas) - COMBINACIONES.indexOf(b.tiendas)
-  );
+    combinaciones.indexOf(a.tiendas) - combinaciones.indexOf(b.tiendas);
 }
 
 export function planificar(
   necesidades: Necesidad[],
-  buscarProducto: (tienda: TiendaEquivalencia, id: string) => ProductoApp | undefined,
+  buscarProducto: (tienda: IdTienda, id: string) => ProductoApp | undefined,
   opciones: OpcionesPlan,
 ): Plan {
-  const analisis = analizar(necesidades, buscarProducto, opciones.semanas, opciones.hoy);
+  const { tiendas } = opciones;
+  const analisis = analizar(necesidades, buscarProducto, opciones.semanas, opciones.hoy, tiendas);
   const sinProducto = analisis
     .filter((a) => Object.keys(a.opciones).length === 0)
     .map((a) => a.necesidad);
-  const combinaciones = COMBINACIONES.map((t) => evaluar(analisis, t, opciones.costeVisita)).sort(
-    comparar,
-  );
+  // Solo se combinan las tiendas donde se puede comprar algo: las demás no cambian nada.
+  const utiles = tiendas.filter((t) => analisis.some((a) => a.opciones[t]));
+  const posibles = combinacionesDe(utiles);
+  const combinaciones = posibles
+    .map((t) => evaluar(analisis, t, opciones.costeVisita, tiendas))
+    .sort(comparador(posibles));
 
   const hayAlgo = analisis.length > sinProducto.length;
   const mejor = hayAlgo ? (combinaciones[0] ?? null) : null;

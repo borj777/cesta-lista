@@ -5,15 +5,15 @@ import { Icono, type NombreIcono } from './componentes/Icono.tsx';
 import { cargarDatos } from './datos.ts';
 import { avisosPrecios } from './estado.ts';
 import { PantallaNecesidades } from './necesidades/PantallaNecesidades.tsx';
-import { PantallaLidl } from './lidl/PantallaLidl.tsx';
 import { PantallaLista } from './lista/PantallaLista.tsx';
 import { PantallaAjustes } from './pantallas.tsx';
+import { PantallaTiendas } from './tiendas/PantallaTiendas.tsx';
 import type { DatosApp } from './tipos.ts';
 
 const PESTANAS = [
   { id: 'lista', nombre: 'Lista', icono: 'carrito' },
   { id: 'necesidades', nombre: 'Necesidades', icono: 'lista' },
-  { id: 'lidl', nombre: 'Lidl', icono: 'etiqueta' },
+  { id: 'tiendas', nombre: 'Tiendas', icono: 'tienda' },
   { id: 'ajustes', nombre: 'Ajustes', icono: 'ajustes' },
 ] as const satisfies readonly { id: string; nombre: string; icono: NombreIcono }[];
 type IdPestana = (typeof PESTANAS)[number]['id'];
@@ -22,6 +22,10 @@ type Ruta = { pestana: IdPestana; sub: string | null };
 
 /** La pantalla se guarda en la dirección: #lista, #necesidades/nueva, #necesidades/<id>... */
 function rutaDeLaDireccion(): Ruta {
+  // Las direcciones #lidl de las versiones anteriores llevan a la tienda «Lidl».
+  if (location.hash === '#lidl' || location.hash.startsWith('#lidl/')) {
+    history.replaceState(null, '', '#tiendas/lidl');
+  }
   const [id = '', ...resto] = location.hash.replace('#', '').split('/');
   const pestana = PESTANAS.find((p) => p.id === id)?.id ?? 'lista';
   return { pestana, sub: resto.length > 0 ? resto.map(decodeURIComponent).join('/') : null };
@@ -91,7 +95,7 @@ export function App() {
         {datos && <AvisosPrecios avisos={avisosPrecios(datos, ahora)} />}
         {pestana === 'lista' && <PantallaLista datos={datos} ahora={ahora} />}
         {pestana === 'necesidades' && <PantallaNecesidades sub={sub} datos={datos} />}
-        {pestana === 'lidl' && <PantallaLidl sub={sub} />}
+        {pestana === 'tiendas' && <PantallaTiendas sub={sub} datos={datos} ahora={ahora} />}
         {pestana === 'ajustes' && (
           <PantallaAjustes datos={datos} ahora={ahora} guardados={guardados} error={error} />
         )}

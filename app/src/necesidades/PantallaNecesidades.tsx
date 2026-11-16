@@ -2,6 +2,9 @@ import { useState } from 'preact/hooks';
 import { useCatalogo } from '../catalogo.ts';
 import { Icono } from '../componentes/Icono.tsx';
 import { Opciones } from '../componentes/Opciones.tsx';
+import { Punto } from '../componentes/Tienda.tsx';
+import { useTiendas } from '../tiendas/estado.ts';
+import type { InfoTienda } from '../tiendas/modelo.ts';
 import type { DatosApp } from '../tipos.ts';
 import { DetalleNecesidad } from './DetalleNecesidad.tsx';
 import { ElegirProducto } from './ElegirProducto.tsx';
@@ -41,7 +44,8 @@ export function PantallaNecesidades({
   datos: DatosApp | null;
 }) {
   const { necesidades, error } = useNecesidades();
-  const { productosLidl, buscarProducto } = useCatalogo(datos);
+  const { productosPropios, buscarProducto } = useCatalogo(datos);
+  const { lista: tiendas } = useTiendas();
 
   if (error) {
     return (
@@ -63,49 +67,56 @@ export function PantallaNecesidades({
     if (existente && accion === 'editar') {
       return <FormNecesidad key={existente.id} existente={existente} />;
     }
-    if (
-      existente &&
-      accion === 'elegir' &&
-      (tienda === 'mercadona' || tienda === 'consum' || tienda === 'lidl')
-    ) {
-      if (!datos || !productosLidl || !buscarProducto) {
+    const info = tiendas?.find((t) => t.id === tienda);
+    if (existente && accion === 'elegir' && (info || !tiendas)) {
+      if (!datos || !productosPropios || !buscarProducto || !info) {
         return <p class="secundario">Cargando precios…</p>;
       }
       return (
         <ElegirProducto
-          key={`${existente.id}-${tienda}`}
+          key={`${existente.id}-${info.id}`}
           necesidad={existente}
-          tienda={tienda}
-          productos={tienda === 'lidl' ? productosLidl : datos.productos}
+          info={info}
+          productos={info.automatica ? datos.productos : productosPropios}
           buscarProducto={buscarProducto}
         />
       );
     }
     if (existente)
-      return <DetalleNecesidad necesidad={existente} buscarProducto={buscarProducto} />;
+      return (
+        <DetalleNecesidad necesidad={existente} buscarProducto={buscarProducto} tiendas={tiendas} />
+      );
   }
-  return <ListaNecesidades necesidades={necesidades} />;
+  return <ListaNecesidades necesidades={necesidades} tiendas={tiendas ?? []} />;
 }
 
-/** Puntos de color de las tiendas con producto elegido, o «Sin elegir». */
-function TiendasElegidas({ necesidad }: { necesidad: Necesidad }) {
+/** Puntos de color de las tiendas encendidas con producto elegido, o «Sin elegir». */
+function TiendasElegidas({ necesidad, tiendas }: { necesidad: Necesidad; tiendas: InfoTienda[] }) {
   const e = necesidad.equivalencias ?? {};
-  const elegidas = (['mercadona', 'consum', 'lidl'] as const).filter((t) => {
-    const x = e[t];
+  const activas = tiendas.filter((t) => t.activa);
+  const elegidas = activas.filter((t) => {
+    const x = e[t.id];
     return x && 'id' in x;
   });
-  const decididas = Object.keys(e).length;
+  const decididas = activas.filter((t) => e[t.id]).length;
   if (decididas === 0) return <span class="sin-elegir">Sin elegir</span>;
+  if (elegidas.length === 0) return <span class="sin-elegir">No lo compras</span>;
   return (
     <span class="puntos" aria-label={`Elegido en ${elegidas.length} tiendas`}>
       {elegidas.map((t) => (
-        <span key={t} class={`punto punto--${t}`} />
+        <Punto key={t.id} color={t.color} />
       ))}
     </span>
   );
 }
 
-function ListaNecesidades({ necesidades }: { necesidades: Necesidad[] }) {
+function ListaNecesidades({
+  necesidades,
+  tiendas,
+}: {
+  necesidades: Necesidad[];
+  tiendas: InfoTienda[];
+}) {
   if (necesidades.length === 0) {
     return (
       <>
@@ -145,7 +156,7 @@ function ListaNecesidades({ necesidades }: { necesidades: Necesidad[] }) {
                     <span>{n.nombre}</span>
                     <span class="secundario">{textoNecesidad(n)}</span>
                   </div>
-                  <TiendasElegidas necesidad={n} />
+                  <TiendasElegidas necesidad={n} tiendas={tiendas} />
                   <span class="chevron" aria-hidden="true">
                     ›
                   </span>
