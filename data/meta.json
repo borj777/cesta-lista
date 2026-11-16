@@ -1,16 +1,16 @@
 {
-  "generado": "2026-11-15T20:55:19.208Z",
+  "generado": "2026-11-16T08:05:11.343Z",
   "tiendas": {
     "mercadona": {
       "estado": "ok",
-      "actualizado": "2026-11-15T20:55:19.208Z",
+      "actualizado": "2026-11-16T08:05:11.343Z",
       "productos": 4345,
-      "comprobado": "2026-11-15T20:55:19.208Z",
-      "duracionSegundos": 264,
+      "comprobado": "2026-11-16T08:05:11.343Z",
+      "duracionSegundos": 267,
       "peticiones": 154,
       "sinVerificar": 0,
       "descartados": 40,
-      "avisosPrecioRef": 70,
+      "avisosPrecioRef": 66,
       "ejemplosAvisos": [
         {
           "id": "29540",
@@ -18,34 +18,6 @@
           "unidad": "kg",
           "calculado": 3.625,
           "tienda": 3.45
-        },
-        {
-          "id": "79603",
-          "nombre": "Toallitas bebé frescas & perfumadas Deliplus",
-          "unidad": "ud",
-          "calculado": 0.9167,
-          "tienda": 0.01
-        },
-        {
-          "id": "17789",
-          "nombre": "Pañales bebé talla 3 Deliplus de 5-10 kg",
-          "unidad": "ud",
-          "calculado": 6,
-          "tienda": 0.15
-        },
-        {
-          "id": "17791",
-          "nombre": "Pañales bebé talla 4 Deliplus de 10-15 kg",
-          "unidad": "ud",
-          "calculado": 6.3333,
-          "tienda": 0.17
-        },
-        {
-          "id": "17793",
-          "nombre": "Pañales bebé talla 5 Deliplus de 14-18 kg",
-          "unidad": "ud",
-          "calculado": 6.6667,
-          "tienda": 0.19
         },
         {
           "id": "21889",
@@ -151,19 +123,69 @@
           "unidad": "l",
           "calculado": 250,
           "tienda": 2.75
+        },
+        {
+          "id": "42293",
+          "nombre": "Laca de uñas alto brillo Deliplus 15 perla rosada",
+          "unidad": "l",
+          "calculado": 227.2727,
+          "tienda": 2.5
+        },
+        {
+          "id": "42294",
+          "nombre": "Laca de uñas alto brillo Deliplus 18 suave peonia",
+          "unidad": "l",
+          "calculado": 227.2727,
+          "tienda": 2.5
+        },
+        {
+          "id": "42295",
+          "nombre": "Laca de uñas alto brillo Deliplus 20 rosa magnético",
+          "unidad": "l",
+          "calculado": 227.2727,
+          "tienda": 2.5
+        },
+        {
+          "id": "42296",
+          "nombre": "Laca de uñas alto brillo Deliplus 22 granate sublime",
+          "unidad": "l",
+          "calculado": 227.2727,
+          "tienda": 2.5
         }
+      ],
+      "ejemplosDescartados": [
+        "62048 Preparado de paella y sopa Hacendado ultracongelado",
+        "24147 Gambón congelado",
+        "24708 Alistado pequeño congelado",
+        "24712 Langostino crudo Hacendado ultracongelado",
+        "24477 Langostino cocido y pelado Hacendado ultracongelado",
+        "24181 Gamba pelada cruda tamaño mediano Hacendado ultracongelada",
+        "24486 Langostino crudo y pelado Hacendado ultracongelado",
+        "24230 Gamba pelada cruda tamaño grande Hacendado ultracongelada",
+        "62380 Bogavante americano crudo Hacendado ultracongelado",
+        "62396 Carne de mejillón cocido Hacendado ultracongelado",
+        "62228 Filetes de merluza del Cabo sin piel Hacendado ultracongelados",
+        "24345 Rodaja de emperador Hacendado ultracongelado",
+        "24016 Filetes de bacalao MareDeus ultracongelado",
+        "24203 Tubo de pota Argentina limpio Hacendado congelado",
+        "24200 Sepia faraónica limpia Hacendado congelada",
+        "24350 Filete de salmón rosado salvaje con piel Hacendado ultracongelado",
+        "62145 Rodajas de emperador pequeñas Hacendado ultracongeladas",
+        "24274 Sepia faraónica troceada limpia Hacendado congelada",
+        "24242 Calamar troceado limpio Hacendado congelado",
+        "62191 Filetes de panga Hacendado ultracongelados"
       ]
     },
     "consum": {
       "estado": "ok",
-      "actualizado": "2026-11-15T20:55:19.208Z",
-      "productos": 9238,
-      "comprobado": "2026-11-15T20:55:19.208Z",
-      "duracionSegundos": 174,
+      "actualizado": "2026-11-16T08:05:11.343Z",
+      "productos": 9236,
+      "comprobado": "2026-11-16T08:05:11.343Z",
+      "duracionSegundos": 179,
       "peticiones": 94,
-      "sinVerificar": 417,
+      "sinVerificar": 416,
       "descartados": 140,
-      "avisosPrecioRef": 23,
+      "avisosPrecioRef": 9,
       "ejemplosAvisos": [
         {
           "id": "9744",
@@ -180,20 +202,6 @@
           "tienda": 23.96
         },
         {
-          "id": "12535",
-          "nombre": "Pila Recargable AAA Pack de 4 Unidades",
-          "unidad": "ud",
-          "calculado": 7.9,
-          "tienda": 1.98
-        },
-        {
-          "id": "13027",
-          "nombre": "Duplo Rec Ambientador Fresh Matic Nenuco",
-          "unidad": "ud",
-          "calculado": 6.99,
-          "tienda": 3.5
-        },
-        {
           "id": "13837",
           "nombre": "Bombón Dulces Deseos",
           "unidad": "kg",
@@ -208,66 +216,10 @@
           "tienda": 12.92
         },
         {
-          "id": "17633",
-          "nombre": "Hermetic Twist c/rosca 1000 ml  Pack de 2 uds",
-          "unidad": "ud",
-          "calculado": 2.05,
-          "tienda": 1.03
-        },
-        {
-          "id": "19136",
-          "nombre": "Bolsa para Residuos Recambios",
-          "unidad": "ud",
-          "calculado": 0.0825,
-          "tienda": 0.03
-        },
-        {
-          "id": "19682",
-          "nombre": "Pila Alcalina AA Blister 4 Más 2",
-          "unidad": "ud",
-          "calculado": 5.29,
-          "tienda": 0.88
-        },
-        {
-          "id": "22502",
-          "nombre": "Pila Alcalina AAA Blister 4 Más 2",
-          "unidad": "ud",
-          "calculado": 5.39,
-          "tienda": 0.9
-        },
-        {
-          "id": "22962",
-          "nombre": "Pila Cegasa LR14 C Superalkaline",
-          "unidad": "ud",
-          "calculado": 4.49,
-          "tienda": 2.25
-        },
-        {
-          "id": "23317",
-          "nombre": "Pila Cegasa LR20 D Superalkaline",
-          "unidad": "ud",
-          "calculado": 4.49,
-          "tienda": 2.25
-        },
-        {
           "id": "26807",
           "nombre": "Bastoncillos Algodón",
           "unidad": "ud",
           "calculado": 0.0043,
-          "tienda": 0.01
-        },
-        {
-          "id": "29570",
-          "nombre": "Recambio Air Wick Duplo F.Matic W.Buquet",
-          "unidad": "ud",
-          "calculado": 6.99,
-          "tienda": 3.5
-        },
-        {
-          "id": "31860",
-          "nombre": "Toallita Limpieza y Fresc Pack 3 Unidades",
-          "unidad": "ud",
-          "calculado": 0.0344,
           "tienda": 0.01
         },
         {
@@ -285,26 +237,41 @@
           "tienda": 1.1
         },
         {
-          "id": "33888",
-          "nombre": "Set Vasos Vela Maxi Sandalo y Vainilla",
+          "id": "35106",
+          "nombre": "Edulcorante Sacarina en Comprimidos",
           "unidad": "ud",
-          "calculado": 3.99,
-          "tienda": 2
+          "calculado": 0.0014,
+          "tienda": 0.01
         },
         {
-          "id": "34119",
-          "nombre": "Pipeta Repelente para Perros",
-          "unidad": "ud",
-          "calculado": 4.6,
-          "tienda": 2.3
-        },
-        {
-          "id": "34120",
-          "nombre": "Pipeta Repelente para Gatos",
-          "unidad": "ud",
-          "calculado": 4.6,
-          "tienda": 2.3
+          "id": "47008",
+          "nombre": "Cola de rape sin piel 200-500 gr",
+          "unidad": "kg",
+          "calculado": 14.36,
+          "tienda": 17.95
         }
+      ],
+      "ejemplosDescartados": [
+        "4980 Detergente Líquido Prendas Delicadas 25 Lv",
+        "5818 Aluminio 30 M",
+        "5819 Aluminio 50 M",
+        "6102 Huevos M Medianos Docena 1 Dc",
+        "6103 Huevos L Grandes Docena 1 Dc",
+        "6104 Huevos L Grandes 1/2 Docena 0,5 Dc",
+        "6260 Huevos Camperos M/L 1/2 Docena 0,5 Dc",
+        "6463 Infusión Cola de Caballo Plus 3 Bolsitas 20 Unid. 20 Do",
+        "7611 Lavavajillas en Gel Excellence Antigrasa 50 Lv",
+        "9480 Film Transparente 30 M",
+        "10648 Papel de Horno 8 M",
+        "14313 Huevo XL Jumbo 1/2 Docena 0,5 Dc",
+        "14652 Detergente Concentrado Ropa Blanca y Color 25 Lv",
+        "15869 Lavavajillas en Gel Excellence Limón 50 Lv",
+        "17453 Detergente Líquido P.Delicadas Máquina 37 Lv",
+        "17498 Detergente Líquido Prendas Delicadas Bebé 32 Lv",
+        "17577 Detergente Líquido Prendas Delicadas Mano 45 Lv",
+        "17662 Detergente Cápsulas Eco 20 Lv",
+        "18019 Detergente Líquido Max 50 Lv",
+        "19298 Detergente Polvo Marsella 36 Lv"
       ]
     }
   }
