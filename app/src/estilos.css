@@ -273,3 +273,21 @@ p {
     transform: none;
   }
 }
+
+/* Diagnóstico técnico en Ajustes */
+.diagnostico {
+  margin: 0;
+  font-size: 15px;
+}
+
+.diagnostico dt {
+  color: var(--texto-2);
+  margin-top: 10px;
+}
+
+.diagnostico dd {
+  margin: 2px 0 0;
+  word-break: break-word;
+  -webkit-user-select: text;
+  user-select: text;
+}

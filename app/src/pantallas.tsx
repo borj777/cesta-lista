@@ -1,4 +1,5 @@
 import { ComoInstalar } from './componentes/Banderas.tsx';
+import { Diagnostico } from './componentes/Diagnostico.tsx';
 import { DetallePrecios, FechaPrecios } from './componentes/EstadoPrecios.tsx';
 import { fechaHora } from './estado.ts';
 import type { DatosApp } from './tipos.ts';
@@ -52,7 +53,12 @@ export function PantallaLidl() {
   );
 }
 
-export function PantallaAjustes({ datos, ahora }: Props) {
+export function PantallaAjustes({
+  datos,
+  ahora,
+  guardados,
+  error,
+}: Props & { guardados: boolean; error: string | null }) {
   return (
     <>
       <h1>Ajustes</h1>
@@ -67,10 +73,11 @@ export function PantallaAjustes({ datos, ahora }: Props) {
             </p>
           </>
         ) : (
-          <p class="secundario">Cargando precios…</p>
+          <p class="secundario">{error ?? 'Cargando precios…'}</p>
         )}
       </section>
       <ComoInstalar />
+      <Diagnostico guardados={guardados} error={error} />
       <section class="tarjeta">
         <h2>Acerca de</h2>
         <p class="secundario">

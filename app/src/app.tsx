@@ -24,13 +24,25 @@ function pestanaDeLaDireccion(): IdPestana {
 export function App() {
   const [pestana, setPestana] = useState<IdPestana>(pestanaDeLaDireccion);
   const [datos, setDatos] = useState<DatosApp | null>(null);
+  const [guardados, setGuardados] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cargando, setCargando] = useState(true);
   const ahora = new Date();
 
-  useEffect(() => {
+  const cargar = () => {
+    setCargando(true);
+    setError(null);
     cargarDatos()
-      .then(setDatos)
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
+      .then((r) => {
+        setDatos(r.datos);
+        setGuardados(r.guardados);
+      })
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
+      .finally(() => setCargando(false));
+  };
+
+  useEffect(() => {
+    cargar();
     const alCambiar = () => setPestana(pestanaDeLaDireccion());
     window.addEventListener('hashchange', alCambiar);
     return () => window.removeEventListener('hashchange', alCambiar);
@@ -46,16 +58,36 @@ export function App() {
         <VersionNueva />
         <SinConexion />
         {error && (
-          <p class="aviso aviso--error" role="alert">
+          <div class="aviso aviso--error" role="alert">
             <Icono nombre="alerta" tamano={20} />
-            <span>{error} Comprueba la conexión y vuelve a abrir la app.</span>
+            <span>{error}</span>
+            <button type="button" class="boton boton--pequeno" onClick={cargar}>
+              Reintentar
+            </button>
+          </div>
+        )}
+        {cargando && !datos && !error && (
+          <p class="aviso aviso--info" role="status">
+            <Icono nombre="recargar" tamano={20} />
+            <span>Cargando precios…</span>
           </p>
+        )}
+        {guardados && datos && (
+          <div class="aviso aviso--info" role="status">
+            <Icono nombre="sinConexion" tamano={20} />
+            <span>No se han podido descargar los precios: usas los guardados en el iPhone.</span>
+            <button type="button" class="boton boton--pequeno" onClick={cargar}>
+              Reintentar
+            </button>
+          </div>
         )}
         {datos && <AvisosPrecios avisos={avisosPrecios(datos, ahora)} />}
         {pestana === 'lista' && <PantallaLista datos={datos} ahora={ahora} />}
         {pestana === 'necesidades' && <PantallaNecesidades />}
         {pestana === 'lidl' && <PantallaLidl />}
-        {pestana === 'ajustes' && <PantallaAjustes datos={datos} ahora={ahora} />}
+        {pestana === 'ajustes' && (
+          <PantallaAjustes datos={datos} ahora={ahora} guardados={guardados} error={error} />
+        )}
       </main>
       <nav class="pestanas" aria-label="Secciones">
         {PESTANAS.map((p) => (

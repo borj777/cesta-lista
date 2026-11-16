@@ -35,17 +35,40 @@ self.addEventListener('message', (evento) => {
   if (evento.data === 'activar') self.skipWaiting();
 });
 
-async function primeroRed(peticion) {
+/** Con poca cobertura, si la red tarda más que esto y hay precios guardados, se usan esos. */
+const ESPERA_RED_MS = 6000;
+
+/**
+ * Precios: primero la red y, si falla o tarda, la copia guardada.
+ * La copia se guarda a la vez que se entrega la respuesta (evento.waitUntil), nunca antes:
+ * en Safari, esperar a guardar una copia de un archivo grande antes de responder puede
+ * bloquear la respuesta para siempre.
+ */
+async function primeroRed(evento) {
+  const url = evento.request.url;
   const cache = await caches.open(CACHE_DATOS);
-  try {
-    const respuesta = await fetch(peticion, { cache: 'no-cache' });
-    if (respuesta.ok) await cache.put(peticion, respuesta.clone());
+
+  const red = fetch(url, { cache: 'no-cache' }).then((respuesta) => {
+    if (respuesta.ok) {
+      const copia = respuesta.clone();
+      evento.waitUntil(cache.put(url, copia).catch(() => {}));
+    }
     return respuesta;
+  });
+
+  const guardada = await cache.match(url);
+  if (!guardada) return red;
+
+  const espera = new Promise((resolver) => setTimeout(() => resolver(null), ESPERA_RED_MS));
+  try {
+    const respuesta = await Promise.race([red, espera]);
+    if (respuesta && respuesta.ok) return respuesta;
   } catch {
-    const guardada = await cache.match(peticion);
-    if (guardada) return guardada;
-    throw new Error('Sin conexión y sin precios guardados');
+    // Sin conexión: se usa la copia guardada.
   }
+  // La descarga sigue en segundo plano y actualizará la copia para la próxima vez.
+  evento.waitUntil(red.catch(() => {}));
+  return guardada;
 }
 
 async function primeroCache(peticion) {
@@ -60,7 +83,7 @@ self.addEventListener('fetch', (evento) => {
   if (url.origin !== self.location.origin) return;
 
   if (url.pathname.endsWith('/data/app.json')) {
-    evento.respondWith(primeroRed(request));
+    evento.respondWith(primeroRed(evento));
   } else if (request.mode === 'navigate') {
     // Cualquier página de la app abre index.html, también sin conexión.
     evento.respondWith(caches.match('./').then((r) => r ?? fetch(request)));
