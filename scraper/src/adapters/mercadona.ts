@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { Pedir } from '../http.ts';
 import { cerrarProducto, idDe, normalizarTodos, validar } from '../normalizar.ts';
-import type { Normalizado, ResultadoAdaptador } from '../tipos.ts';
+import type { Normalizado, ResultadoAdaptador, Unidad } from '../tipos.ts';
 import { calcularPrecioRef, coincidePrecioRef, redondear, type Formato } from '../unidades.ts';
 
 export const MERCADONA_API = 'https://tienda.mercadona.es/api';
@@ -33,10 +33,12 @@ const ProductoCrudoSchema = z.object({
     size_format: z.string(),
     total_units: z.number().nullish(),
     pack_size: z.number().nullish(),
+    drained_weight: z.number().nullish(),
+    selling_method: z.number().nullish(),
     previous_unit_price: importeOpcional,
   }),
 });
-type InstruccionesPrecio = z.infer<typeof ProductoCrudoSchema>['price_instructions'];
+export type InstruccionesPrecio = z.infer<typeof ProductoCrudoSchema>['price_instructions'];
 
 const ArbolSchema = z.object({
   results: z
@@ -55,31 +57,116 @@ const DetalleSchema = z.object({
   categories: z.array(z.object({ products: z.array(z.unknown()) })),
 });
 
-/**
- * Formato del producto según Mercadona. Lo comprobado con las respuestas reales:
- * - Si se vende por kg o litros, unit_size es el total del envase (un pack de 6 briks de 1 L = 6).
- * - Si se cuenta en unidades (huevos, rollos, cápsulas, pastillas), bulk_price es el precio
- *   por pieza. Las piezas pueden estar en total_units (12 rollos) o en unit_size (12 huevos).
- *   En los packs de paquetes, total_units cuenta paquetes y unit_size piezas (pañales: 3
- *   paquetes de 40 = unit_size 120), así que se toma el mayor de los dos.
- * - Los detergentes ("lv", lavados) tienen bulk_price por litro o kg, no por lavado.
- */
-export function formatoMercadona(pi: InstruccionesPrecio): Formato | null {
-  const tamano = pi.size_format.toLowerCase();
-  const positivo = (n: number | null | undefined) => (n && n > 0 ? n : null);
-  const unitSize = positivo(pi.unit_size);
-  const candidatas = [
-    positivo(pi.total_units),
-    tamano === 'ud' ? unitSize : null,
-    pi.total_units && pi.pack_size ? positivo(pi.total_units * pi.pack_size) : null,
-  ].filter((n): n is number => n !== null);
-  const piezas = candidatas.length > 0 ? Math.max(...candidatas) : null;
+/** Cómo se interpreta un producto de Mercadona. */
+export type Interpretacion = {
+  /** Formato en la unidad de nuestro precioRef. */
+  formato: Formato;
+  /** Precio por artículo. En los productos a granel, el precio por kg. */
+  precio: number;
+  /**
+   * Cantidades a las que puede referirse el bulk_price de la tienda, para comprobarlo.
+   * La primera es la esperada; las demás cubren las incoherencias conocidas de Mercadona.
+   */
+  cantidadesTienda: number[];
+  /** Unidad de la cantidad esperada de la tienda. */
+  unidadTienda: Unidad;
+  /** El precioRef es el de la propia tienda (granel): no se puede comprobar. */
+  deLaTienda?: boolean;
+};
 
-  if (pi.reference_format.toLowerCase() === 'ud' && piezas)
-    return { cantidad: piezas, unidad: 'ud' };
-  if (tamano === 'kg' || tamano === 'l')
-    return unitSize ? { cantidad: unitSize, unidad: tamano } : null;
-  if (tamano === 'ud') return piezas ? { cantidad: piezas, unidad: 'ud' } : null;
+const positivo = (n: number | null | undefined): number | null => (n && n > 0 ? n : null);
+
+/**
+ * Interpreta el formato de un producto de Mercadona. Lo comprobado con respuestas reales:
+ * - Kg, litros o metros: unit_size es el total del envase (6 briks de 1 L = 6). Si falta, como
+ *   en los congelados, vale el peso neto escurrido (drained_weight), igual que hace la tienda.
+ * - A granel (selling_method 1: gambón, morralla) se vende al peso: unit_price no es un precio
+ *   real (1.282,05 €) y el que vale es bulk_price, por kg.
+ * - Detergentes ("lv"): el precioRef va por lavado; bulk_price va por litro, kg o lavado.
+ * - Contados en unidades (huevos, rollos, pañales): las piezas están en total_units o en
+ *   unit_size; en los packs de paquetes (3 paquetes de 40 pañales) se toma el mayor.
+ * - Si se conoce el peso, el precioRef va siempre por kg (o l), aunque la tienda dé el precio
+ *   por pieza (fuet, longaniza, chorizo: reference_format "ud" con unit_size en kg).
+ */
+export function interpretarMercadona(pi: InstruccionesPrecio): Interpretacion | null {
+  const tamano = pi.size_format.toLowerCase();
+  const referencia = pi.reference_format.toLowerCase();
+
+  if (pi.selling_method === 1) {
+    if (!(pi.bulk_price > 0)) return null;
+    const unidad = tamano === 'l' ? 'l' : 'kg';
+    return {
+      formato: { cantidad: 1, unidad },
+      precio: redondear(pi.bulk_price, 2),
+      cantidadesTienda: [1],
+      unidadTienda: unidad,
+      deLaTienda: true,
+    };
+  }
+  if (!(pi.unit_price > 0)) return null;
+  const precio = redondear(pi.unit_price, 2);
+
+  const unidades = positivo(pi.total_units);
+  const unitSize = positivo(pi.unit_size);
+  const medida =
+    tamano === 'kg' || tamano === 'l'
+      ? (unitSize ?? positivo(pi.drained_weight))
+      : tamano === 'm'
+        ? unitSize
+        : null;
+  const candidatasPiezas = [
+    unidades,
+    tamano === 'ud' ? unitSize : null,
+    unidades && pi.pack_size ? positivo(unidades * pi.pack_size) : null,
+  ].filter((n): n is number => n !== null);
+  const piezas = candidatasPiezas.length > 0 ? Math.max(...candidatasPiezas) : null;
+
+  // Otras cantidades a las que Mercadona refiere a veces su bulk_price.
+  const alternativas = [unitSize, positivo(pi.drained_weight), unidades, piezas, 1];
+  const conAlternativas = (esperada: number) =>
+    [esperada, ...alternativas].filter(
+      (n, i, lista): n is number => n !== null && lista.indexOf(n) === i,
+    );
+
+  if (referencia === 'lv' && medida && (tamano === 'kg' || tamano === 'l')) {
+    return {
+      formato: unidades
+        ? { cantidad: unidades, unidad: 'lavado' }
+        : { cantidad: medida, unidad: tamano },
+      precio,
+      cantidadesTienda: conAlternativas(medida),
+      unidadTienda: tamano,
+    };
+  }
+  if (tamano === 'ud') {
+    return piezas
+      ? {
+          formato: { cantidad: piezas, unidad: 'ud' },
+          precio,
+          cantidadesTienda: conAlternativas(piezas),
+          unidadTienda: 'ud',
+        }
+      : null;
+  }
+  if (medida && (tamano === 'kg' || tamano === 'l' || tamano === 'm')) {
+    // Si la tienda da el precio por pieza, la cantidad esperada son las piezas (o 1).
+    const porPieza = referencia === 'ud' || referencia === 'dc';
+    const esperada = porPieza ? (unidades ?? 1) : medida;
+    return {
+      formato: { cantidad: medida, unidad: tamano },
+      precio,
+      cantidadesTienda: conAlternativas(esperada),
+      unidadTienda: porPieza ? 'ud' : tamano,
+    };
+  }
+  if (referencia === 'ud' && piezas) {
+    return {
+      formato: { cantidad: piezas, unidad: 'ud' },
+      precio,
+      cantidadesTienda: conAlternativas(piezas),
+      unidadTienda: 'ud',
+    };
+  }
   return null;
 }
 
@@ -90,10 +177,9 @@ export function normalizarMercadona(crudo: unknown): Normalizado {
   const p = r.data;
   const pi = p.price_instructions;
 
-  const formato = formatoMercadona(pi);
-  if (!formato || !(pi.unit_price > 0)) return { ok: false };
-
-  const precio = redondear(pi.unit_price, 2);
+  const interpretacion = interpretarMercadona(pi);
+  if (!interpretacion) return { ok: false };
+  const { formato, precio, cantidadesTienda, unidadTienda } = interpretacion;
   const precioRef = calcularPrecioRef(precio, formato.cantidad);
   const anterior = pi.previous_unit_price;
 
@@ -109,18 +195,30 @@ export function normalizarMercadona(crudo: unknown): Normalizado {
     imagen: p.thumbnail ?? undefined,
   });
   if (!producto) return { ok: false };
+  if (interpretacion.deLaTienda) return { ok: true, producto, sinVerificar: true };
+  if (!(pi.bulk_price > 0)) return { ok: true, producto, sinVerificar: true };
 
-  const aviso =
-    pi.bulk_price > 0 && !coincidePrecioRef(precioRef, pi.bulk_price)
-      ? {
-          id: producto.id,
-          nombre: producto.nombre,
-          unidad: formato.unidad,
-          calculado: precioRef,
-          tienda: pi.bulk_price,
-        }
-      : undefined;
-  return aviso ? { ok: true, producto, aviso } : { ok: true, producto };
+  // Comprobación siempre en la misma unidad que la tienda, para no mezclar € por pieza y € por kg.
+  const cuadra = cantidadesTienda.find((c) => coincidePrecioRef(precio / c, pi.bulk_price));
+  if (cuadra === undefined) {
+    const esperada = cantidadesTienda[0] ?? formato.cantidad;
+    return {
+      ok: true,
+      producto,
+      aviso: {
+        id: producto.id,
+        nombre: producto.nombre,
+        unidad: unidadTienda,
+        calculado: calcularPrecioRef(precio, esperada),
+        tienda: pi.bulk_price,
+      },
+    };
+  }
+  // La tienda cuadra, pero con otra cantidad (p. ej. por pieza y nosotros por kg): nuestro
+  // precioRef es correcto, pero no se puede contrastar directamente con el suyo.
+  return Math.abs(cuadra - formato.cantidad) < 1e-9
+    ? { ok: true, producto }
+    : { ok: true, producto, sinVerificar: true };
 }
 
 /**

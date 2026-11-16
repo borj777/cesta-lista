@@ -38,17 +38,19 @@ describe('normalizarMercadona con respuestas reales', () => {
     ['Plátano de Canarias IGP', 0.48, { cantidad: 0.15, unidad: 'kg' }, 3.2],
     ['Leche semidesnatada Hacendado', 4.98, { cantidad: 6, unidad: 'l' }, 0.83],
     ['Huevos grandes L', 3.05, { cantidad: 12, unidad: 'ud' }, 0.2542],
+    // Detergente "lv": por lavado (50 lavados), aunque la tienda dé el precio por litro.
     [
       'Detergente ropa jabón natural de Marsella Bosque Verde líquido',
       3.5,
-      { cantidad: 3, unidad: 'l' },
-      1.1667,
+      { cantidad: 50, unidad: 'lavado' },
+      0.07,
     ],
+    // Cápsulas con peso conocido: por kg, aunque la tienda dé el precio por cápsula.
     [
       'Detergente ropa todo en 1 Ariel Pods en cápsulas',
       4.95,
-      { cantidad: 19, unidad: 'ud' },
-      0.2605,
+      { cantidad: 0.3477, unidad: 'kg' },
+      14.2364,
     ],
     ['Pastillas antical para lavadora Bosque Verde', 3.25, { cantidad: 40, unidad: 'ud' }, 0.0813],
     ['Papel higiénico Doble Rollo Bosque Verde', 4.6, { cantidad: 12, unidad: 'ud' }, 0.3833],
@@ -72,9 +74,26 @@ describe('normalizarMercadona con respuestas reales', () => {
 
   it('coincide con el bulk_price de la tienda salvo en unos pocos productos', () => {
     const avisos = normalizados.flatMap((r) => (r.ok && r.aviso ? [r.aviso] : []));
-    // Mercadona no es coherente en algunos productos de papel y detergente en cápsulas.
-    expect(avisos.length / productos.length).toBeLessThan(0.05);
-    expect(avisos.map((a) => a.nombre)).toContain('Papel cocina Gigante Absorbente Bosque Verde');
+    // Los pañuelos de papel son incoherentes en la propia tienda (0,02 € por pañuelo en un
+    // paquete de 1,65 €). El aviso se da en la unidad de la tienda, sin mezclar unidades.
+    expect(avisos.length / productos.length).toBeLessThan(0.02);
+    expect(avisos).toContainEqual({
+      id: '46703',
+      nombre: 'Pañuelos de papel Aloe Vera Bosque Verde',
+      unidad: 'ud',
+      calculado: 0.165,
+      tienda: 0.02,
+    });
+  });
+
+  it('el papel de cocina va por servicio y cuadra con el precio por rollo de la tienda', () => {
+    const r = normalizados.find((x) => x.ok && x.producto.id === '49176');
+    expect(r).toMatchObject({
+      ok: true,
+      sinVerificar: true,
+      producto: { formato: { cantidad: 375, unidad: 'ud' } },
+    });
+    expect(r?.ok && r.aviso).toBeFalsy();
   });
 
   it('descarta un producto sin precio o sin formato', () => {
@@ -156,5 +175,80 @@ describe('packs de paquetes en Mercadona (datos reales del 15/11/2026)', () => {
     expect(r).toMatchObject({ ok: true, producto: { formato: { cantidad: us, unidad: 'ud' } } });
     expect(r.ok && r.producto.precioRef).toBe(ref);
     expect(r.ok && r.aviso).toBeFalsy();
+  });
+});
+
+describe('descartados recuperados y embutidos (datos reales del 16/11/2026)', () => {
+  const NUEVAS = ['pescado-congelado', 'marisco-congelado', 'marisco', 'embutido-curado', 'menaje'];
+  const crudosNuevos = NUEVAS.flatMap((c) =>
+    (fixture(`mercadona-categoria-${c}-vlc1.json`) as Categoria).categories.flatMap(
+      (s) => s.products,
+    ),
+  );
+  const porId = (id: string) => {
+    const crudo = crudosNuevos.find((c) => (c as { id: string }).id === id);
+    if (!crudo) throw new Error(`No está en las fixtures: ${id}`);
+    return normalizarMercadona(crudo);
+  };
+
+  it('ya no descarta ningún producto de estas categorías', () => {
+    const descartados = crudosNuevos.filter((c) => !normalizarMercadona(c).ok);
+    expect(crudosNuevos.length).toBeGreaterThan(150);
+    expect(descartados).toHaveLength(0);
+  });
+
+  it('congelados: usa el peso neto escurrido cuando falta el peso total', () => {
+    // Filetes de merluza: 5,30 € y 0,6 kg escurridos = 8,83 €/kg, como dice la tienda.
+    const r = porId('62228');
+    expect(r).toMatchObject({
+      ok: true,
+      producto: { precio: 5.3, formato: { cantidad: 0.6, unidad: 'kg' }, precioRef: 8.8333 },
+    });
+    expect(r.ok && (r.aviso || r.sinVerificar)).toBeFalsy();
+  });
+
+  it('a granel: el precio es el de la tienda por kg, no el unit_price', () => {
+    // Gambón: unit_price 1.282,05 € (no es un precio real); bulk_price 12,95 €/kg.
+    expect(porId('24147')).toMatchObject({
+      ok: true,
+      sinVerificar: true,
+      producto: { precio: 12.95, formato: { cantidad: 1, unidad: 'kg' }, precioRef: 12.95 },
+    });
+  });
+
+  it('aluminio y film: por metro', () => {
+    const r = porId('49000');
+    expect(r).toMatchObject({
+      ok: true,
+      producto: { precio: 2.25, formato: { cantidad: 30, unidad: 'm' }, precioRef: 0.075 },
+    });
+    expect(r.ok && (r.aviso || r.sinVerificar)).toBeFalsy();
+  });
+
+  it.each([
+    // Fuet: 2,50 € la pieza de 0,24 kg → 10,42 €/kg.
+    ['55108', 2.5, 0.24, 10.4167],
+    ['55125', 2.8, 0.28, 10],
+    ['54105', 3.05, 0.35, 8.7143],
+  ])(
+    'embutido por pieza %s: precioRef por kg, sin aviso por mezclar unidades',
+    (id, precio, kg, ref) => {
+      const r = porId(id);
+      expect(r).toMatchObject({
+        ok: true,
+        sinVerificar: true,
+        producto: { precio, formato: { cantidad: kg, unidad: 'kg' }, precioRef: ref },
+      });
+      expect(r.ok && r.aviso).toBeFalsy();
+    },
+  );
+
+  it('todo lo que tiene peso en kg tiene el precioRef en €/kg', () => {
+    for (const crudo of crudosNuevos) {
+      const pi = (crudo as { price_instructions: { size_format: string; selling_method: number } })
+        .price_instructions;
+      const r = normalizarMercadona(crudo);
+      if (r.ok && pi.size_format === 'kg') expect(r.producto.formato.unidad).toBe('kg');
+    }
   });
 });
