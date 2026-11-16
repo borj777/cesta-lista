@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { recargarAjustesCompra } from '../ajustes.ts';
 import { guardarAjuste, leerAjuste, leerTodo, reemplazarTodo } from '../almacen.ts';
 import { crearCopia, leerCopia, nombreArchivo, ofrecerArchivo, textoCopia } from '../copia.ts';
 import { fechaHora } from '../estado.ts';
@@ -74,7 +75,7 @@ export function CopiaSeguridad() {
         ...copia,
         ajustes: { ...copia.ajustes, ultimaCopia: copia.exportada },
       });
-      await Promise.all([recargarNecesidades(), recargarLidl()]);
+      await Promise.all([recargarNecesidades(), recargarLidl(), recargarAjustesCompra()]);
       setUltima(copia.exportada);
       setMensaje({
         tipo: 'bien',

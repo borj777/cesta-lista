@@ -674,3 +674,48 @@ a.producto--boton {
 body:has(input:focus:not([type='radio'])) .pestanas {
   display: none;
 }
+
+/* Lista: la compra más barata */
+.plan__periodo {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--marca);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.plan__titulo {
+  margin: 4px 0 0;
+  font-size: 22px;
+}
+
+.plan__total {
+  margin: 4px 0 8px;
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.grupo__titulo--tienda {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.grupo__titulo--tienda .punto {
+  display: inline-block;
+  margin-right: 4px;
+}
+
+.fila__importe {
+  flex: none;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.fila__importe--apagado {
+  color: var(--texto-3);
+}

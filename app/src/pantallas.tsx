@@ -1,34 +1,12 @@
+import { AjustesCompra } from './componentes/AjustesCompra.tsx';
 import { ComoInstalar } from './componentes/Banderas.tsx';
 import { CopiaSeguridad } from './componentes/CopiaSeguridad.tsx';
 import { Diagnostico } from './componentes/Diagnostico.tsx';
-import { DetallePrecios, FechaPrecios } from './componentes/EstadoPrecios.tsx';
+import { DetallePrecios } from './componentes/EstadoPrecios.tsx';
 import { fechaHora } from './estado.ts';
 import type { DatosApp } from './tipos.ts';
 
 type Props = { datos: DatosApp | null; ahora: Date };
-
-function Proximamente({ titulo, children }: { titulo: string; children: string }) {
-  return (
-    <section class="tarjeta vacia">
-      <h2>{titulo}</h2>
-      <p class="secundario">{children}</p>
-    </section>
-  );
-}
-
-export function PantallaLista({ datos, ahora }: Props) {
-  return (
-    <>
-      <h1>Lista de compra</h1>
-      {datos && <FechaPrecios datos={datos} ahora={ahora} />}
-      <ComoInstalar />
-      <Proximamente titulo="Tu lista aparecerá aquí">
-        Cuando añadas tus necesidades y elijas qué producto compras en cada tienda, Cesta Lista
-        repartirá la compra entre Mercadona, Consum y Lidl para que gastes lo mínimo.
-      </Proximamente>
-    </>
-  );
-}
 
 export function PantallaAjustes({
   datos,
@@ -53,6 +31,7 @@ export function PantallaAjustes({
           <p class="secundario">{error ?? 'Cargando precios…'}</p>
         )}
       </section>
+      <AjustesCompra />
       <CopiaSeguridad />
       <ComoInstalar />
       <Diagnostico guardados={guardados} error={error} />

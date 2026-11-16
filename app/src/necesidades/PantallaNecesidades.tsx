@@ -1,10 +1,8 @@
-import { useMemo, useState } from 'preact/hooks';
-import { indicePorId } from '../buscador.ts';
+import { useState } from 'preact/hooks';
+import { useCatalogo } from '../catalogo.ts';
 import { Icono } from '../componentes/Icono.tsx';
 import { Opciones } from '../componentes/Opciones.tsx';
-import { useLidl } from '../lidl/estado.ts';
-import { aProductoApp } from '../lidl/modelo.ts';
-import type { DatosApp, ProductoApp } from '../tipos.ts';
+import type { DatosApp } from '../tipos.ts';
 import { DetalleNecesidad } from './DetalleNecesidad.tsx';
 import { ElegirProducto } from './ElegirProducto.tsx';
 import { borrar, guardar, useNecesidades } from './estado.ts';
@@ -24,7 +22,6 @@ import {
   type ErroresBorrador,
   type Frecuencia,
   type Necesidad,
-  type TiendaEquivalencia,
   type UnidadNecesidad,
 } from './modelo.ts';
 
@@ -44,21 +41,7 @@ export function PantallaNecesidades({
   datos: DatosApp | null;
 }) {
   const { necesidades, error } = useNecesidades();
-  const { productos: lidl } = useLidl();
-  // Los precios de Lidl apuntados a mano, en el mismo formato que los de app.json.
-  const productosLidl = useMemo(() => (lidl ? lidl.map(aProductoApp) : null), [lidl]);
-  const indice = useMemo(
-    () => (datos && productosLidl ? indicePorId([...datos.productos, ...productosLidl]) : null),
-    [datos, productosLidl],
-  );
-  const buscarProducto = useMemo(
-    () =>
-      indice
-        ? (tienda: TiendaEquivalencia, id: string): ProductoApp | undefined =>
-            indice.get(`${tienda}:${id}`)
-        : null,
-    [indice],
-  );
+  const { productosLidl, buscarProducto } = useCatalogo(datos);
 
   if (error) {
     return (

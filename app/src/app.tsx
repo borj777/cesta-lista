@@ -6,7 +6,8 @@ import { cargarDatos } from './datos.ts';
 import { avisosPrecios } from './estado.ts';
 import { PantallaNecesidades } from './necesidades/PantallaNecesidades.tsx';
 import { PantallaLidl } from './lidl/PantallaLidl.tsx';
-import { PantallaAjustes, PantallaLista } from './pantallas.tsx';
+import { PantallaLista } from './lista/PantallaLista.tsx';
+import { PantallaAjustes } from './pantallas.tsx';
 import type { DatosApp } from './tipos.ts';
 
 const PESTANAS = [
