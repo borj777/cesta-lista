@@ -39,7 +39,14 @@ jobs:
         id: decidir
         env:
           EVENTO: ${{ github.event_name }}
+          # Hora programada que ha lanzado la ejecución ('0 7 * * *' o '30 9 * * *').
+          CRON: ${{ github.event.schedule }}
         run: |
+          # Para comprobar si GitHub respeta la zona horaria: hora programada, hora real de
+          # arranque en España y en UTC.
+          arranque="$(TZ=Europe/Madrid date '+%H:%M') en España ($(date -u '+%H:%M') UTC)"
+          echo "Hora programada: ${CRON:-ninguna, lanzado a mano} · arranque: $arranque"
+          echo "**Hora programada:** \`${CRON:-ninguna (lanzado a mano)}\` · **arranque:** $arranque" >> "$GITHUB_STEP_SUMMARY"
           hoy=$(TZ=Europe/Madrid date +%F)
           generado=$(jq -r '.generado // empty' data/meta.json 2>/dev/null || true)
           ultimo="ninguno"
