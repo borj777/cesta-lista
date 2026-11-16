@@ -6,6 +6,7 @@ import type { ContenidoBD } from './almacen.ts';
 import {
   CATEGORIAS,
   FRECUENCIAS,
+  TIENDAS_EQUIVALENCIA,
   UNIDADES_NECESIDAD,
   type Necesidad,
 } from './necesidades/modelo.ts';
@@ -66,6 +67,19 @@ function problemaNecesidad(n: Record<string, unknown>): string | null {
   if (!FRECUENCIAS.includes(n.frecuencia as never)) return 'la frecuencia no es válida';
   if (n.notas !== undefined && typeof n.notas !== 'string') return 'las notas no son texto';
   if (!esFecha(n.creada) || !esFecha(n.actualizada)) return 'las fechas no son válidas';
+  if (n.equivalencias !== undefined) {
+    if (!esObjeto(n.equivalencias)) return 'los productos elegidos no son válidos';
+    for (const [tienda, e] of Object.entries(n.equivalencias)) {
+      if (!TIENDAS_EQUIVALENCIA.includes(tienda as never)) {
+        return `la tienda «${tienda}» no es válida`;
+      }
+      const valida =
+        esObjeto(e) &&
+        ((typeof e.id === 'string' && e.id.length > 0 && Object.keys(e).length === 1) ||
+          (e.noCompro === true && Object.keys(e).length === 1));
+      if (!valida) return `el producto elegido en ${tienda} no es válido`;
+    }
+  }
   return null;
 }
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { normalizarConsum } from '../src/adapters/consum.ts';
 import { normalizarMercadona } from '../src/adapters/mercadona.ts';
-import { CAMPOS_APP, construirApp, serializarApp } from '../src/app.ts';
+import { CAMPOS_APP, construirApp, serializarApp, serializarImagenes } from '../src/app.ts';
 import type { Meta } from '../src/meta.ts';
 import { normalizarTodos } from '../src/normalizar.ts';
 import { AHORA, fixture } from './ayudas.ts';
@@ -82,5 +82,25 @@ describe('archivo ligero para la app', () => {
   it('pesa bastante menos que los archivos completos', () => {
     const completo = JSON.stringify([...mercadona, ...consum]).length;
     expect(serializarApp(datos).length).toBeLessThan(completo * 0.75);
+  });
+});
+
+describe('archivo de fotos', () => {
+  it('tiene una foto por producto, una por línea, y se puede leer', () => {
+    const texto = serializarImagenes(AHORA, { consum, mercadona });
+    const datos = JSON.parse(texto) as {
+      generado: string;
+      imagenes: Record<string, Record<string, string>>;
+    };
+    expect(datos.generado).toBe(AHORA);
+    expect(Object.keys(datos.imagenes)).toEqual(['mercadona', 'consum']);
+    expect(datos.imagenes.consum?.['4679']).toMatch(/^https:\/\/cdn-consum\./);
+    expect(Object.keys(datos.imagenes.mercadona ?? {})).toHaveLength(
+      mercadona.filter((p) => p.imagen).length,
+    );
+    const lineasProducto = texto
+      .split('\n')
+      .filter((l) => l.startsWith('"') && l.includes('https'));
+    expect(lineasProducto).toHaveLength(mercadona.length + consum.length);
   });
 });

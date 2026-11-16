@@ -1,6 +1,10 @@
-import { useState } from 'preact/hooks';
+import { useMemo, useState } from 'preact/hooks';
+import { indicePorId } from '../buscador.ts';
 import { Icono } from '../componentes/Icono.tsx';
 import { Opciones } from '../componentes/Opciones.tsx';
+import type { DatosApp, ProductoApp } from '../tipos.ts';
+import { DetalleNecesidad } from './DetalleNecesidad.tsx';
+import { ElegirProducto } from './ElegirProducto.tsx';
 import { borrar, guardar, useNecesidades } from './estado.ts';
 import {
   agruparPorCategoria,
@@ -18,6 +22,7 @@ import {
   type ErroresBorrador,
   type Frecuencia,
   type Necesidad,
+  type TiendaEquivalencia,
   type UnidadNecesidad,
 } from './modelo.ts';
 
@@ -25,9 +30,27 @@ const ir = (ruta: string) => {
   location.hash = ruta;
 };
 
-/** #necesidades, #necesidades/nueva o #necesidades/<id>. */
-export function PantallaNecesidades({ sub }: { sub: string | null }) {
+/**
+ * Rutas: #necesidades, #necesidades/nueva, #necesidades/<id>, #necesidades/<id>/editar y
+ * #necesidades/<id>/elegir/<tienda>.
+ */
+export function PantallaNecesidades({
+  sub,
+  datos,
+}: {
+  sub: string | null;
+  datos: DatosApp | null;
+}) {
   const { necesidades, error } = useNecesidades();
+  const indice = useMemo(() => (datos ? indicePorId(datos.productos) : null), [datos]);
+  const buscarProducto = useMemo(
+    () =>
+      indice
+        ? (tienda: TiendaEquivalencia, id: string): ProductoApp | undefined =>
+            indice.get(`${tienda}:${id}`)
+        : null,
+    [indice],
+  );
 
   if (error) {
     return (
@@ -44,10 +67,45 @@ export function PantallaNecesidades({ sub }: { sub: string | null }) {
 
   if (sub === 'nueva') return <FormNecesidad key="nueva" />;
   if (sub) {
-    const existente = necesidades.find((n) => n.id === sub);
-    if (existente) return <FormNecesidad key={existente.id} existente={existente} />;
+    const [id, accion, tienda] = sub.split('/');
+    const existente = necesidades.find((n) => n.id === id);
+    if (existente && accion === 'editar') {
+      return <FormNecesidad key={existente.id} existente={existente} />;
+    }
+    if (existente && accion === 'elegir' && (tienda === 'mercadona' || tienda === 'consum')) {
+      if (!datos || !buscarProducto) return <p class="secundario">Cargando precios…</p>;
+      return (
+        <ElegirProducto
+          key={`${existente.id}-${tienda}`}
+          necesidad={existente}
+          tienda={tienda}
+          productos={datos.productos}
+          buscarProducto={buscarProducto}
+        />
+      );
+    }
+    if (existente)
+      return <DetalleNecesidad necesidad={existente} buscarProducto={buscarProducto} />;
   }
   return <ListaNecesidades necesidades={necesidades} />;
+}
+
+/** Puntos de color de las tiendas con producto elegido, o «Sin elegir». */
+function TiendasElegidas({ necesidad }: { necesidad: Necesidad }) {
+  const e = necesidad.equivalencias ?? {};
+  const elegidas = (['mercadona', 'consum', 'lidl'] as const).filter((t) => {
+    const x = e[t];
+    return x && 'id' in x;
+  });
+  const decididas = Object.keys(e).length;
+  if (decididas === 0) return <span class="sin-elegir">Sin elegir</span>;
+  return (
+    <span class="puntos" aria-label={`Elegido en ${elegidas.length} tiendas`}>
+      {elegidas.map((t) => (
+        <span key={t} class={`punto punto--${t}`} />
+      ))}
+    </span>
+  );
 }
 
 function ListaNecesidades({ necesidades }: { necesidades: Necesidad[] }) {
@@ -90,6 +148,7 @@ function ListaNecesidades({ necesidades }: { necesidades: Necesidad[] }) {
                     <span>{n.nombre}</span>
                     <span class="secundario">{textoNecesidad(n)}</span>
                   </div>
+                  <TiendasElegidas necesidad={n} />
                   <span class="chevron" aria-hidden="true">
                     ›
                   </span>
@@ -153,12 +212,12 @@ function FormNecesidad({ existente }: { existente?: Necesidad }) {
     const borrador = { nombre, categoria, cantidad, unidad, frecuencia, notas };
     const ahora = new Date().toISOString();
     try {
-      await guardar(
-        existente
-          ? editarNecesidad(existente, borrador, ahora)
-          : crearNecesidad(borrador, ahora, crypto.randomUUID()),
-      );
-      ir('necesidades');
+      const guardada = existente
+        ? editarNecesidad(existente, borrador, ahora)
+        : crearNecesidad(borrador, ahora, crypto.randomUUID());
+      await guardar(guardada);
+      // Tras crearla o editarla, se va a su ficha para elegir los productos de cada tienda.
+      ir(`necesidades/${guardada.id}`);
     } catch (error) {
       setFallo(`No se ha podido guardar (${error instanceof Error ? error.message : error}).`);
       setGuardando(false);
@@ -173,8 +232,8 @@ function FormNecesidad({ existente }: { existente?: Necesidad }) {
 
   return (
     <form onSubmit={alGuardar} noValidate>
-      <a class="volver" href="#necesidades">
-        ‹ Mis necesidades
+      <a class="volver" href={existente ? `#necesidades/${existente.id}` : '#necesidades'}>
+        ‹ {existente ? existente.nombre : 'Mis necesidades'}
       </a>
       <h1>{existente ? 'Editar necesidad' : 'Nueva necesidad'}</h1>
 
@@ -280,7 +339,10 @@ function FormNecesidad({ existente }: { existente?: Necesidad }) {
         <button type="submit" class="boton boton--principal boton--ancho" disabled={guardando}>
           {guardando ? 'Guardando…' : existente ? 'Guardar cambios' : 'Añadir'}
         </button>
-        <a class="boton boton--ancho" href="#necesidades">
+        <a
+          class="boton boton--ancho"
+          href={existente ? `#necesidades/${existente.id}` : '#necesidades'}
+        >
           Cancelar
         </a>
         {existente && (

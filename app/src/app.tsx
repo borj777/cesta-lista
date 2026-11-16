@@ -20,9 +20,9 @@ type Ruta = { pestana: IdPestana; sub: string | null };
 
 /** La pantalla se guarda en la dirección: #lista, #necesidades/nueva, #necesidades/<id>... */
 function rutaDeLaDireccion(): Ruta {
-  const [id = '', sub] = location.hash.replace('#', '').split('/');
+  const [id = '', ...resto] = location.hash.replace('#', '').split('/');
   const pestana = PESTANAS.find((p) => p.id === id)?.id ?? 'lista';
-  return { pestana, sub: sub ? decodeURIComponent(sub) : null };
+  return { pestana, sub: resto.length > 0 ? resto.map(decodeURIComponent).join('/') : null };
 }
 
 export function App() {
@@ -88,7 +88,7 @@ export function App() {
         )}
         {datos && <AvisosPrecios avisos={avisosPrecios(datos, ahora)} />}
         {pestana === 'lista' && <PantallaLista datos={datos} ahora={ahora} />}
-        {pestana === 'necesidades' && <PantallaNecesidades sub={sub} />}
+        {pestana === 'necesidades' && <PantallaNecesidades sub={sub} datos={datos} />}
         {pestana === 'lidl' && <PantallaLidl />}
         {pestana === 'ajustes' && (
           <PantallaAjustes datos={datos} ahora={ahora} guardados={guardados} error={error} />

@@ -80,11 +80,11 @@ jobs:
           npm ci
           npm run build
 
-      - name: Añadir los precios del día
+      - name: Añadir los precios y las fotos del día
         run: |
           mkdir -p app/dist/data
-          cp data/app.json app/dist/data/app.json
-          echo "app.json: $(du -h app/dist/data/app.json | cut -f1)"
+          cp data/app.json data/imagenes.json app/dist/data/
+          du -h app/dist/data/*
 
       - name: Preparar GitHub Pages
         uses: actions/configure-pages@v6

@@ -1,6 +1,6 @@
 /** Lectura y escritura de los archivos de /data. */
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
-import { construirApp, serializarApp } from './app.ts';
+import { construirApp, serializarApp, serializarImagenes } from './app.ts';
 import { leerProductos, MetaSchema, type Meta } from './meta.ts';
 import { TIENDAS, type Producto, type Tienda } from './tipos.ts';
 
@@ -28,7 +28,7 @@ export async function leerMeta(): Promise<Meta | null> {
 }
 
 /**
- * Regenera data/app.json a partir de los archivos completos guardados.
+ * Regenera data/app.json y data/imagenes.json a partir de los archivos completos guardados.
  * Si una tienda ha fallado hoy, sus productos son los del último día bueno.
  * Devuelve el tamaño del archivo en bytes.
  */
@@ -40,5 +40,6 @@ export async function actualizarApp(meta: Meta): Promise<number> {
   }
   const contenido = serializarApp(construirApp(meta, porTienda));
   await escribir('app.json', contenido);
+  await escribir('imagenes.json', serializarImagenes(meta.generado, porTienda));
   return Buffer.byteLength(contenido);
 }

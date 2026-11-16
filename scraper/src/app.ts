@@ -62,3 +62,23 @@ export function serializarApp(datos: DatosApp): string {
   const lineas = datos.productos.map((p) => JSON.stringify(p)).join(',\n');
   return `${cabecera.slice(0, -1)},"productos":[\n${lineas}\n]}\n`;
 }
+
+/**
+ * Fotos de los productos para la app (data/imagenes.json), aparte de app.json para que la
+ * lista de precios cargue rápido: la app solo lo descarga al elegir productos.
+ * Un producto por línea, como los demás archivos, para que los commits sean pequeños.
+ */
+export function serializarImagenes(
+  generado: string,
+  porTienda: Partial<Record<Tienda, Producto[]>>,
+): string {
+  const partes: string[] = [];
+  for (const tienda of ORDEN) {
+    const lineas = [...(porTienda[tienda] ?? [])]
+      .filter((p) => p.imagen)
+      .sort((a, b) => a.id.localeCompare(b.id, 'es', { numeric: true }))
+      .map((p) => `${JSON.stringify(p.id)}:${JSON.stringify(p.imagen)}`);
+    if (lineas.length > 0) partes.push(`${JSON.stringify(tienda)}:{\n${lineas.join(',\n')}\n}`);
+  }
+  return `{"generado":${JSON.stringify(generado)},"imagenes":{\n${partes.join(',\n')}\n}}\n`;
+}
