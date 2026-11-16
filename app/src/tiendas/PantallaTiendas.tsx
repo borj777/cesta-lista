@@ -245,9 +245,11 @@ function ListaTiendas({
         </ul>
       )}
       {propias.length < MAX_TIENDAS_PROPIAS ? (
-        <a class="boton boton--principal boton--ancho" href="#tiendas/nueva">
-          Añadir una tienda
-        </a>
+        <div class="acciones">
+          <a class="boton boton--principal boton--ancho" href="#tiendas/nueva">
+            Añadir una tienda
+          </a>
+        </div>
       ) : (
         <p class="secundario">
           Has llegado al máximo de {MAX_TIENDAS_PROPIAS} tiendas propias. Borra alguna que no uses
