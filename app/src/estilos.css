@@ -651,6 +651,16 @@ p {
   color: var(--texto-3);
 }
 
+.producto__nota--atencion {
+  color: var(--atencion);
+  font-weight: 600;
+}
+
+/* Filas de producto que son enlaces (precios de Lidl): sin subrayado. */
+a.producto--boton {
+  text-decoration: none;
+}
+
 /* Los productos de Lidl, apuntados a mano, llevan una etiqueta en lugar de foto. */
 .foto--lidl {
   display: flex;

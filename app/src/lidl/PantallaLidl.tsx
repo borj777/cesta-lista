@@ -82,9 +82,18 @@ export function PantallaLidl({ sub }: { sub: string | null }) {
     const para = necesidades.find((n) => n.id === sub.split('/')[1]);
     return <FormLidl key={sub} para={para} necesidades={necesidades} />;
   }
-  const existente = sub ? productos.find((p) => p.id === sub) : undefined;
+  // #lidl/<id>/<id de necesidad>: se ha abierto desde la ficha de esa necesidad y vuelve a ella.
+  const [id, idDesde] = sub?.split('/') ?? [];
+  const existente = id ? productos.find((p) => p.id === id) : undefined;
   if (existente) {
-    return <FormLidl key={existente.id} existente={existente} necesidades={necesidades} />;
+    return (
+      <FormLidl
+        key={existente.id}
+        existente={existente}
+        desde={necesidades.find((n) => n.id === idDesde)}
+        necesidades={necesidades}
+      />
+    );
   }
   return <ListaLidl productos={productos} />;
 }
@@ -108,9 +117,8 @@ function ListaLidl({ productos }: { productos: ProductoLidl[] }) {
           <Icono nombre="alerta" tamano={20} />
           <span>
             {antiguos === 1
-              ? `1 precio tiene más de ${DIAS_PRECIO_ANTIGUO} días.`
-              : `${antiguos} precios tienen más de ${DIAS_PRECIO_ANTIGUO} días.`}{' '}
-            Compruébalos la próxima vez que vayas a Lidl.
+              ? `1 precio tiene más de ${DIAS_PRECIO_ANTIGUO} días. Compruébalo la próxima vez que vayas a Lidl.`
+              : `${antiguos} precios tienen más de ${DIAS_PRECIO_ANTIGUO} días. Compruébalos la próxima vez que vayas a Lidl.`}
           </span>
         </p>
       )}
@@ -147,11 +155,14 @@ function ListaLidl({ productos }: { productos: ProductoLidl[] }) {
 function FormLidl({
   existente,
   para,
+  desde,
   necesidades,
 }: {
   existente?: ProductoLidl;
   /** Necesidad para la que se añade el producto: al guardarlo, se elige para ella. */
   para?: Necesidad;
+  /** Necesidad desde cuya ficha se ha abierto: se vuelve a ella al terminar. */
+  desde?: Necesidad;
   necesidades: Necesidad[];
 }) {
   const inicial = existente ? deFormato(existente.formato) : null;
@@ -171,7 +182,11 @@ function FormLidl({
   const cantidad = leerCantidad(cantidadTexto);
   const precio = leerPrecio(precioTexto);
   const ahora = new Date();
-  const volver = para ? `necesidades/${para.id}/elegir/lidl` : 'lidl';
+  const volver = para
+    ? `necesidades/${para.id}/elegir/lidl`
+    : desde
+      ? `necesidades/${desde.id}`
+      : 'lidl';
 
   // Necesidades que usan este producto, para avisar al borrarlo.
   const usos = useMemo(
@@ -203,7 +218,7 @@ function FormLidl({
         await guardarNecesidad(elegirProducto(para, 'lidl', guardado.id, momento));
         ir(`necesidades/${para.id}`);
       } else {
-        ir('lidl');
+        ir(volver);
       }
     } catch (error) {
       setFallo(falloDe(error));
@@ -215,7 +230,7 @@ function FormLidl({
     if (!existente) return;
     try {
       await guardarLidl(confirmarPrecio(existente, new Date().toISOString()));
-      ir('lidl');
+      ir(volver);
     } catch (error) {
       setFallo(falloDe(error));
     }
@@ -230,7 +245,7 @@ function FormLidl({
     if (!confirm(`¿Borrar «${existente.nombre}» de tus precios de Lidl?${aviso}`)) return;
     try {
       await borrarLidl(existente.id);
-      ir('lidl');
+      ir(volver);
     } catch (error) {
       setFallo(falloDe(error));
     }
@@ -242,7 +257,7 @@ function FormLidl({
   return (
     <form onSubmit={alGuardar} noValidate>
       <a class="volver" href={`#${volver}`}>
-        ‹ {para ? 'Elegir en Lidl' : 'Precios de Lidl'}
+        ‹ {para ? 'Elegir en Lidl' : desde ? desde.nombre : 'Precios de Lidl'}
       </a>
       <h1>{titulo}</h1>
       {para && (

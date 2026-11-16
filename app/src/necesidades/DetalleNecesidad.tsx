@@ -92,7 +92,7 @@ export function DetalleNecesidad({
                     />
                   </div>
                   {precioLidl && precioAntiguo(precioLidl, hoy) && (
-                    <a class="boton boton--ancho" href={`#lidl/${precioLidl.id}`}>
+                    <a class="boton boton--ancho" href={`#lidl/${precioLidl.id}/${necesidad.id}`}>
                       Actualizar el precio de Lidl
                     </a>
                   )}

@@ -65,7 +65,9 @@ export function InfoProducto({
         </span>
         {vigente.oferta && <span class="etiqueta-oferta">{vigente.oferta}</span>}
         {nota && (
-          <span class={nota.atencion ? 'producto__nota texto--atencion' : 'producto__nota'}>
+          <span
+            class={nota.atencion ? 'producto__nota producto__nota--atencion' : 'producto__nota'}
+          >
             {nota.texto}
           </span>
         )}
