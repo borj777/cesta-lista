@@ -8,15 +8,18 @@ import {
 import { ErrorFormato, ProductoSchema, type Producto } from '../src/tipos.ts';
 import { AHORA, fixture, pedirFalso, respuesta } from './ayudas.ts';
 
-type Categoria = { categories: { products: unknown[] }[] };
+type Categoria = { id: number; categories: { products: unknown[] }[] };
 
 const CATEGORIAS = ['fruta', 'leche', 'huevos', 'detergente', 'papel', 'pollo'];
-const crudos = CATEGORIAS.flatMap((c) =>
-  (fixture(`mercadona-categoria-${c}-vlc1.json`) as Categoria).categories.flatMap(
-    (s) => s.products,
-  ),
-);
-const normalizados = crudos.map((c) => normalizarMercadona(c));
+/** Cada producto con la categoría de la que se descargó, como hace el adaptador. */
+const conCategoria = CATEGORIAS.flatMap((c) => {
+  const categoria = fixture(`mercadona-categoria-${c}-vlc1.json`) as Categoria;
+  return categoria.categories.flatMap((s) =>
+    s.products.map((crudo) => ({ crudo, categoria: categoria.id })),
+  );
+});
+const crudos = conCategoria.map((x) => x.crudo);
+const normalizados = conCategoria.map((x) => normalizarMercadona(x.crudo, x.categoria));
 const productos = normalizados.flatMap((r) => (r.ok ? [r.producto] : []));
 
 function buscar(nombre: string, precio?: number): Producto {
@@ -45,12 +48,18 @@ describe('normalizarMercadona con respuestas reales', () => {
       { cantidad: 50, unidad: 'lavado' },
       0.07,
     ],
-    // Cápsulas con peso conocido: por kg, aunque la tienda dé el precio por cápsula.
+    // Cápsulas de detergente: una cápsula es un lavado (como Consum), aunque se sepa el peso.
     [
       'Detergente ropa todo en 1 Ariel Pods en cápsulas',
       4.95,
-      { cantidad: 0.3477, unidad: 'kg' },
-      14.2364,
+      { cantidad: 19, unidad: 'lavado' },
+      0.2605,
+    ],
+    [
+      'Detergente ropa Blanca y Color floral Sensation Bosque Verde en cápsulas',
+      4.65,
+      { cantidad: 24, unidad: 'lavado' },
+      0.1938,
     ],
     ['Pastillas antical para lavadora Bosque Verde', 3.25, { cantidad: 40, unidad: 'ud' }, 0.0813],
     ['Papel higiénico Doble Rollo Bosque Verde', 4.6, { cantidad: 12, unidad: 'ud' }, 0.3833],
@@ -250,5 +259,66 @@ describe('descartados recuperados y embutidos (datos reales del 16/11/2026)', ()
       const r = normalizarMercadona(crudo);
       if (r.ok && pi.size_format === 'kg') expect(r.producto.formato.unidad).toBe('kg');
     }
+  });
+});
+
+describe('cápsulas de detergente por lavado', () => {
+  const detergente = fixture('mercadona-categoria-detergente-vlc1.json') as Categoria;
+  const todos = detergente.categories.flatMap((s) => s.products);
+  const porNombre = (nombre: string, categoria?: number) => {
+    const crudo = todos.find((c) => (c as { display_name: string }).display_name === nombre);
+    if (!crudo) throw new Error(`No está en las fixtures: ${nombre}`);
+    return normalizarMercadona(crudo, categoria);
+  };
+
+  it('en la categoría de detergentes, una cápsula es un lavado y cuadra con la tienda', () => {
+    const r = porNombre('Detergente ropa todo en 1 Ariel Pods en cápsulas', detergente.id);
+    expect(detergente.id).toBe(226);
+    expect(r).toMatchObject({
+      ok: true,
+      producto: { formato: { cantidad: 19, unidad: 'lavado' }, precioRef: 0.2605 },
+    });
+    // La tienda da 0,26 € por cápsula: es la misma unidad, así que queda verificado.
+    expect(r.ok && (r.aviso || r.sinVerificar)).toBeFalsy();
+  });
+
+  it('fuera de esas categorías, una cápsula no es un lavado (p. ej. las de café)', () => {
+    const r = porNombre('Detergente ropa todo en 1 Ariel Pods en cápsulas');
+    expect(r.ok && r.producto.formato.unidad).toBe('kg');
+  });
+
+  it('las pastillas de antical y de jabón no son lavados', () => {
+    const antical = porNombre('Pastillas antical para lavadora Bosque Verde', detergente.id);
+    const jabon = porNombre('Jabón Natural con glicerina Bosque Verde', detergente.id);
+    expect(antical.ok && antical.producto.formato).toEqual({ cantidad: 40, unidad: 'ud' });
+    expect(jabon.ok && jabon.producto.formato.unidad).toBe('kg');
+  });
+
+  it('los suavizantes que indican lavados van por lavado aunque la referencia sea el litro', () => {
+    const suavizantes = todos
+      .map((c) => normalizarMercadona(c, detergente.id))
+      .flatMap((r) => (r.ok && r.producto.nombre.startsWith('Suavizante') ? [r.producto] : []));
+    expect(suavizantes.length).toBeGreaterThan(3);
+    for (const s of suavizantes) expect(s.formato.unidad).toBe('lavado');
+  });
+});
+
+describe('descargarMercadona recuerda la categoría de cada producto', () => {
+  it('trata las cápsulas de la categoría de detergentes como lavados', async () => {
+    const arbol = {
+      results: [
+        { id: 26, name: 'Limpieza y hogar', categories: [{ id: 226, name: 'Detergente' }] },
+      ],
+    };
+    const { pedir } = pedirFalso((url) => {
+      if (url.includes('postal-codes')) return respuesta({}, { 'x-customer-wh': ALMACEN });
+      if (url.includes('/categories/?')) return respuesta(arbol);
+      return respuesta(fixture('mercadona-categoria-detergente-vlc1.json'));
+    });
+    const r = await descargarMercadona(pedir, AHORA);
+    const ariel = r.productos.find(
+      (p) => p.nombre === 'Detergente ropa todo en 1 Ariel Pods en cápsulas' && p.precio === 4.95,
+    );
+    expect(ariel?.formato).toEqual({ cantidad: 19, unidad: 'lavado' });
   });
 });

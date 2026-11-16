@@ -86,7 +86,7 @@ Para no estropear los datos buenos, una tienda se marca como fallida y **no se s
 
 - `avisosPrecioRef`: productos cuyo precio por kg, litro o unidad, calculado aquí, no coincide con el que publica la tienda (con un margen del 2 %). Se guardan igualmente; `ejemplosAvisos` enseña algunos para revisarlos.
 - `sinVerificar`: productos cuyo `precioRef` no se puede contrastar directamente con el de la tienda: la fruta por piezas de Consum (no indica el peso y se usa su precio por kg), lo vendido a granel, o productos en los que la tienda usa otra unidad (por ejemplo, el fuet: la tienda da el precio por pieza y aquí se calcula por kg; o el detergente: la tienda lo da por litro y aquí por lavado).
-- Unidades de `precioRef`: kg, l, ud., `lavado` (detergentes y suavizantes) y `m` (aluminio, film). Si se conoce el peso, siempre va por kg.
+- Unidades de `precioRef`: kg, l, ud., `lavado` (detergentes, suavizantes y sus cápsulas) y `m` (aluminio, film). Si se conoce el peso, siempre va por kg.
 - `ejemplosDescartados`: lista de los productos que no se han podido leer, para revisarlos.
 - `descartados`: productos que no se han podido leer.
 

@@ -48,10 +48,14 @@ export function cerrarProducto(producto: Producto): Producto | null {
   return r.success ? r.data : null;
 }
 
-/** Normaliza todos los productos crudos y reúne avisos y recuentos. */
-export function normalizarTodos(
-  crudos: Iterable<unknown>,
-  normalizar: (crudo: unknown) => Normalizado,
+/**
+ * Normaliza todos los productos crudos y reúne avisos y recuentos.
+ * `describir` da el "id nombre" de un descartado (por defecto, a partir del producto crudo).
+ */
+export function normalizarTodos<T>(
+  crudos: Iterable<T>,
+  normalizar: (crudo: T) => Normalizado,
+  describir: (crudo: T) => string = descripcionCruda,
 ): ResultadoAdaptador {
   const productos: Producto[] = [];
   const avisos: AvisoPrecioRef[] = [];
@@ -66,7 +70,7 @@ export function normalizarTodos(
     if (!r.ok) {
       descartados++;
       if (ejemplosDescartados.length < MAX_DESCARTADOS) {
-        ejemplosDescartados.push(descripcionCruda(crudo));
+        ejemplosDescartados.push(describir(crudo));
       }
       continue;
     }

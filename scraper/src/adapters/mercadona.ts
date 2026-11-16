@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { Pedir } from '../http.ts';
-import { cerrarProducto, idDe, normalizarTodos, validar } from '../normalizar.ts';
+import { cerrarProducto, descripcionCruda, idDe, normalizarTodos, validar } from '../normalizar.ts';
 import type { Normalizado, ResultadoAdaptador, Unidad } from '../tipos.ts';
 import { calcularPrecioRef, coincidePrecioRef, redondear, type Formato } from '../unidades.ts';
 
@@ -35,9 +35,16 @@ const ProductoCrudoSchema = z.object({
     pack_size: z.number().nullish(),
     drained_weight: z.number().nullish(),
     selling_method: z.number().nullish(),
+    unit_name: z.string().nullish(),
     previous_unit_price: importeOpcional,
   }),
 });
+
+/**
+ * Categorías en las que una cápsula es un lavado: «Detergente y suavizante ropa» (226) y
+ * «Limpieza vajilla» (229). Así se comparan con Consum, que da sus cápsulas por lavado.
+ */
+export const CATEGORIAS_LAVADO = new Set([226, 229]);
 export type InstruccionesPrecio = z.infer<typeof ProductoCrudoSchema>['price_instructions'];
 
 const ArbolSchema = z.object({
@@ -82,13 +89,18 @@ const positivo = (n: number | null | undefined): number | null => (n && n > 0 ? 
  *   en los congelados, vale el peso neto escurrido (drained_weight), igual que hace la tienda.
  * - A granel (selling_method 1: gambón, morralla) se vende al peso: unit_price no es un precio
  *   real (1.282,05 €) y el que vale es bulk_price, por kg.
- * - Detergentes ("lv"): el precioRef va por lavado; bulk_price va por litro, kg o lavado.
+ * - Detergentes y suavizantes: el precioRef va por lavado cuando la tienda indica los lavados
+ *   ("lv" o unit_name "lavados") y en las cápsulas de detergente y lavavajillas (una cápsula
+ *   es un lavado). bulk_price va por litro, kg, lavado o cápsula.
  * - Contados en unidades (huevos, rollos, pañales): las piezas están en total_units o en
  *   unit_size; en los packs de paquetes (3 paquetes de 40 pañales) se toma el mayor.
  * - Si se conoce el peso, el precioRef va siempre por kg (o l), aunque la tienda dé el precio
  *   por pieza (fuet, longaniza, chorizo: reference_format "ud" con unit_size en kg).
  */
-export function interpretarMercadona(pi: InstruccionesPrecio): Interpretacion | null {
+export function interpretarMercadona(
+  pi: InstruccionesPrecio,
+  opciones: { capsulasSonLavados?: boolean } = {},
+): Interpretacion | null {
   const tamano = pi.size_format.toLowerCase();
   const referencia = pi.reference_format.toLowerCase();
 
@@ -128,11 +140,25 @@ export function interpretarMercadona(pi: InstruccionesPrecio): Interpretacion | 
       (n, i, lista): n is number => n !== null && lista.indexOf(n) === i,
     );
 
+  const nombreUnidad = (pi.unit_name ?? '').toLowerCase();
+  const porLavado =
+    unidades !== null &&
+    (referencia === 'lv' ||
+      nombreUnidad.includes('lavado') ||
+      (opciones.capsulasSonLavados === true && /c[áa]psula/.test(nombreUnidad)));
+  if (porLavado) {
+    // La tienda da el precio por cápsula (referencia "ud") o por litro o kg del envase.
+    const porCapsula = referencia === 'ud';
+    return {
+      formato: { cantidad: unidades, unidad: 'lavado' },
+      precio,
+      cantidadesTienda: conAlternativas(porCapsula ? unidades : (medida ?? unidades)),
+      unidadTienda: porCapsula || !medida || tamano === 'ud' ? 'lavado' : (tamano as Unidad),
+    };
+  }
   if (referencia === 'lv' && medida && (tamano === 'kg' || tamano === 'l')) {
     return {
-      formato: unidades
-        ? { cantidad: unidades, unidad: 'lavado' }
-        : { cantidad: medida, unidad: tamano },
+      formato: { cantidad: medida, unidad: tamano },
       precio,
       cantidadesTienda: conAlternativas(medida),
       unidadTienda: tamano,
@@ -170,14 +196,19 @@ export function interpretarMercadona(pi: InstruccionesPrecio): Interpretacion | 
   return null;
 }
 
-/** Convierte un producto de la API de Mercadona al esquema común. */
-export function normalizarMercadona(crudo: unknown): Normalizado {
+/**
+ * Convierte un producto de la API de Mercadona al esquema común.
+ * `categoria` es la categoría de la que se ha descargado (decide si una cápsula es un lavado).
+ */
+export function normalizarMercadona(crudo: unknown, categoria?: number): Normalizado {
   const r = ProductoCrudoSchema.safeParse(crudo);
   if (!r.success) return { ok: false };
   const p = r.data;
   const pi = p.price_instructions;
 
-  const interpretacion = interpretarMercadona(pi);
+  const interpretacion = interpretarMercadona(pi, {
+    capsulasSonLavados: categoria !== undefined && CATEGORIAS_LAVADO.has(categoria),
+  });
   if (!interpretacion) return { ok: false };
   const { formato, precio, cantidadesTienda, unidadTienda } = interpretacion;
   const precioRef = calcularPrecioRef(precio, formato.cantidad);
@@ -251,8 +282,9 @@ export async function descargarMercadona(
   const ids = arbol.results.flatMap((c) => c.categories.map((s) => s.id));
   registrar(`Mercadona: ${ids.length} categorías`);
 
-  // 3. Productos de cada categoría (un producto puede estar en varias: se guarda una vez).
-  const crudos = new Map<string, unknown>();
+  // 3. Productos de cada categoría (un producto puede estar en varias: se guarda una vez,
+  //    recordando si alguna de ellas es de detergentes o lavavajillas).
+  const crudos = new Map<string, { crudo: unknown; categoria: number }>();
   for (const [i, id] of ids.entries()) {
     const detalle = validar(
       DetalleSchema,
@@ -263,7 +295,9 @@ export async function descargarMercadona(
       for (const crudo of sub.products) {
         const pid = idDe(crudo);
         const publicado = (crudo as { published?: unknown }).published !== false;
-        if (pid && publicado && !crudos.has(pid)) crudos.set(pid, crudo);
+        if (!pid || !publicado) continue;
+        if (!crudos.has(pid) || CATEGORIAS_LAVADO.has(id))
+          crudos.set(pid, { crudo, categoria: id });
       }
     }
     if ((i + 1) % 25 === 0 || i === ids.length - 1) {
@@ -271,5 +305,9 @@ export async function descargarMercadona(
     }
   }
 
-  return normalizarTodos(crudos.values(), normalizarMercadona);
+  return normalizarTodos(
+    crudos.values(),
+    ({ crudo, categoria }) => normalizarMercadona(crudo, categoria),
+    ({ crudo }) => descripcionCruda(crudo),
+  );
 }
