@@ -12,7 +12,18 @@ const CACHE_APP = `app-${VERSION}`;
 const CACHE_DATOS = 'datos';
 
 self.addEventListener('install', (evento) => {
-  evento.waitUntil(caches.open(CACHE_APP).then((cache) => cache.addAll(ARCHIVOS)));
+  evento.waitUntil(
+    Promise.all([
+      caches.open(CACHE_APP).then((cache) => cache.addAll(ARCHIVOS)),
+      // La primera vez que se abre la app instalada, los precios se descargan antes de que
+      // este service worker esté activo y no pasan por él: se guardan aquí para que haya
+      // copia sin conexión desde el primer día. Si falla, no impide la instalación.
+      caches
+        .open(CACHE_DATOS)
+        .then((cache) => cache.add(new Request('./data/app.json', { cache: 'no-cache' })))
+        .catch(() => {}),
+    ]),
+  );
 });
 
 self.addEventListener('activate', (evento) => {

@@ -291,3 +291,13 @@ p {
   -webkit-user-select: text;
   user-select: text;
 }
+
+/* Pasos numerados de las instrucciones */
+.pasos {
+  margin: 0 0 8px;
+  padding-left: 22px;
+}
+
+.pasos li {
+  margin-bottom: 6px;
+}

@@ -56,7 +56,7 @@ export function Diagnostico({ guardados, error }: { guardados: boolean; error: s
         <dd>{estado?.sinConexion ?? '…'}</dd>
         <dt>Precios guardados en el iPhone</dt>
         <dd>{estado?.copia ?? '…'}</dd>
-        <dt>Sistema</dt>
+        <dt>Sistema (según Safari)</dt>
         <dd>{estado?.sistema ?? '…'}</dd>
         <dt>Versión de la app</dt>
         <dd>{__VERSION_APP__}</dd>

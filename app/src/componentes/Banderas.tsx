@@ -50,10 +50,20 @@ export function ComoInstalar() {
   return (
     <section class="tarjeta tarjeta--destacada">
       <h2>Instala Cesta Lista</h2>
-      <p>
-        Pulsa <Icono nombre="compartir" tamano={18} /> <b>Compartir</b> en la barra de Safari y
-        luego <b>Añadir a pantalla de inicio</b>. Así se abre como una app y funciona sin conexión.
-      </p>
+      <ol class="pasos">
+        <li>
+          Pulsa <Icono nombre="compartir" tamano={18} /> <b>Compartir</b>. Si no lo ves en la barra
+          de Safari, está dentro del botón <b>≡</b> o <b>···</b> que hay junto a la dirección.
+        </li>
+        <li>
+          Pulsa <b>Añadir a pantalla de inicio</b>. Si no aparece, desliza hacia arriba o toca{' '}
+          <b>Ver más</b>.
+        </li>
+        <li>
+          Pulsa <b>Añadir</b> y abre Cesta Lista desde su icono.
+        </li>
+      </ol>
+      <p class="secundario">Así se abre como una app y funciona sin conexión.</p>
     </section>
   );
 }
