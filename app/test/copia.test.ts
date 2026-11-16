@@ -102,6 +102,32 @@ describe('leerCopia', () => {
     });
   });
 
+  it('acepta y conserva los productos elegidos en cada tienda', () => {
+    const conElegidos = {
+      ...pollo,
+      equivalencias: { mercadona: { id: '3819' }, consum: { noCompro: true } },
+    };
+    const r = leerCopia(copiaTexto([conElegidos]));
+    expect(r).toMatchObject({ ok: true, copia: { necesidades: [conElegidos] } });
+  });
+
+  it.each([
+    ['una tienda desconocida', { carrefour: { id: '1' } }, 'la tienda «carrefour» no es válida'],
+    [
+      'un producto sin id',
+      { mercadona: { id: '' } },
+      'el producto elegido en mercadona no es válido',
+    ],
+    ['un valor raro', { consum: { noCompro: 'sí' } }, 'el producto elegido en consum no es válido'],
+    ['algo que no es un objeto', 'mercadona', 'los productos elegidos no son válidos'],
+  ])('rechaza productos elegidos con %s', (_caso, equivalencias, motivo) => {
+    const r = leerCopia(copiaTexto([{ ...pollo, equivalencias }]));
+    expect(r).toEqual({
+      ok: false,
+      error: `La necesidad n.º 1 («Pechuga de pollo») no es válida: ${motivo}.`,
+    });
+  });
+
   it('rechaza necesidades repetidas', () => {
     const r = leerCopia(copiaTexto([pollo, pollo]));
     expect(r).toEqual({

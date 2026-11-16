@@ -479,3 +479,169 @@ p {
   padding: 12px 14px;
   font-size: 15px;
 }
+
+/* Productos: foto, nombre, formato y precio por unidad */
+.producto {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 72px;
+  padding: 10px 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.producto--boton {
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--borde);
+  cursor: pointer;
+}
+
+.tarjeta--lista li:last-child .producto--boton {
+  border-bottom: none;
+}
+
+.producto--boton:active {
+  background: var(--superficie-2);
+}
+
+.producto--elegido {
+  box-shadow: inset 4px 0 0 var(--marca);
+  padding-left: 10px;
+}
+
+.foto {
+  width: 56px;
+  height: 56px;
+  flex: none;
+  border-radius: 10px;
+  overflow: hidden;
+  /* Fondo blanco también en modo oscuro: las fotos de las tiendas tienen fondo blanco. */
+  background: #ffffff;
+  border: 1px solid var(--borde);
+}
+
+.foto img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.producto__texto {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.producto__nombre {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.3;
+}
+
+.producto__ref {
+  flex: none;
+  font-weight: 600;
+  font-size: 15px;
+  text-align: right;
+  max-width: 34%;
+}
+
+.producto__ref--otra {
+  color: var(--texto-3);
+  font-weight: 500;
+}
+
+.etiqueta-oferta {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--atencion-fondo);
+  color: var(--atencion);
+}
+
+/* Buscador */
+.buscador {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin: 12px 0 8px;
+}
+
+.buscador .icono {
+  position: absolute;
+  left: 14px;
+  color: var(--texto-3);
+  pointer-events: none;
+}
+
+.entrada--busqueda {
+  padding-left: 44px;
+}
+
+/* Ficha de una necesidad: una tarjeta por tienda */
+.grupo__titulo--separado {
+  margin-top: 24px;
+}
+
+.tienda {
+  margin: 12px 0;
+}
+
+.tienda__titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.tienda__no-compro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--texto-2);
+}
+
+.tienda__no-compro .boton--pequeno {
+  color: var(--marca);
+}
+
+.acciones--fila {
+  grid-template-columns: 1fr 1fr;
+  margin-top: 8px;
+}
+
+.acciones--fila .boton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+/* Lista de necesidades: tiendas con producto elegido */
+.puntos {
+  display: flex;
+  gap: 4px;
+  flex: none;
+}
+
+.sin-elegir {
+  flex: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--atencion);
+}

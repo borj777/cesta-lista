@@ -3,6 +3,10 @@ import {
   agruparPorCategoria,
   crearNecesidad,
   editarNecesidad,
+  elegirProducto,
+  estadoEquivalencia,
+  noComprarEn,
+  quitarEquivalencia,
   escribirCantidad,
   leerCantidad,
   textoNecesidad,
@@ -121,5 +125,55 @@ describe('agruparPorCategoria', () => {
       ['limpieza', ['detergente']],
       ['mascota', ['Pienso']],
     ]);
+  });
+});
+
+describe('equivalencias', () => {
+  const leche = crearNecesidad(
+    { nombre: 'Leche', categoria: 'alimentacion', cantidad: 6, unidad: 'l', frecuencia: 'semana' },
+    AHORA,
+    'leche',
+  );
+  const catalogo = new Map([['mercadona:10381', { id: '10381', nombre: 'Leche Hacendado' }]]);
+  const buscarProducto = (tienda: string, id: string) => catalogo.get(`${tienda}:${id}`);
+
+  it('al principio no hay nada elegido', () => {
+    expect(estadoEquivalencia(leche, 'mercadona', buscarProducto)).toEqual({ tipo: 'sin-elegir' });
+  });
+
+  it('guarda el producto elegido por su id y lo encuentra', () => {
+    const n = elegirProducto(leche, 'mercadona', '10381', LUEGO);
+    expect(n.equivalencias).toEqual({ mercadona: { id: '10381' } });
+    expect(n.actualizada).toBe(LUEGO);
+    expect(estadoEquivalencia(n, 'mercadona', buscarProducto)).toEqual({
+      tipo: 'elegido',
+      producto: { id: '10381', nombre: 'Leche Hacendado' },
+    });
+  });
+
+  it('avisa si el producto elegido ya no está en el catálogo (no busca otro por nombre)', () => {
+    const n = elegirProducto(leche, 'mercadona', '99999', LUEGO);
+    expect(estadoEquivalencia(n, 'mercadona', buscarProducto)).toEqual({
+      tipo: 'desaparecido',
+      id: '99999',
+    });
+  });
+
+  it('«no lo compro aquí» y deshacer', () => {
+    const n = noComprarEn(leche, 'consum', LUEGO);
+    expect(estadoEquivalencia(n, 'consum', buscarProducto)).toEqual({ tipo: 'no-compro' });
+    const deshecha = quitarEquivalencia(n, 'consum', LUEGO);
+    expect(deshecha).not.toHaveProperty('equivalencias');
+    expect(estadoEquivalencia(deshecha, 'consum', buscarProducto)).toEqual({ tipo: 'sin-elegir' });
+  });
+
+  it('cambiar una tienda no toca las demás', () => {
+    let n = elegirProducto(leche, 'mercadona', '10381', LUEGO);
+    n = noComprarEn(n, 'consum', LUEGO);
+    n = elegirProducto(n, 'mercadona', '10382', LUEGO);
+    expect(n.equivalencias).toEqual({ mercadona: { id: '10382' }, consum: { noCompro: true } });
+    expect(quitarEquivalencia(n, 'mercadona', LUEGO).equivalencias).toEqual({
+      consum: { noCompro: true },
+    });
   });
 });

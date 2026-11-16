@@ -3,8 +3,9 @@
  * vite.config.ts lo copia a dist/sw.js y rellena VERSION y ARCHIVOS.
  *
  * - La app (HTML, JS, CSS, iconos) se guarda al instalarse y se sirve desde la caché.
- * - data/app.json se pide primero a la red (precios del día) y, si no hay conexión,
+ * - data/app.json e imagenes.json se piden primero a la red y, si no hay conexión,
  *   se usa la última copia guardada.
+ * - Las fotos de las tiendas se guardan al verlas (las 400 más recientes).
  */
 const VERSION = '__VERSION__';
 const ARCHIVOS = __ARCHIVOS__;
@@ -90,13 +91,50 @@ async function primeroCache(peticion) {
   return guardada ?? fetch(peticion);
 }
 
+/** Fotos de las tiendas: se guardan al verlas para tenerlas sin conexión (hasta 400). */
+const CACHE_FOTOS = 'fotos';
+const MAX_FOTOS = 400;
+const SERVIDORES_FOTOS = ['prod-mercadona.imgix.net', 'cdn-consum.aktiosdigitalservices.com'];
+
+async function recortarFotos() {
+  const cache = await caches.open(CACHE_FOTOS);
+  const claves = await cache.keys();
+  // Las primeras son las más antiguas: se borran las que sobran.
+  await Promise.all(
+    claves.slice(0, Math.max(0, claves.length - MAX_FOTOS)).map((c) => cache.delete(c)),
+  );
+}
+
+async function foto(evento) {
+  const cache = await caches.open(CACHE_FOTOS);
+  const guardada = await cache.match(evento.request);
+  if (guardada) return guardada;
+  const respuesta = await fetch(evento.request);
+  // Las fotos de otros servidores llegan «opacas» (status 0): también se pueden guardar.
+  if (respuesta.ok || respuesta.type === 'opaque') {
+    const copia = respuesta.clone();
+    evento.waitUntil(
+      cache
+        .put(evento.request, copia)
+        .then(recortarFotos)
+        .catch(() => {}),
+    );
+  }
+  return respuesta;
+}
+
 self.addEventListener('fetch', (evento) => {
   const { request } = evento;
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
+
+  if (SERVIDORES_FOTOS.includes(url.hostname)) {
+    evento.respondWith(foto(evento));
+    return;
+  }
   if (url.origin !== self.location.origin) return;
 
-  if (url.pathname.endsWith('/data/app.json')) {
+  if (url.pathname.endsWith('/data/app.json') || url.pathname.endsWith('/data/imagenes.json')) {
     evento.respondWith(primeroRed(evento));
   } else if (request.mode === 'navigate') {
     // Cualquier página de la app abre index.html, también sin conexión.
