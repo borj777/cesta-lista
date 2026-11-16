@@ -719,3 +719,12 @@ body:has(input:focus:not([type='radio'])) .pestanas {
 .fila__importe--apagado {
   color: var(--texto-3);
 }
+
+/* Enlaces dentro de avisos y textos: del color del texto, en negrita. */
+.aviso a,
+.secundario a {
+  color: inherit;
+  font-weight: 600;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}

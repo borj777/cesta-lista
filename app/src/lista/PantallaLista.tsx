@@ -195,7 +195,9 @@ function FilaCompra({ compra }: { compra: Compra }) {
         <div class="fila__texto">
           <span>{analisis.necesidad.nombre}</span>
           <span class="secundario">
-            {opcion.producto.nombre} · {textoFormato(opcion.producto.formato)}
+            {[opcion.producto.marca, opcion.producto.nombre, textoFormato(opcion.producto.formato)]
+              .filter(Boolean)
+              .join(' · ')}
           </span>
           <span class="secundario">
             {opcion.envases} × {euros(opcion.precio)}
