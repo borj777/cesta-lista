@@ -71,7 +71,7 @@ describe('crear y editar', () => {
     expect(validarBorradorLidl({ nombre: '', cantidad: null, precio: null })).toEqual({
       nombre: 'Escribe el nombre del producto.',
       cantidad: 'Escribe cuánto trae el envase, por ejemplo 500 (g) o 1 (litro).',
-      precio: 'Escribe el precio del envase, por ejemplo 1,29.',
+      precio: 'Escribe el precio del envase con 2 decimales como mucho, por ejemplo 1,29.',
     });
   });
 

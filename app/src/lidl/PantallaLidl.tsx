@@ -30,6 +30,17 @@ import {
   type ProductoLidl,
 } from './modelo.ts';
 
+/** Ejemplo de cantidad del envase según la unidad elegida. */
+const EJEMPLO_CANTIDAD: Record<UnidadNecesidad, string> = {
+  kg: '1',
+  g: '500',
+  l: '1',
+  ml: '330',
+  ud: '12',
+  lavado: '40',
+  m: '25',
+};
+
 const ir = (ruta: string) => {
   location.hash = ruta;
 };
@@ -107,8 +118,8 @@ function ListaLidl({ productos }: { productos: ProductoLidl[] }) {
         <section class="tarjeta">
           <h2>Todavía no hay ninguno</h2>
           <p class="secundario">
-            Por ejemplo: «Leche semidesnatada», 6 litros, 4,74 €. La app calcula el precio por litro
-            para compararlo con Mercadona y Consum.
+            Por ejemplo: «Leche semidesnatada», 6 litros, 4,74&nbsp;€. La app calcula el precio por
+            litro para compararlo con Mercadona y Consum.
           </p>
         </section>
       ) : (
@@ -304,7 +315,7 @@ function FormLidl({
           class={errores.cantidad ? 'entrada entrada--error' : 'entrada'}
           type="text"
           inputmode="decimal"
-          placeholder="500"
+          placeholder={EJEMPLO_CANTIDAD[unidad]}
           autocomplete="off"
           value={cantidadTexto}
           onInput={(e) => {

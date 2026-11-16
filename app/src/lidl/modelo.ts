@@ -75,7 +75,8 @@ export function validarBorradorLidl(b: {
   if (b.cantidad === null) {
     errores.cantidad = 'Escribe cuánto trae el envase, por ejemplo 500 (g) o 1 (litro).';
   }
-  if (b.precio === null) errores.precio = 'Escribe el precio del envase, por ejemplo 1,29.';
+  if (b.precio === null)
+    errores.precio = 'Escribe el precio del envase con 2 decimales como mucho, por ejemplo 1,29.';
   return errores;
 }
 

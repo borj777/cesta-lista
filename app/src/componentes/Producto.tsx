@@ -1,3 +1,4 @@
+import { Icono } from './Icono.tsx';
 import {
   hoyEnEspana,
   precioVigente,
@@ -34,7 +35,7 @@ export function FotoProducto({ producto }: { producto: ProductoApp }) {
 /**
  * Datos de un producto: foto, nombre, marca, formato, precio y precio por unidad.
  * El formato se muestra siempre (regla de la fase 2). Los de Lidl, apuntados a mano, no
- * tienen foto; `nota` añade una línea, por ejemplo cuándo se comprobó su precio.
+ * tienen foto: llevan una etiqueta azul; `nota` añade una línea, por ejemplo cuándo se comprobó su precio.
  */
 export function InfoProducto({
   producto,
@@ -48,7 +49,13 @@ export function InfoProducto({
   const vigente = precioVigente(producto, hoyEnEspana());
   return (
     <>
-      {producto.tienda !== 'lidl' && <FotoProducto producto={producto} />}
+      {producto.tienda === 'lidl' ? (
+        <span class="foto foto--lidl" aria-hidden="true">
+          <Icono nombre="etiqueta" tamano={26} />
+        </span>
+      ) : (
+        <FotoProducto producto={producto} />
+      )}
       <span class="producto__texto">
         <span class="producto__nombre">{producto.nombre}</span>
         <span class="secundario">

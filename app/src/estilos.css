@@ -650,3 +650,17 @@ p {
   font-size: 13px;
   color: var(--texto-3);
 }
+
+/* Los productos de Lidl, apuntados a mano, llevan una etiqueta en lugar de foto. */
+.foto--lidl {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--superficie-2);
+  color: var(--lidl);
+}
+
+/* Con el teclado abierto, la barra de pestañas se esconde para no tapar el formulario. */
+body:has(input:focus:not([type='radio'])) .pestanas {
+  display: none;
+}
