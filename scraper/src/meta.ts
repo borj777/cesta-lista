@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { MAX_EJEMPLOS } from './normalizar.ts';
+import { MAX_DESCARTADOS, MAX_EJEMPLOS } from './normalizar.ts';
 import type { Veredicto } from './proteccion.ts';
 import {
   ProductoSchema,
@@ -70,7 +70,7 @@ export function estadoTienda(args: {
     descartados: resultado?.descartados ?? 0,
     avisosPrecioRef: avisos.length,
     ejemplosAvisos: avisos.slice(0, MAX_EJEMPLOS),
-    ejemplosDescartados: (resultado?.ejemplosDescartados ?? []).slice(0, MAX_EJEMPLOS),
+    ejemplosDescartados: (resultado?.ejemplosDescartados ?? []).slice(0, MAX_DESCARTADOS),
   };
 
   if (veredicto.valido && resultado) {

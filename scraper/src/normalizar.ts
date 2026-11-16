@@ -8,8 +8,10 @@ import {
   type ResultadoAdaptador,
 } from './tipos.ts';
 
-/** Ejemplos de productos descartados que se guardan en meta.json (el total va aparte). */
+/** Ejemplos de avisos de precioRef que se guardan en meta.json (el total va aparte). */
 export const MAX_EJEMPLOS = 20;
+/** Descartados que se guardan en meta.json: casi todos, para poder revisarlos uno a uno. */
+export const MAX_DESCARTADOS = 300;
 
 /** Valida una respuesta de la tienda; si no tiene la forma esperada, lanza ErrorFormato. */
 export function validar<T>(esquema: z.ZodType<T>, datos: unknown, que: string): T {
@@ -63,7 +65,7 @@ export function normalizarTodos(
     const r = normalizar(crudo);
     if (!r.ok) {
       descartados++;
-      if (ejemplosDescartados.length < MAX_EJEMPLOS) {
+      if (ejemplosDescartados.length < MAX_DESCARTADOS) {
         ejemplosDescartados.push(descripcionCruda(crudo));
       }
       continue;
