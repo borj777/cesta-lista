@@ -34,22 +34,38 @@ function unidadBase(abreviatura: string): { unidad: Unidad; factor: number } | n
   if (['l', 'lt', 'litro', 'litros'].includes(a)) return { unidad: 'l', factor: 1 };
   if (a === 'cl') return { unidad: 'l', factor: 0.01 };
   if (a === 'ml') return { unidad: 'l', factor: 0.001 };
-  if (['u', 'ud', 'uds', 'unidad', 'unidades'].includes(a)) return { unidad: 'ud', factor: 1 };
+  if (['u', 'ud', 'uds', 'unid', 'unidad', 'unidades'].includes(a)) {
+    return { unidad: 'ud', factor: 1 };
+  }
+  // Consum: "Do" son dosis (una bolsita, una pastilla...): se cuentan como unidades.
+  if (['do', 'dosis'].includes(a)) return { unidad: 'ud', factor: 1 };
+  // Consum: "Dc" son docenas ("0,5 Dc" = 6 huevos; "0,83 Dc" = una decena).
+  if (a === 'dc') return { unidad: 'ud', factor: 12 };
+  if (['lv', 'lavado', 'lavados'].includes(a)) return { unidad: 'lavado', factor: 1 };
+  if (['m', 'metro', 'metros'].includes(a)) return { unidad: 'm', factor: 1 };
   return null;
 }
 
-const NUM = String.raw`(\d+(?:[.,]\d+)?)`;
-const MEDIDA = String.raw`(kgs?|kilos?|grs?|g|gramos|litros?|lt|l|cl|ml)`;
+/** Número que no forma parte de una fracción ni de otro número ("1/2 Docena" no es "2 Docena"). */
+const NUM = String.raw`(?<![\d/.,])(\d+(?:[.,]\d+)?)`;
+const PALABRA = String.raw`([a-záéíóú]+)\.?`;
 const FIN = String.raw`(?=[\s.,)]|$)`;
-const RE_PACK = new RegExp(String.raw`(\d+)\s*x\s*${NUM}\s*${MEDIDA}${FIN}`, 'gi');
-const RE_MEDIDA = new RegExp(String.raw`${NUM}\s*${MEDIDA}${FIN}`, 'gi');
-const UDS = String.raw`(unidades|unidad|uds|ud|u)`;
-const RE_UNIDADES = new RegExp(String.raw`(\d+)\s*${UDS}${FIN}`, 'gi');
-const RE_PACK_UNIDADES = new RegExp(String.raw`(\d+)\s*x\s*(\d+)\s*${UDS}${FIN}`, 'gi');
+const RE_PACK = new RegExp(String.raw`(?<![\d/.,])(\d+)\s*x\s*${NUM}\s*${PALABRA}${FIN}`, 'gi');
+const RE_MEDIDA = new RegExp(String.raw`${NUM}\s*${PALABRA}${FIN}`, 'gi');
 
-/** Interpreta una cantidad con unidad, p. ej. "1 Kg", "100 Gr", "0,75 L", "1 U". */
+/** Las unidades se redondean al entero si están muy cerca ("0,83 Dc" = 9,96 → 10 huevos). */
+function ajustar(formato: Formato): Formato {
+  const { cantidad, unidad } = formato;
+  const entero = Math.round(cantidad);
+  if (unidad === 'ud' && entero > 0 && Math.abs(cantidad - entero) <= 0.1) {
+    return { cantidad: entero, unidad };
+  }
+  return { cantidad: redondear(cantidad, 6), unidad };
+}
+
+/** Interpreta una cantidad con unidad, p. ej. "1 Kg", "100 Gr", "0,75 L", "1 U", "1 Dc". */
 export function parsearCantidad(texto: string): Formato | null {
-  const m = new RegExp(String.raw`^\s*${NUM}\s*([a-záéíóú]+)\.?\s*$`, 'i').exec(texto);
+  const m = new RegExp(String.raw`^\s*${NUM}\s*${PALABRA}\s*$`, 'i').exec(texto);
   if (!m?.[1] || !m[2]) return null;
   const base = unidadBase(m[2]);
   if (!base) return null;
@@ -60,37 +76,34 @@ export function parsearCantidad(texto: string): Formato | null {
 /**
  * Extrae el formato de la descripción de un producto de Consum en la unidad pedida.
  * Ejemplos: "Leche Brik 1 L" → 1 l; "Postre Pack de 2 Unidades 2 x 125 Gr" → 0,25 kg;
- * "Lechuga Peso Aproximado 350 Gr. 0,35 Kg" → 0,35 kg (vale la última medida).
- * Devuelve null si la descripción no indica una medida de esa unidad.
+ * "Lechuga Peso Aproximado 350 Gr. 0,35 Kg" → 0,35 kg (vale la última medida);
+ * "Pila Recargable AAA Pack de 4 Unidades 4 x 1 U" → 4 ud; "Huevos 1/2 Docena 0,5 Dc" → 6 ud;
+ * "Detergente Líquido 50 Lv" → 50 lavados; "Aluminio 30 M" → 30 m.
+ * Un pack "N x cantidad" tiene preferencia. Devuelve null si no hay medida de esa unidad.
  */
 export function parsearFormatoDescripcion(descripcion: string, unidad: Unidad): Formato | null {
   const ultima = <T>(lista: T[]): T | undefined => lista[lista.length - 1];
+  const deLaUnidad = (f: Formato | null): f is Formato =>
+    !!f && f.unidad === unidad && f.cantidad > 0;
 
-  if (unidad === 'ud') {
-    // "Pila Recargable AAA Pack de 4 Unidades 4 x 1 U" → 4 ud.
-    const pack = ultima([...descripcion.matchAll(RE_PACK_UNIDADES)]);
-    if (pack?.[1] && pack[2]) return { cantidad: Number(pack[1]) * Number(pack[2]), unidad: 'ud' };
-    const m = ultima([...descripcion.matchAll(RE_UNIDADES)]);
-    return m?.[1] ? { cantidad: Number(m[1]), unidad: 'ud' } : null;
-  }
+  const pack = ultima(
+    [...descripcion.matchAll(RE_PACK)]
+      .map((m) => {
+        const base = unidadBase(m[3] ?? '');
+        const cantidad = Number(m[1]) * numero(m[2] ?? '');
+        return base && { cantidad: cantidad * base.factor, unidad: base.unidad };
+      })
+      .filter(deLaUnidad),
+  );
+  if (pack) return ajustar(pack);
 
-  const packs = [...descripcion.matchAll(RE_PACK)]
-    .map((m) => {
-      const base = unidadBase(m[3] ?? '');
-      return (
-        base && { cantidad: Number(m[1]) * numero(m[2] ?? '') * base.factor, unidad: base.unidad }
-      );
-    })
-    .filter((f): f is Formato => !!f && f.unidad === unidad && f.cantidad > 0);
-  const pack = ultima(packs);
-  if (pack) return { cantidad: redondear(pack.cantidad, 6), unidad };
-
-  const medidas = [...descripcion.matchAll(RE_MEDIDA)]
-    .map((m) => {
-      const base = unidadBase(m[2] ?? '');
-      return base && { cantidad: numero(m[1] ?? '') * base.factor, unidad: base.unidad };
-    })
-    .filter((f): f is Formato => !!f && f.unidad === unidad && f.cantidad > 0);
-  const medida = ultima(medidas);
-  return medida ? { cantidad: redondear(medida.cantidad, 6), unidad } : null;
+  const medida = ultima(
+    [...descripcion.matchAll(RE_MEDIDA)]
+      .map((m) => {
+        const base = unidadBase(m[2] ?? '');
+        return base && { cantidad: numero(m[1] ?? '') * base.factor, unidad: base.unidad };
+      })
+      .filter(deLaUnidad),
+  );
+  return medida ? ajustar(medida) : null;
 }

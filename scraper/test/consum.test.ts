@@ -169,3 +169,51 @@ describe('ofertaVigente', () => {
     );
   });
 });
+
+describe('docenas, lavados, metros y dosis (datos reales del 16/11/2026)', () => {
+  const BUSQUEDAS = ['detergente', 'huevos', 'aluminio', 'cola-de-caballo'];
+  const crudos = BUSQUEDAS.flatMap(
+    (b) => (fixture(`consum-busqueda-${b}.json`) as { products: unknown[] }).products,
+  );
+  const resultados = crudos.map((c) => normalizarConsum(c, AHORA));
+  const porId = (id: string) => {
+    const r = resultados.find((x) => x.ok && x.producto.id === id);
+    if (!r?.ok) throw new Error(`No está en las fixtures: ${id}`);
+    return r;
+  };
+
+  it('ya no descarta ningún producto de estas búsquedas', () => {
+    expect(crudos.length).toBeGreaterThan(200);
+    expect(resultados.filter((r) => !r.ok)).toHaveLength(0);
+  });
+
+  it('docenas: precio por huevo, que cuadra con el precio por docena de la tienda', () => {
+    // Decena de huevos camperos: 2,90 € = 10 huevos; la tienda dice 3,49 €/docena.
+    const r = porId('24492');
+    expect(r.producto).toMatchObject({ formato: { cantidad: 10, unidad: 'ud' }, precioRef: 0.29 });
+    expect(r.aviso).toBeUndefined();
+  });
+
+  it('lavados: precio por lavado', () => {
+    const r = porId('45813');
+    expect(r.producto).toMatchObject({
+      formato: { cantidad: 60, unidad: 'lavado' },
+      precioRef: 0.0698,
+    });
+    expect(r.aviso).toBeUndefined();
+  });
+
+  it('metros: precio por metro', () => {
+    const r = porId('5818');
+    expect(r.producto).toMatchObject({ formato: { cantidad: 30, unidad: 'm' }, precioRef: 0.075 });
+    expect(r.aviso).toBeUndefined();
+  });
+
+  it('dosis: se cuentan como unidades', () => {
+    expect(porId('6463').producto).toMatchObject({
+      precio: 2.55,
+      formato: { cantidad: 20, unidad: 'ud' },
+      precioRef: 0.1275,
+    });
+  });
+});

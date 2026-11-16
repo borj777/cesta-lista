@@ -94,3 +94,32 @@ describe('packs en unidades de Consum (datos reales del 15/11/2026)', () => {
     expect(parsearFormatoDescripcion(descripcion, 'ud')).toEqual({ cantidad, unidad: 'ud' });
   });
 });
+
+describe('docenas, lavados, metros y dosis de Consum (datos reales del 16/11/2026)', () => {
+  it.each([
+    ['1 Dc', 12, 'ud'],
+    ['1 Lv', 1, 'lavado'],
+    ['1 M', 1, 'm'],
+    ['1 Do', 1, 'ud'],
+    ['100 ml', 0.1, 'l'],
+  ] as const)('parsearCantidad("%s")', (texto, cantidad, unidad) => {
+    expect(parsearCantidad(texto)).toEqual({ cantidad, unidad });
+  });
+
+  it.each([
+    ['Huevos L Grandes Docena 1 Dc', 'ud', 12],
+    ['Huevos L Grandes 1/2 Docena 0,5 Dc', 'ud', 6],
+    ['Huevo Campero M Decena 0,83 Dc', 'ud', 10],
+    ['Huevos M Medianos Docena 1 Dc', 'ud', 12],
+    ['Detergente Líquido Marsella 60 Lv', 'lavado', 60],
+    ['Detergente Polvo Original 30+6 36 Lv', 'lavado', 36],
+    ['Aluminio 30 M', 'm', 30],
+    ['Infusión Cola de Caballo Plus 3 Bolsitas 20 Unid. 20 Do', 'ud', 20],
+  ] as const)('%s → %s %s', (descripcion, unidad, cantidad) => {
+    expect(parsearFormatoDescripcion(descripcion, unidad)).toEqual({ cantidad, unidad });
+  });
+
+  it('no confunde la talla M de los huevos con metros', () => {
+    expect(parsearFormatoDescripcion('Huevos M Medianos Docena 1 Dc', 'm')).toBeNull();
+  });
+});

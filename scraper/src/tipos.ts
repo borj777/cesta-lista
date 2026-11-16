@@ -4,7 +4,8 @@ import { z } from 'zod';
 export const TIENDAS = ['mercadona', 'consum', 'lidl'] as const;
 export type Tienda = (typeof TIENDAS)[number];
 
-export const UNIDADES = ['kg', 'l', 'ud'] as const;
+/** Unidades de precioRef: € por kg, litro, unidad, lavado (detergentes) o metro (aluminio, film). */
+export const UNIDADES = ['kg', 'l', 'ud', 'lavado', 'm'] as const;
 export type Unidad = (typeof UNIDADES)[number];
 
 export const ProductoSchema = z.object({
