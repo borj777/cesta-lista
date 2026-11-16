@@ -28,7 +28,13 @@ export function actualizarApp(): void {
 
 export async function registrarServiceWorker(): Promise<void> {
   if (!('serviceWorker' in navigator) || !import.meta.env.PROD) return;
-  const registro = await navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`);
+  let registro: ServiceWorkerRegistration;
+  try {
+    registro = await navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`);
+  } catch (error) {
+    console.warn('No se ha podido activar el modo sin conexión', error);
+    return;
+  }
   if (registro.waiting && navigator.serviceWorker.controller) avisar(registro.waiting);
   registro.addEventListener('updatefound', () => {
     const nuevo = registro.installing;
@@ -36,8 +42,12 @@ export async function registrarServiceWorker(): Promise<void> {
       if (nuevo.state === 'installed' && navigator.serviceWorker.controller) avisar(nuevo);
     });
   });
-  // Busca versiones nuevas al volver a la app.
+  // Busca versiones nuevas al volver a la app. Si el registro ya no existe (el sistema lo ha
+  // borrado), se vuelve a registrar.
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') void registro.update();
+    if (document.visibilityState !== 'visible') return;
+    registro.update().catch(() => {
+      void navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {});
+    });
   });
 }
