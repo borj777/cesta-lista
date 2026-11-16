@@ -37,6 +37,9 @@ const ProductoCrudoSchema = z.object({
     url: texto,
     imageURL: texto,
   }),
+  media: z
+    .array(z.object({ url: z.string(), order: z.number().nullish(), type: z.string().nullish() }))
+    .nullish(),
   priceData: z.object({
     prices: z.array(z.object({ id: z.string(), value: ValorPrecio })),
     unitPriceUnitType: texto,
@@ -87,6 +90,19 @@ export function ofertaVigente(
   const oferta = vigente.shortDescription ?? vigente.longDescription;
   const fin = vigente.to ? Date.parse(vigente.to) : NaN;
   return Number.isNaN(fin) ? { oferta } : { oferta, ofertaHasta: fechaEspana.format(fin) };
+}
+
+/**
+ * Foto del producto. La dirección de `imageURL` no funciona (el servidor de Consum responde
+ * 404, comprobado el 16/11/2026); las de la galería `media` («…_001.jpg») sí. Se usa la
+ * primera foto de la galería y, si no hay, `imageURL`.
+ */
+export function fotoConsum(
+  media: { url: string; order?: number | null }[] | null | undefined,
+  imageURL: string | undefined,
+): string | undefined {
+  const primera = [...(media ?? [])].sort((a, b) => (a.order ?? 99) - (b.order ?? 99))[0];
+  return primera?.url ?? imageURL;
 }
 
 /**
@@ -153,7 +169,7 @@ export function normalizarConsum(crudo: unknown, ahora: string): Normalizado {
     precioAnterior: oferta ? redondear(normal.value.centAmount, 2) : undefined,
     ...ofertaVigente(p.offers, ahora),
     url: p.productData.url,
-    imagen: p.productData.imageURL,
+    imagen: fotoConsum(p.media, p.productData.imageURL),
   });
   if (!producto) return { ok: false };
 

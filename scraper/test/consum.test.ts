@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { descargarConsum, normalizarConsum, ofertaVigente } from '../src/adapters/consum.ts';
+import {
+  descargarConsum,
+  fotoConsum,
+  normalizarConsum,
+  ofertaVigente,
+} from '../src/adapters/consum.ts';
 import { ErrorFormato, ProductoSchema, type Producto } from '../src/tipos.ts';
 import { AHORA, fixture, pedirFalso, respuesta } from './ayudas.ts';
 
@@ -215,5 +220,26 @@ describe('docenas, lavados, metros y dosis (datos reales del 16/11/2026)', () =>
       formato: { cantidad: 20, unidad: 'ud' },
       precioRef: 0.1275,
     });
+  });
+});
+
+describe('foto de Consum', () => {
+  it('usa la primera foto de la galería, que sí funciona, y no imageURL (404)', () => {
+    const p = pagina.products.map((c) => normalizarConsum(c, AHORA)).find((r) => r.ok);
+    expect(p?.ok && p.producto.imagen).toMatch(/_001\.jpg/);
+  });
+
+  it('ordena la galería y, si no hay galería, usa imageURL', () => {
+    expect(
+      fotoConsum(
+        [
+          { url: 'b_002.jpg', order: 2 },
+          { url: 'b_001.jpg', order: 1 },
+        ],
+        'b.jpg',
+      ),
+    ).toBe('b_001.jpg');
+    expect(fotoConsum([], 'b.jpg')).toBe('b.jpg');
+    expect(fotoConsum(null, undefined)).toBeUndefined();
   });
 });

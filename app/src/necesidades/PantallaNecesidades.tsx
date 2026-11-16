@@ -249,6 +249,13 @@ function FormNecesidad({ existente }: { existente?: Necesidad }) {
           autocomplete="off"
           enterkeyhint="next"
           value={nombre}
+          onKeyDown={(e) => {
+            // «Siguiente» en el teclado pasa a la cantidad en vez de guardar el formulario.
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              document.getElementById('cantidad')?.focus();
+            }
+          }}
           onInput={(e) => {
             setNombre(e.currentTarget.value);
             if (errores.nombre) setErrores({ ...errores, nombre: undefined });
@@ -313,7 +320,15 @@ function FormNecesidad({ existente }: { existente?: Necesidad }) {
           type="text"
           placeholder="Sin piel, la marca que sea"
           autocomplete="off"
+          enterkeyhint="done"
           value={notas}
+          onKeyDown={(e) => {
+            // «OK» en el teclado lo cierra; para guardar está el botón.
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              e.currentTarget.blur();
+            }
+          }}
           onInput={(e) => setNotas(e.currentTarget.value)}
         />
       </div>
