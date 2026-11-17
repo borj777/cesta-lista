@@ -2,7 +2,7 @@ import { useMemo, useState } from 'preact/hooks';
 import { Contador } from '../../componentes/Contador.tsx';
 import { Icono } from '../../componentes/Icono.tsx';
 import { asignarPlato, guardarMenu, useRecetas } from '../estado.ts';
-import { MAX_PERSONAS } from '../menu.ts';
+import { MAX_PERSONAS, menuSinPlatos, platosConReceta } from '../menu.ts';
 import type { Receta } from '../recetas.ts';
 import {
   cambiarRevision,
@@ -190,13 +190,17 @@ function Resultado({ revision }: { revision: Revision }) {
 function RevisarPlatos({ revision }: { revision: Revision }) {
   const { recetas, menu, sinCompra } = useRecetas();
   const [veces, setVeces] = useState(revision.veces);
-  const [personas, setPersonas] = useState(revision.personas ?? menu[0]?.personas ?? 1);
+  const [personas, setPersonas] = useState(revision.personas ?? menu.personas);
   const [abierto, setAbierto] = useState<string | null>(null);
   const [fallo, setFallo] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   if (!recetas) return null;
 
-  const resultado = menuDeLaDieta(revision.grupos, veces, recetas, sinCompra, personas);
+  const libres =
+    revision.lectura.tipo === 'tabla' ? resumirDieta(revision.lectura.dieta).libresEn : [];
+  const resultado = menuDeLaDieta(revision.grupos, veces, recetas, sinCompra, personas, libres);
+  const conReceta = platosConReceta(resultado.menu);
+  const hayMenu = !menuSinPlatos(menu);
   const cambiarVeces = (id: string, v: number) => {
     const nuevas = { ...veces, [id]: v };
     setVeces(nuevas);
@@ -208,11 +212,10 @@ function RevisarPlatos({ revision }: { revision: Revision }) {
   };
 
   const usar = async () => {
-    const ahora = menu.length;
-    const sustituye = ahora > 0 ? ` Sustituye al que tienes ahora (${platosTexto(ahora)}).` : '';
+    const sustituye = hayMenu ? ' Sustituye al que tienes ahora.' : '';
     if (
       !confirm(
-        `¿Usar este menú?\n\nTendrá ${platosTexto(resultado.menu.length)}.${sustituye} Tus recetas se conservan.`,
+        `¿Usar este menú?\n\nTendrá ${platosTexto(conReceta)} con ingredientes que comprar, de lunes a domingo.${sustituye} Tus recetas se conservan.`,
       )
     ) {
       return;
@@ -266,16 +269,9 @@ function RevisarPlatos({ revision }: { revision: Revision }) {
         </p>
       ) : (
         <p class="secundario">
-          Tu menú tendrá {platosTexto(resultado.menu.length)} para{' '}
-          {personas === 1 ? '1 persona' : `${personas} personas`}.
-          {menu.length > 0 && ' Sustituirá al que tienes ahora; tus recetas se conservan.'}
-        </p>
-      )}
-      {resultado.recortadas.length > 0 && (
-        <p class="secundario">
-          {enumerar(resultado.recortadas.map((r) => `«${r.nombre}»`))}{' '}
-          {resultado.recortadas.length === 1 ? 'sale' : 'salen'} más de 21 veces a la semana: se
-          queda en 21, lo máximo del menú.
+          Tu menú, de lunes a domingo, tendrá {platosTexto(conReceta)} con ingredientes que comprar,
+          para {personas === 1 ? '1 persona' : `${personas} personas`}.
+          {hayMenu && ' Sustituirá al que tienes ahora; tus recetas se conservan.'}
         </p>
       )}
       {fallo && (
@@ -288,7 +284,7 @@ function RevisarPlatos({ revision }: { revision: Revision }) {
         <button
           type="button"
           class="boton boton--principal boton--ancho"
-          disabled={guardando || resultado.pendientes.length > 0 || resultado.menu.length === 0}
+          disabled={guardando || resultado.pendientes.length > 0 || menuSinPlatos(resultado.menu)}
           onClick={() => void usar()}
         >
           {guardando ? 'Guardando…' : 'Usar este menú'}

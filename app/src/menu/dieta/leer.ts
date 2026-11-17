@@ -318,44 +318,63 @@ export function leerDieta(paginas: Pagina[]): Lectura {
   return { tipo: 'lineas', lineas: sueltas };
 }
 
+/** Dónde sale un plato: día (0 es lunes), comida, fila de la tabla y posición en la celda. */
+export type Momento = { dia: number; comida: string; fila: number; posicion: number };
+
 export type PlatoSemana = {
   texto: string;
   veces: number;
   /** «Lunes, comida», «Jueves, cena». */
   cuando: string[];
+  momentos: Momento[];
 };
+
+const DIAS_CLAVE = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+
+/** Día de la semana (0 es lunes) de una columna de la tabla; si no se reconoce, su posición. */
+export function indiceDia(nombre: string | undefined, columna: number): number {
+  const i = DIAS_CLAVE.indexOf(clave(nombre ?? ''));
+  return i >= 0 ? i : columna % 7;
+}
 
 export type ResumenDieta = {
   /** Platos de los días, de los que más se repiten a los que menos. */
   platos: PlatoSemana[];
   /** Filas para cualquier día: desayuno, merienda... */
-  opciones: { comida: string; platos: string[] }[];
+  opciones: { comida: string; fila: number; platos: string[] }[];
   /** «Sábado, comida»: comidas libres. */
   libres: string[];
+  /** Las comidas libres con su texto («Libre con moderación») y dónde salen. */
+  libresEn: (Momento & { texto: string })[];
 };
 
 /** Lo que se come en la semana: cada plato con las veces que sale. */
 export function resumirDieta(dieta: Dieta): ResumenDieta {
   const platos = new Map<string, PlatoSemana>();
   const libres: { texto: string; dia: number; fila: number }[] = [];
+  const libresEn: ResumenDieta['libresEn'] = [];
   const opciones: ResumenDieta['opciones'] = [];
   for (const [f, fila] of dieta.filas.entries()) {
     if (fila.opciones) {
       const suyas = fila.opciones.filter((p) => !p.libre).map((p) => p.texto);
-      if (suyas.length > 0) opciones.push({ comida: fila.comida, platos: suyas });
+      if (suyas.length > 0) opciones.push({ comida: fila.comida, fila: f, platos: suyas });
       continue;
     }
     fila.porDia.forEach((delDia, d) => {
       const cuando = `${dieta.dias[d] ?? ''}, ${fila.comida.toLowerCase()}`;
-      for (const p of delDia) {
+      const dia = indiceDia(dieta.dias[d], d);
+      for (const [posicion, p] of delDia.entries()) {
+        const momento = { dia, comida: fila.comida, fila: f, posicion };
         if (p.libre) {
           libres.push({ texto: cuando, dia: d, fila: f });
+          libresEn.push({ ...momento, texto: p.texto });
           continue;
         }
         const k = clave(p.texto);
-        const plato = platos.get(k) ?? { texto: p.texto, veces: 0, cuando: [] };
+        const plato = platos.get(k) ?? { texto: p.texto, veces: 0, cuando: [], momentos: [] };
         plato.veces += 1;
         plato.cuando.push(cuando);
+        plato.momentos.push(momento);
         platos.set(k, plato);
       }
     });
@@ -367,5 +386,6 @@ export function resumirDieta(dieta: Dieta): ResumenDieta {
     opciones,
     // Por días: «sábado, comida» antes que «domingo, cena».
     libres: libres.sort((a, b) => a.dia - b.dia || a.fila - b.fila).map((l) => l.texto),
+    libresEn,
   };
 }

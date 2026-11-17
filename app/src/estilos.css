@@ -1083,3 +1083,88 @@ body:has(input:focus:not([type='radio'])) .pestanas {
 .elegir-receta__lista li:last-child .fila--compra {
   border-bottom: none;
 }
+
+/* Menú por días: una tarjeta por día, de lunes a domingo. */
+.dia-menu {
+  display: grid;
+  gap: 10px;
+}
+
+.dia-menu--hoy {
+  border-color: var(--marca);
+  box-shadow: 0 0 0 1px var(--marca);
+}
+
+.dia-menu__titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 19px;
+}
+
+.dia-menu__hoy {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sobre-marca);
+  background: var(--marca);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.dia-menu__nombre-comida {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--texto-2);
+}
+
+.dia-menu__platos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.dia-menu__plato {
+  display: grid;
+  gap: 1px;
+  width: 100%;
+  padding: 6px 0;
+  border: none;
+  background: none;
+  color: var(--texto);
+  font: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.dia-menu__plato .secundario {
+  font-size: 13px;
+}
+
+.dia-menu__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 2px 0 8px;
+}
+
+.dia-menu__anadir {
+  justify-self: start;
+}
+
+.dia-menu__anadiendo {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--borde);
+  padding-top: 10px;
+}
+
+.boton-recetas {
+  margin-top: 8px;
+}

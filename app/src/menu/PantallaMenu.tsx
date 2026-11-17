@@ -17,7 +17,20 @@ import { platoDeRevision } from './dieta/estado.ts';
 import { PantallaDieta } from './dieta/PantallaDieta.tsx';
 import { sugerirIngredientes, type IngredienteSugerido } from './dieta/revision.ts';
 import { asignarPlato, borrarReceta, guardarMenu, guardarReceta, useRecetas } from './estado.ts';
-import { aportesDelMenu, MAX_PERSONAS, MAX_VECES, type PlatoMenu } from './menu.ts';
+import {
+  COMIDAS,
+  comidasDelDia,
+  DIAS_SEMANA,
+  diaDeLaSemana,
+  MAX_PERSONAS,
+  MAX_PLATOS_DIA,
+  menuSinPlatos,
+  menuVacio,
+  nombrePlato,
+  type Menu,
+  type PlatoDia,
+} from './menu.ts';
+import { hoyEnEspana } from '../formato.ts';
 import {
   necesidadParaIngrediente,
   sugerirNecesidades,
@@ -87,6 +100,7 @@ export function PantallaMenu({ sub }: { sub: string | null }) {
     );
   }
   if (seccion === 'dieta') return <PantallaDieta />;
+  if (seccion === 'recetas') return <ListaRecetas recetas={recetas} necesidades={necesidades} />;
   if (seccion === 'receta' && id === 'nueva') {
     return <FormReceta key="nueva" necesidades={necesidades} />;
   }
@@ -100,54 +114,44 @@ export function PantallaMenu({ sub }: { sub: string | null }) {
       <a class="boton boton--ancho boton-dieta" href="#menu/dieta">
         <Icono nombre="documento" tamano={20} /> Leer el PDF de la dieta
       </a>
-      <MenuSemanal recetas={recetas} menu={menu} necesidades={necesidades} />
-      <ListaRecetas recetas={recetas} necesidades={necesidades} />
+      <MenuPorDias recetas={recetas} menu={menu} />
+      <a class="boton boton--ancho boton-recetas" href="#menu/recetas">
+        Mis recetas ({recetas.length})
+      </a>
     </>
   );
 }
 
-/** Qué platos se comen cada semana, cuántas veces y para cuántas personas. */
-function MenuSemanal({
-  recetas,
-  menu,
-  necesidades,
-}: {
-  recetas: Receta[];
-  menu: PlatoMenu[];
-  necesidades: Necesidad[];
-}) {
-  const [eligiendo, setEligiendo] = useState(false);
+/** El menú de la semana, de lunes a domingo: en cada día, sus comidas y sus platos. */
+function MenuPorDias({ recetas, menu }: { recetas: Receta[]; menu: Menu }) {
+  const [abierto, setAbierto] = useState<string | null>(null);
+  const [anadiendo, setAnadiendo] = useState<number | null>(null);
   const [fallo, setFallo] = useState<string | null>(null);
   const porId = new Map(recetas.map((r) => [r.id, r]));
-  const platos = menu.filter((p) => porId.has(p.receta));
-  const fuera = recetas
-    .filter((r) => !menu.some((p) => p.receta === r.id))
-    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
-  const aportes = aportesDelMenu(platos, recetas, necesidades);
-  const gasto = necesidades
-    .filter((n) => aportes.has(n.id))
-    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+  const hoy = diaDeLaSemana(hoyEnEspana());
+  const vacio = menuSinPlatos(menu);
 
-  const guardar = (nuevo: PlatoMenu[]) => {
+  const guardar = (nuevo: Menu) => {
     setFallo(null);
     guardarMenu(nuevo).catch((e: unknown) => setFallo(falloDe(e)));
   };
-  const cambiar = (receta: string, cambios: Partial<PlatoMenu>) =>
-    guardar(menu.map((p) => (p.receta === receta ? { ...p, ...cambios } : p)));
-  const anadir = (receta: string) => {
-    // Para las mismas personas que el último plato añadido.
-    const personas = platos.at(-1)?.personas ?? 1;
-    guardar([...menu, { receta, veces: 1, personas }]);
-    setEligiendo(false);
-  };
+  const cambiarDia = (dia: number, platos: PlatoDia[]) =>
+    guardar({ ...menu, dias: menu.dias.map((p, d) => (d === dia ? platos : p)) });
 
   return (
     <>
-      <h2 class="grupo__titulo">Menú de la semana</h2>
-      {platos.length === 0 && (
+      <section class="tarjeta">
+        <Contador
+          etiqueta="Personas que comen cada plato"
+          valor={menu.personas}
+          max={MAX_PERSONAS}
+          alCambiar={(personas) => guardar({ ...menu, personas })}
+        />
+      </section>
+      {vacio && (
         <p class="secundario">
-          Elige qué platos comes cada semana y para cuántas personas. Sus ingredientes se sumarán a
-          tu lista de la compra.
+          Aún no hay platos. Lee el PDF de tu dieta o añade los platos de cada día. Sus ingredientes
+          se sumarán a tu lista de la compra.
         </p>
       )}
       {fallo && (
@@ -156,44 +160,148 @@ function MenuSemanal({
           <span>{fallo}</span>
         </p>
       )}
-      {platos.length > 0 && (
-        <ul class="filas tarjeta tarjeta--lista">
-          {platos.map((p) => (
-            <li key={p.receta} class="plato-menu">
-              <div class="plato-menu__cabecera">
-                <a href={`#menu/receta/${p.receta}`}>{porId.get(p.receta)?.nombre}</a>
+      {DIAS_SEMANA.map((nombreDia, dia) => {
+        const platos = menu.dias[dia] ?? [];
+        return (
+          <section
+            key={nombreDia}
+            class={dia === hoy ? 'tarjeta dia-menu dia-menu--hoy' : 'tarjeta dia-menu'}
+          >
+            <h2 class="dia-menu__titulo">
+              {nombreDia}
+              {dia === hoy && <span class="dia-menu__hoy">Hoy</span>}
+            </h2>
+            {platos.length === 0 && anadiendo !== dia && <p class="secundario">Sin platos.</p>}
+            {comidasDelDia(platos).map((g) => (
+              <div key={g.comida} class="dia-menu__comida">
+                {g.comida && <h3 class="dia-menu__nombre-comida">{g.comida}</h3>}
+                <ul class="dia-menu__platos">
+                  {g.platos.map(({ plato, indice }) => {
+                    const clave = `${dia}-${indice}`;
+                    const receta = plato.receta ? porId.get(plato.receta) : undefined;
+                    return (
+                      <li key={clave}>
+                        <button
+                          type="button"
+                          class="dia-menu__plato"
+                          aria-expanded={abierto === clave}
+                          onClick={() => setAbierto(abierto === clave ? null : clave)}
+                        >
+                          <span>{nombrePlato(plato, porId)}</span>
+                          {!receta && <span class="secundario">No se compra nada</span>}
+                        </button>
+                        {abierto === clave && (
+                          <div class="dia-menu__acciones">
+                            {receta && (
+                              <a class="boton boton--pequeno" href={`#menu/receta/${receta.id}`}>
+                                Ver la receta
+                              </a>
+                            )}
+                            <button
+                              type="button"
+                              class="boton boton--pequeno"
+                              onClick={() => {
+                                setAbierto(null);
+                                cambiarDia(
+                                  dia,
+                                  platos.filter((_, i) => i !== indice),
+                                );
+                              }}
+                            >
+                              Quitar de este día
+                            </button>
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+            {anadiendo === dia ? (
+              <AnadirPlato
+                recetas={recetas}
+                alAnadir={(plato) => {
+                  cambiarDia(dia, [...platos, plato]);
+                  setAnadiendo(null);
+                }}
+                alCancelar={() => setAnadiendo(null)}
+              />
+            ) : (
+              platos.length < MAX_PLATOS_DIA && (
                 <button
                   type="button"
-                  class="boton boton--pequeno"
-                  onClick={() => guardar(menu.filter((x) => x.receta !== p.receta))}
+                  class="boton boton--pequeno dia-menu__anadir"
+                  onClick={() => {
+                    setAbierto(null);
+                    setAnadiendo(dia);
+                  }}
                 >
-                  Quitar
+                  + Añadir un plato
                 </button>
-              </div>
-              <Contador
-                etiqueta="Veces a la semana"
-                valor={p.veces}
-                max={MAX_VECES}
-                alCambiar={(veces) => cambiar(p.receta, { veces })}
-              />
-              <Contador
-                etiqueta="Personas"
-                valor={p.personas}
-                max={MAX_PERSONAS}
-                alCambiar={(personas) => cambiar(p.receta, { personas })}
-              />
-            </li>
-          ))}
-        </ul>
+              )
+            )}
+          </section>
+        );
+      })}
+      {!vacio && (
+        <div class="acciones">
+          <button
+            type="button"
+            class="boton boton--ancho"
+            onClick={() => {
+              if (confirm('¿Vaciar el menú?\n\nTus recetas se conservan para otros meses.')) {
+                guardar(menuVacio(menu.personas));
+              }
+            }}
+          >
+            Vaciar el menú (nueva dieta)
+          </button>
+        </div>
       )}
+    </>
+  );
+}
 
-      {eligiendo ? (
-        <section class="tarjeta">
-          <h3 class="tienda__titulo">¿Qué plato añades?</h3>
-          <ul class="filas">
-            {fuera.map((r) => (
+/** Elegir la comida y la receta del plato que se añade a un día. */
+function AnadirPlato({
+  recetas,
+  alAnadir,
+  alCancelar,
+}: {
+  recetas: Receta[];
+  alAnadir: (plato: PlatoDia) => void;
+  alCancelar: () => void;
+}) {
+  const [comida, setComida] = useState<string>('Comida');
+  const ordenadas = [...recetas].sort((a, b) =>
+    a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }),
+  );
+  return (
+    <div class="dia-menu__anadiendo">
+      <Opciones
+        nombre="comida"
+        etiqueta="¿En qué comida?"
+        opciones={COMIDAS.map((c) => ({ valor: c, texto: c }))}
+        valor={comida}
+        alCambiar={setComida}
+        columnas={3}
+      />
+      {ordenadas.length === 0 ? (
+        <p class="secundario">
+          Primero añade la receta del plato en <a href="#menu/recetas">Mis recetas</a>.
+        </p>
+      ) : (
+        <>
+          <p class="campo__etiqueta">¿Qué plato?</p>
+          <ul class="filas elegir-receta__lista">
+            {ordenadas.map((r) => (
               <li key={r.id}>
-                <button type="button" class="fila fila--compra" onClick={() => anadir(r.id)}>
+                <button
+                  type="button"
+                  class="fila fila--compra"
+                  onClick={() => alAnadir({ comida, nombre: '', receta: r.id })}
+                >
                   <span class="fila__texto">
                     <span>{r.nombre}</span>
                   </span>
@@ -201,73 +309,14 @@ function MenuSemanal({
               </li>
             ))}
           </ul>
-          <button type="button" class="boton boton--ancho" onClick={() => setEligiendo(false)}>
-            Cancelar
-          </button>
-        </section>
-      ) : (
-        <div class="acciones">
-          {fuera.length > 0 ? (
-            <button
-              type="button"
-              class="boton boton--principal boton--ancho"
-              onClick={() => setEligiendo(true)}
-            >
-              Añadir un plato al menú
-            </button>
-          ) : recetas.length === 0 ? (
-            <p class="secundario">Primero añade las recetas de tus platos, aquí debajo.</p>
-          ) : null}
-          {platos.length > 0 && (
-            <button
-              type="button"
-              class="boton boton--ancho"
-              onClick={() => {
-                if (confirm('¿Vaciar el menú?\n\nTus recetas se conservan para otros meses.')) {
-                  guardar([]);
-                }
-              }}
-            >
-              Vaciar el menú (nueva dieta)
-            </button>
-          )}
-        </div>
-      )}
-
-      {gasto.length > 0 && (
-        <>
-          <h2 class="grupo__titulo grupo__titulo--separado">Lo que gastas a la semana</h2>
-          <ul class="filas tarjeta tarjeta--lista">
-            {gasto.map((n) => {
-              const aporte = aportes.get(n.id);
-              return (
-                <li key={n.id}>
-                  <a class="fila fila--enlace" href={`#necesidades/${n.id}`}>
-                    <div class="fila__texto">
-                      <span>{n.nombre}</span>
-                      <span class="secundario">
-                        {aporte?.platos.map((x) => x.receta.nombre).join(', ')}
-                      </span>
-                    </div>
-                    <span class="fila__importe">
-                      {aporte ? textoCantidad(redondearTexto(aporte.semanal), n.unidad) : ''}
-                    </span>
-                  </a>
-                </li>
-              );
-            })}
-          </ul>
-          <p class="secundario">
-            Se suma a lo que gastas aparte. La lista de la compra lo tiene en cuenta.
-          </p>
         </>
       )}
-    </>
+      <button type="button" class="boton boton--ancho" onClick={alCancelar}>
+        Cancelar
+      </button>
+    </div>
   );
 }
-
-/** 333,333333 g → 333,3 g para mostrarlo. */
-const redondearTexto = (n: number) => Math.round(n * 10) / 10;
 
 function ListaRecetas({ recetas, necesidades }: { recetas: Receta[]; necesidades: Necesidad[] }) {
   const porId = new Map(necesidades.map((n) => [n.id, n]));
@@ -282,7 +331,10 @@ function ListaRecetas({ recetas, necesidades }: { recetas: Receta[]; necesidades
 
   return (
     <>
-      <h2 class="grupo__titulo grupo__titulo--separado">Mis recetas</h2>
+      <a class="volver" href="#menu">
+        ‹ Menú
+      </a>
+      <h1>Mis recetas</h1>
       <p class="secundario">
         Apunta los platos de tu dieta con sus ingredientes. Cada ingrediente es una necesidad: en
         Necesidades eliges qué producto compras de cada tienda, como siempre.
@@ -370,7 +422,7 @@ function FormReceta({
   );
   // Sugerencias del plato ya añadidas (por su posición).
   const [usadas, setUsadas] = useState<number[]>([]);
-  const volver = propuesta ? '#menu/dieta' : '#menu';
+  const volver = propuesta ? '#menu/dieta' : '#menu/recetas';
   const [ingredientes, setIngredientes] = useState<IngredienteBorrador[]>(
     (existente?.ingredientes ?? [])
       .filter((i) => porId.has(i.necesidad))
@@ -419,7 +471,7 @@ function FormReceta({
         // El plato pasa a ser de esta receta (y deja de ser de otra o de «no se compra»).
         await asignarPlato(propuesta.texto, { receta: receta.id });
         ir('menu/dieta');
-      } else ir('menu');
+      } else ir('menu/recetas');
     } catch (e) {
       setFallo(falloDe(e));
       setGuardando(false);
@@ -436,7 +488,7 @@ function FormReceta({
       return;
     try {
       await borrarReceta(existente.id);
-      ir('menu');
+      ir('menu/recetas');
     } catch (e) {
       setFallo(falloDe(e));
     }
@@ -456,7 +508,7 @@ function FormReceta({
   return (
     <form onSubmit={alGuardar} noValidate>
       <a class="volver" href={volver}>
-        {propuesta ? '‹ Leer la dieta' : '‹ Menú'}
+        {propuesta ? '‹ Leer la dieta' : '‹ Mis recetas'}
       </a>
       <h1>{existente ? 'Editar receta' : 'Nueva receta'}</h1>
       {propuesta && (

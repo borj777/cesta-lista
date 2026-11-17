@@ -8,9 +8,12 @@
  */
 import { palabras } from '../../buscador.ts';
 import type { Necesidad, UnidadNecesidad } from '../../necesidades/modelo.ts';
-import { MAX_VECES, type PlatoMenu } from '../menu.ts';
+import { DIAS_SEMANA, menuVacio, type Menu, type PlatoDia } from '../menu.ts';
 import { unidadesCompatibles, type Receta } from '../recetas.ts';
-import { clavePlato, resumirDieta, type Lectura } from './leer.ts';
+import { clavePlato, resumirDieta, type Lectura, type Momento } from './leer.ts';
+
+/** Máximo de veces de una línea suelta (sin tabla): tres al día. */
+export const MAX_VECES = 21;
 
 export const AJUSTE_SIN_COMPRA = 'platosSinCompra';
 
@@ -24,6 +27,8 @@ export type PlatoRevision = {
   fijo: boolean;
   /** «Lunes, comida»... (solo en los platos de los días). */
   cuando?: string[];
+  /** Día y comida de cada vez que sale (solo en los platos de los días). */
+  momentos?: Momento[];
 };
 
 export type GrupoRevision = {
@@ -32,6 +37,8 @@ export type GrupoRevision = {
   maxVeces: number;
   /** Las veces son opciones de una misma comida: se avisa si no suman los días. */
   dias?: number;
+  /** Comida de las opciones («Desayuno») y su fila en la tabla. */
+  comida?: { nombre: string; fila: number };
   platos: PlatoRevision[];
 };
 
@@ -68,6 +75,7 @@ export function gruposDeRevision(lectura: Lectura): GrupoRevision[] {
         veces: p.veces,
         fijo: true,
         cuando: p.cuando,
+        momentos: p.momentos,
       })),
     });
   }
@@ -78,6 +86,7 @@ export function gruposDeRevision(lectura: Lectura): GrupoRevision[] {
       titulo: `${o.comida}: opciones para cualquier día`,
       maxVeces: dias,
       dias,
+      comida: { nombre: o.comida, fila: o.fila },
       platos: o.platos.map((texto, i) => ({
         id: `${g}-${i}`,
         texto,
@@ -118,47 +127,78 @@ export const vecesDe = (p: PlatoRevision, elegidas: Readonly<Record<string, numb
   p.fijo ? p.veces : (elegidas[p.id] ?? p.veces);
 
 export type MenuDieta = {
-  menu: PlatoMenu[];
+  menu: Menu;
   /** Platos que se toman alguna vez y aún no tienen receta ni «no se compra nada» (sin repetir). */
   pendientes: PlatoRevision[];
-  /** Recetas que pasan de 21 veces a la semana (se quedan en 21). */
-  recortadas: Receta[];
 };
 
-/** El menú que sale de la dieta: las veces de los platos de cada receta, sumadas. */
+/**
+ * El menú día a día que sale de la dieta. Los platos de la tabla van a su día y su comida; las
+ * opciones de una comida se reparten por días seguidos (4 días la primera, 3 la segunda) y las
+ * líneas sueltas, por toda la semana. Los platos sin receta salen con su nombre, sin comprar nada.
+ */
 export function menuDeLaDieta(
   grupos: readonly GrupoRevision[],
   elegidas: Readonly<Record<string, number>>,
   recetas: readonly Receta[],
   sinCompra: readonly string[],
   personas: number,
+  libres: readonly (Momento & { texto: string })[] = [],
 ): MenuDieta {
-  const veces = new Map<string, number>();
+  type Colocado = { dia: number; fila: number; posicion: number; plato: PlatoDia };
+  const colocados: Colocado[] = [];
   const pendientes: PlatoRevision[] = [];
-  for (const p of grupos.flatMap((g) => g.platos)) {
-    const v = vecesDe(p, elegidas);
-    if (v <= 0) continue;
-    const d = decisionDe(p.texto, recetas, sinCompra);
-    // Un plato que sale en varias comidas («1 fruta») cuenta una vez: se decide una vez.
-    if (
-      d.tipo === 'pendiente' &&
-      !pendientes.some((x) => clavePlato(x.texto) === clavePlato(p.texto))
-    ) {
-      pendientes.push(p);
-    }
-    if (d.tipo !== 'receta') continue;
-    veces.set(d.receta.id, (veces.get(d.receta.id) ?? 0) + v);
+  for (const g of grupos) {
+    let siguiente = 0; // primer día libre para las opciones de esta comida
+    g.platos.forEach((p, i) => {
+      const v = vecesDe(p, elegidas);
+      if (v <= 0) return;
+      const d = decisionDe(p.texto, recetas, sinCompra);
+      // Un plato que sale en varias comidas («1 fruta») cuenta una vez: se decide una vez.
+      if (
+        d.tipo === 'pendiente' &&
+        !pendientes.some((x) => clavePlato(x.texto) === clavePlato(p.texto))
+      ) {
+        pendientes.push(p);
+      }
+      const plato = (comida: string): PlatoDia =>
+        d.tipo === 'receta'
+          ? { comida, nombre: p.texto, receta: d.receta.id }
+          : { comida, nombre: p.texto };
+      if (p.fijo && p.momentos) {
+        for (const m of p.momentos) {
+          colocados.push({
+            dia: m.dia,
+            fila: m.fila,
+            posicion: m.posicion,
+            plato: plato(m.comida),
+          });
+        }
+      } else if (g.comida) {
+        for (let k = 0; k < v; k++) {
+          colocados.push({
+            dia: (siguiente + k) % DIAS_SEMANA.length,
+            fila: g.comida.fila,
+            posicion: i,
+            plato: plato(g.comida.nombre),
+          });
+        }
+        siguiente += v;
+      } else {
+        for (let k = 0; k < v; k++) {
+          const dia = Math.floor((k * DIAS_SEMANA.length) / v) % DIAS_SEMANA.length;
+          colocados.push({ dia, fila: 0, posicion: i, plato: plato('') });
+        }
+      }
+    });
   }
-  const recortadas = recetas.filter((r) => (veces.get(r.id) ?? 0) > MAX_VECES);
-  return {
-    menu: [...veces].map(([receta, v]) => ({
-      receta,
-      veces: Math.min(v, MAX_VECES),
-      personas,
-    })),
-    pendientes,
-    recortadas,
-  };
+  for (const l of libres) {
+    colocados.push({ ...l, plato: { comida: l.comida, nombre: l.texto } });
+  }
+  colocados.sort((a, b) => a.dia - b.dia || a.fila - b.fila || a.posicion - b.posicion);
+  const menu = menuVacio(personas);
+  for (const c of colocados) menu.dias[c.dia]?.push(c.plato);
+  return { menu, pendientes };
 }
 
 /** Recetas cuyo nombre se parece al del plato, las más parecidas primero. */

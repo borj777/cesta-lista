@@ -101,6 +101,10 @@ describe('lector de la dieta en PDF', () => {
       texto: '1 fruta',
       veces: 11,
       cuando: expect.arrayContaining(['Lunes, comida', 'Viernes, cena']) as unknown,
+      momentos: expect.arrayContaining([
+        { dia: 0, comida: 'Comida', fila: 2, posicion: 1 },
+        { dia: 4, comida: 'Cena', fila: 4, posicion: 1 },
+      ]) as unknown,
     });
     const veces = Object.fromEntries(resumen.platos.map((p) => [p.texto, p.veces]));
     expect(veces['Crema de calabaza']).toBe(2);

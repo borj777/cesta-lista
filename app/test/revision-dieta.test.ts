@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { getDocument, OPS, Util } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { cerrar, guardarRecetaYNecesidades, leerAjuste, listarRecetas } from '../src/almacen.ts';
-import { leerDieta, type Lectura } from '../src/menu/dieta/leer.ts';
+import { leerDieta, resumirDieta, type Lectura } from '../src/menu/dieta/leer.ts';
 import { extraerPaginas } from '../src/menu/dieta/pdf.ts';
 import {
   AJUSTE_SIN_COMPRA,
@@ -15,6 +15,7 @@ import {
   sugerirIngredientes,
 } from '../src/menu/dieta/revision.ts';
 import { asignarPlato, recargarRecetas } from '../src/menu/estado.ts';
+import { menuSinPlatos, vecesPorReceta } from '../src/menu/menu.ts';
 import { problemaReceta, type Receta } from '../src/menu/recetas.ts';
 import { crearNecesidad, type Necesidad } from '../src/necesidades/modelo.ts';
 
@@ -123,8 +124,9 @@ describe('qué receta es cada plato', () => {
 });
 
 describe('el menú que sale de la dieta', () => {
-  it('suma las veces de los platos de cada receta y de sus opciones', async () => {
-    const grupos = gruposDeRevision(await lecturaDelPdf());
+  it('pone cada plato en su día y su comida, con las opciones repartidas por días', async () => {
+    const lectura = await lecturaDelPdf();
+    const grupos = gruposDeRevision(lectura);
     const fruta = receta('fruta', 'Fruta', ['1 fruta']);
     const crema = receta('crema', 'Crema de calabaza');
     const todos = grupos.flatMap((g) => g.platos);
@@ -132,61 +134,78 @@ describe('el menú que sale de la dieta', () => {
     const sinCompra = todos
       .map((p) => p.texto)
       .filter((t) => t !== '1 fruta' && t !== 'Crema de calabaza');
-    const { menu, pendientes, recortadas } = menuDeLaDieta(
-      grupos,
-      {},
-      [fruta, crema],
-      sinCompra,
-      2,
-    );
-    // 11 en los días y 4 en el almuerzo (la primera de dos opciones).
-    expect(menu).toEqual([
-      { receta: 'fruta', veces: 15, personas: 2 },
-      { receta: 'crema', veces: 2, personas: 2 },
-    ]);
+    const libres = lectura.tipo === 'tabla' ? resumirDieta(lectura.dieta).libresEn : [];
+    const { menu, pendientes } = menuDeLaDieta(grupos, {}, [fruta, crema], sinCompra, 2, libres);
     expect(pendientes).toEqual([]);
-    expect(recortadas).toEqual([]);
+    expect(menu.personas).toBe(2);
+    // 11 en los días y 4 en el almuerzo (la primera de dos opciones, de lunes a jueves).
+    expect(vecesPorReceta(menu).get('fruta')).toBe(15);
+    expect(vecesPorReceta(menu).get('crema')).toBe(2);
 
-    // Si el almuerzo es siempre fruta: 18; si no se toma nunca, solo las 11.
+    const lunes = (menu.dias[0] ?? []).map((p) => [p.comida, p.nombre, p.receta ?? '-']);
+    expect(lunes).toEqual([
+      ['Desayuno', 'Café con leche y tostada de pan integral con tomate', '-'],
+      ['Almuerzo', '1 fruta', 'fruta'],
+      ['Comida', 'Arroz (70g) con verduras y gambas', '-'],
+      ['Comida', '1 fruta', 'fruta'],
+      ['Merienda', 'Yogur natural', '-'],
+      ['Cena', 'Crema de calabaza', 'crema'],
+      ['Cena', 'Merluza al horno', '-'],
+      ['Cena', '1 fruta', 'fruta'],
+    ]);
+    // El viernes ya toca la segunda opción del almuerzo y del desayuno.
+    const viernes = menu.dias[4] ?? [];
+    expect(viernes.find((p) => p.comida === 'Almuerzo')?.nombre).toBe(
+      '1 puñado de frutos secos (20-30g)',
+    );
+    expect(viernes.find((p) => p.comida === 'Desayuno')?.nombre).toBe('Yogur natural con avena');
+    // La merienda tiene 3 opciones: 3, 2 y 2 días.
+    expect(menu.dias.map((d) => d.find((p) => p.comida === 'Merienda')?.nombre)).toEqual([
+      'Yogur natural',
+      'Yogur natural',
+      'Yogur natural',
+      '1 puñado de frutos secos (20-30g)',
+      '1 puñado de frutos secos (20-30g)',
+      'Hummus con palitos de zanahoria',
+      'Hummus con palitos de zanahoria',
+    ]);
+    // Las comidas libres salen en su día, sin comprar nada.
+    expect(menu.dias[5]?.find((p) => p.comida === 'Comida')).toEqual({
+      comida: 'Comida',
+      nombre: 'Libre con moderación',
+    });
+
+    // Si el almuerzo es siempre fruta: 18.
     const almuerzo = grupos[2]?.platos ?? [];
-    const veces = (fruta: number) =>
-      menuDeLaDieta(
-        grupos,
-        { [almuerzo[0]?.id ?? '']: fruta, [almuerzo[1]?.id ?? '']: 7 - fruta },
-        [fruta === 0 ? receta('x', 'X') : receta('fruta', 'Fruta', ['1 fruta'])],
-        sinCompra,
-        1,
-      ).menu[0]?.veces;
-    expect(veces(7)).toBe(18);
+    const siempre = menuDeLaDieta(
+      grupos,
+      { [almuerzo[0]?.id ?? '']: 7, [almuerzo[1]?.id ?? '']: 0 },
+      [fruta],
+      sinCompra,
+      1,
+    );
+    expect(vecesPorReceta(siempre.menu).get('fruta')).toBe(18);
   });
 
-  it('los platos sin decidir que se toman quedan pendientes; los de 0 veces, no', () => {
+  it('las líneas sueltas se reparten por la semana; los platos de 0 veces no salen', () => {
     const grupos = gruposDeRevision({ tipo: 'lineas', lineas: ['Lentejas', 'Beber agua'] });
     const lentejas = grupos[0]?.platos[0]?.id ?? '';
-    expect(menuDeLaDieta(grupos, {}, [], [], 1)).toEqual({
-      menu: [],
-      pendientes: [],
-      recortadas: [],
-    });
+    const vacio = menuDeLaDieta(grupos, {}, [], [], 1);
+    expect(vacio.pendientes).toEqual([]);
+    expect(menuSinPlatos(vacio.menu)).toBe(true);
     const r = menuDeLaDieta(grupos, { [lentejas]: 2 }, [], [], 1);
     expect(r.pendientes.map((p) => p.texto)).toEqual(['Lentejas']);
     const conReceta = menuDeLaDieta(grupos, { [lentejas]: 2 }, [receta('l', 'Lentejas')], [], 3);
-    expect(conReceta.menu).toEqual([{ receta: 'l', veces: 2, personas: 3 }]);
+    expect(conReceta.menu.personas).toBe(3);
+    // 2 veces: lunes y jueves.
+    expect(conReceta.menu.dias.map((d) => d.length)).toEqual([1, 0, 0, 1, 0, 0, 0]);
+    expect(conReceta.menu.dias[0]).toEqual([{ comida: '', nombre: 'Lentejas', receta: 'l' }]);
   });
 
   it('un plato sin decidir que sale en varias comidas cuenta una vez', async () => {
     const grupos = gruposDeRevision(await lecturaDelPdf());
     // 14 de los días y 7 opciones, de las que «1 fruta» y los frutos secos se repiten.
     expect(menuDeLaDieta(grupos, {}, [], [], 1).pendientes).toHaveLength(19);
-  });
-
-  it('no pasa de 21 veces a la semana', () => {
-    const grupos = gruposDeRevision({ tipo: 'lineas', lineas: ['Fruta', 'Pieza de fruta'] });
-    const [a, b] = grupos[0]?.platos ?? [];
-    const fruta = receta('f', 'Fruta', ['Pieza de fruta']);
-    const r = menuDeLaDieta(grupos, { [a?.id ?? '']: 14, [b?.id ?? '']: 14 }, [fruta], [], 1);
-    expect(r.menu).toEqual([{ receta: 'f', veces: 21, personas: 1 }]);
-    expect(r.recortadas).toEqual([fruta]);
   });
 });
 

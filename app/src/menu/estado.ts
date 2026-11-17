@@ -11,19 +11,19 @@ import { recargarNecesidades } from '../necesidades/estado.ts';
 import type { Necesidad } from '../necesidades/modelo.ts';
 import { clavePlato } from './dieta/leer.ts';
 import { AJUSTE_SIN_COMPRA } from './dieta/revision.ts';
-import { leerMenu, type PlatoMenu } from './menu.ts';
+import { leerMenu, menuVacio, quitarRecetaDelMenu, vecesPorReceta, type Menu } from './menu.ts';
 import type { Receta } from './recetas.ts';
 
 export const AJUSTE_MENU = 'menu';
 
 type Estado = {
   recetas: Receta[] | null;
-  menu: PlatoMenu[];
+  menu: Menu;
   /** Platos de la dieta para los que no se compra nada. */
   sinCompra: string[];
   error: string | null;
 };
-let estado: Estado = { recetas: null, menu: [], sinCompra: [], error: null };
+let estado: Estado = { recetas: null, menu: menuVacio(), sinCompra: [], error: null };
 
 const textos = (v: unknown): string[] =>
   Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
@@ -54,17 +54,17 @@ export async function guardarReceta(r: Receta, nuevas: Necesidad[] = []): Promis
   await Promise.all([recargarRecetas(), nuevas.length > 0 ? recargarNecesidades() : null]);
 }
 
-/** Borra la receta y la quita del menú. */
+/** Borra la receta y la quita del menú (sus platos se quedan con su nombre, sin comprar nada). */
 export async function borrarReceta(id: string): Promise<void> {
   await borrarRecetaBD(id);
-  if (estado.menu.some((p) => p.receta === id)) {
-    await guardarMenu(estado.menu.filter((p) => p.receta !== id));
+  if (vecesPorReceta(estado.menu).has(id)) {
+    await guardarMenu(quitarRecetaDelMenu(estado.menu, id));
   }
   await recargarRecetas();
 }
 
-/** Guarda el menú al momento (cada cambio de veces o personas). */
-export async function guardarMenu(menu: PlatoMenu[]): Promise<void> {
+/** Guarda el menú al momento (cada plato añadido o quitado y cada cambio de personas). */
+export async function guardarMenu(menu: Menu): Promise<void> {
   publicar({ ...estado, menu });
   await guardarAjuste(AJUSTE_MENU, menu);
 }
