@@ -9,6 +9,7 @@ import { recetasCon } from '../menu/recetas.ts';
 import { useTiendas } from '../tiendas/estado.ts';
 import type { InfoTienda } from '../tiendas/modelo.ts';
 import type { DatosApp } from '../tipos.ts';
+import { VistaDespensa } from '../despensa/PantallaDespensa.tsx';
 import { DetalleNecesidad } from './DetalleNecesidad.tsx';
 import { ElegirProducto } from './ElegirProducto.tsx';
 import { borrar, guardar, useNecesidades } from './estado.ts';
@@ -37,7 +38,8 @@ const ir = (ruta: string) => {
 
 /**
  * Rutas: #necesidades, #necesidades/nueva, #necesidades/<id>, #necesidades/<id>/editar y
- * #necesidades/<id>/elegir/<tienda>.
+ * #necesidades/<id>/elegir/<tienda>, #necesidades/en-casa (la despensa) y #necesidades/<id>/casa
+ * (la ficha abierta desde la despensa, que vuelve a ella).
  */
 export function PantallaNecesidades({
   sub,
@@ -64,6 +66,7 @@ export function PantallaNecesidades({
   if (necesidades === null) return <h1>Mis necesidades</h1>;
 
   if (sub === 'nueva') return <FormNecesidad key="nueva" />;
+  if (sub === 'en-casa') return <VistaDespensa />;
   if (sub) {
     const [id, accion, tienda] = sub.split('/');
     const existente = necesidades.find((n) => n.id === id);
@@ -87,7 +90,12 @@ export function PantallaNecesidades({
     }
     if (existente)
       return (
-        <DetalleNecesidad necesidad={existente} buscarProducto={buscarProducto} tiendas={tiendas} />
+        <DetalleNecesidad
+          necesidad={existente}
+          buscarProducto={buscarProducto}
+          tiendas={tiendas}
+          desdeCasa={accion === 'casa'}
+        />
       );
   }
   return <ListaNecesidades necesidades={necesidades} tiendas={tiendas ?? []} />;
@@ -155,6 +163,9 @@ function ListaNecesidades({
       <p class="secundario">
         {necesidades.length === 1 ? '1 cosa apuntada' : `${necesidades.length} cosas apuntadas`}
       </p>
+      <a class="boton boton--ancho" href="#necesidades/en-casa">
+        <Icono nombre="casa" tamano={20} /> Lo que tienes en casa
+      </a>
       {agruparPorCategoria(necesidades).map((grupo) => (
         <section key={grupo.categoria} class="grupo">
           <h2 class="grupo__titulo">{NOMBRE_CATEGORIA[grupo.categoria]}</h2>

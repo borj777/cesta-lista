@@ -11,7 +11,7 @@ import { useTiendas } from '../tiendas/estado.ts';
 import type { InfoTienda } from '../tiendas/modelo.ts';
 import { precioAntiguo } from '../tiendas/productos.ts';
 import { textoNecesidad, type Necesidad } from '../necesidades/modelo.ts';
-import { existencias, textoEnUnidad } from '../despensa/despensa.ts';
+import { existencias, textoAproximado } from '../despensa/despensa.ts';
 import {
   consumoSemanal,
   empezarCompra,
@@ -22,8 +22,8 @@ import {
 } from './compra.ts';
 import { guardarAdelantadas, guardarCompra, useCompra } from './estado.ts';
 import { ModoCompra } from './ModoCompra.tsx';
-import { useRecetas } from '../menu/estado.ts';
-import { aportesDelMenu, necesidadesConMenu } from '../menu/menu.ts';
+import { AvisosDespensa } from '../despensa/PantallaDespensa.tsx';
+import { useConMenu } from '../despensa/estado.ts';
 import {
   planificar,
   type Compra,
@@ -58,14 +58,7 @@ export function PantallaLista({ datos, ahora }: { datos: DatosApp | null; ahora:
   // Lo que dura más que una compra y aún no se ha acabado se deja fuera («puede que aún te quede»).
   // Las necesidades con lo que gasta el menú sumado (las que son solo para recetas y no están
   // en el menú no se compran).
-  const { recetas, menu } = useRecetas();
-  const conMenu = useMemo(
-    () =>
-      necesidades && recetas
-        ? necesidadesConMenu(necesidades, aportesDelMenu(menu, recetas, necesidades))
-        : null,
-    [necesidades, recetas, menu],
-  );
+  const conMenu = useConMenu();
   const reparto = useMemo(
     () => (conMenu ? repartirNecesidades(conMenu, hoy, semanas, adelantadas) : null),
     [conMenu, hoy, semanas, adelantadas],
@@ -145,6 +138,7 @@ export function PantallaLista({ datos, ahora }: { datos: DatosApp | null; ahora:
       )}
       {datos && <FechaPrecios datos={datos} ahora={ahora} />}
       <ComoInstalar />
+      <AvisosDespensa hoy={hoy} />
       {necesidades?.length === 0 && (
         <section class="tarjeta">
           <h2>Apunta lo que compras</h2>
@@ -235,6 +229,7 @@ function PuedeQueTeQuede({
   const fila = (n: Necesidad, anadida: boolean) => {
     const fin = seAcaba(n);
     const queda = existencias(n, consumoSemanal(n), hoy);
+    const aproximado = queda !== null ? textoAproximado(queda, n) : null;
     return (
       <li key={n.id} class="fila">
         <div class="fila__texto">
@@ -242,8 +237,8 @@ function PuedeQueTeQuede({
             {n.nombre}
           </a>
           <span class="secundario">
-            {queda !== null
-              ? `Te quedan unos ${textoEnUnidad(queda, n)}`
+            {aproximado
+              ? `${aproximado.una ? 'Te queda' : 'Te quedan'} ${aproximado.texto}`
               : `${textoNecesidad(n)}${n.ultimaCompra ? ` · comprado el ${textoDia(n.ultimaCompra)}` : ''}`}
             {fin ? `, hasta el ${textoDia(fin)} más o menos` : ''}
           </span>

@@ -3,6 +3,7 @@ import { URL_DATOS } from '../datos.ts';
 import { fechaHora } from '../estado.ts';
 import { useCompra } from '../lista/estado.ts';
 import { pantallaDisponible } from '../lista/pantalla.ts';
+import { estadoIcono } from '../despensa/icono.ts';
 import { useNecesidades } from '../necesidades/estado.ts';
 import { useTiendas } from '../tiendas/estado.ts';
 
@@ -95,6 +96,17 @@ export function Diagnostico({ guardados, error }: { guardados: boolean; error: s
         </dd>
         <dt>Pantalla siempre encendida</dt>
         <dd>{pantallaDisponible() ? 'Disponible' : 'No disponible en este iPhone'}</dd>
+        <dt>Número en el icono</dt>
+        <dd>
+          {
+            {
+              'no-disponible': 'No disponible (abre la app desde la pantalla de inicio)',
+              'sin-permiso': 'Disponible, sin permiso todavía',
+              denegado: 'Sin permiso (Ajustes del iPhone › Notificaciones)',
+              concedido: 'Disponible, con permiso',
+            }[estadoIcono()]
+          }
+        </dd>
         <dt>Sistema (según Safari)</dt>
         <dd>{estado?.sistema ?? '…'}</dd>
         <dt>Versión de la app</dt>

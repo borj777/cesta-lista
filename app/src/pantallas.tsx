@@ -3,6 +3,7 @@ import { ComoInstalar } from './componentes/Banderas.tsx';
 import { CopiaSeguridad } from './componentes/CopiaSeguridad.tsx';
 import { Diagnostico } from './componentes/Diagnostico.tsx';
 import { DetallePrecios } from './componentes/EstadoPrecios.tsx';
+import { AjusteIcono } from './despensa/PantallaDespensa.tsx';
 import { fechaHora } from './estado.ts';
 import type { DatosApp } from './tipos.ts';
 
@@ -32,6 +33,7 @@ export function PantallaAjustes({
         )}
       </section>
       <AjustesCompra />
+      <AjusteIcono />
       <CopiaSeguridad />
       <ComoInstalar />
       <Diagnostico guardados={guardados} error={error} />

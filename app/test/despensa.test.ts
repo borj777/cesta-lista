@@ -8,7 +8,9 @@ import {
   diasQueQuedan,
   estadoDespensa,
   existencias,
+  textoAproximado,
   textoDespensa,
+  textoDias,
   textoEnUnidad,
 } from '../src/despensa/despensa.ts';
 import {
@@ -131,6 +133,22 @@ describe('la lista pide solo lo que falta', () => {
     expect(tocaComprar(detergente, HOY, 1)).toBe(false); // 30 lavados para unos 11 a la semana
     expect(tocaComprar({ ...detergente, despensa: { cantidad: 8, fecha: HOY } }, HOY, 1)).toBe(
       true,
+    );
+  });
+});
+
+describe('textos de lo que queda', () => {
+  it('concuerdan con la unidad y con el número', () => {
+    const huevos = nec('huevos', 12, 'ud');
+    expect(textoAproximado(3, huevos).texto).toBe('unas 3 unidades');
+    expect(textoAproximado(0.6, nec('arroz', 300, 'g')).texto).toBe('unos 600 g');
+    expect(textoAproximado(1, leche)).toEqual({ texto: 'alrededor de 1 litro', una: true });
+    expect(textoDias(0)).toBe('para menos de un día');
+    expect(textoDias(1)).toBe('para 1 día');
+    expect(textoDias(5)).toBe('para unos 5 días');
+    const conUno = { ...leche, despensa: { cantidad: 1, fecha: HOY } };
+    expect(textoDespensa(conUno, estadoDespensa(conUno, 7, HOY))).toBe(
+      'Te queda alrededor de 1 litro, para 1 día.',
     );
   });
 });

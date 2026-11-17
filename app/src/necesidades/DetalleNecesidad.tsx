@@ -29,10 +29,13 @@ export function DetalleNecesidad({
   necesidad,
   buscarProducto,
   tiendas,
+  desdeCasa = false,
 }: {
   necesidad: Necesidad;
   buscarProducto: ((tienda: IdTienda, id: string) => ProductoApp | undefined) | null;
   tiendas: InfoTienda[] | null;
+  /** Abierta desde «En casa»: vuelve allí. */
+  desdeCasa?: boolean;
 }) {
   const [fallo, setFallo] = useState<string | null>(null);
   const { productos: propios } = useTiendas();
@@ -54,9 +57,15 @@ export function DetalleNecesidad({
 
   return (
     <>
-      <a class="volver" href="#necesidades">
-        ‹ Mis necesidades
-      </a>
+      {desdeCasa ? (
+        <a class="volver" href="#necesidades/en-casa">
+          ‹ En casa
+        </a>
+      ) : (
+        <a class="volver" href="#necesidades">
+          ‹ Mis necesidades
+        </a>
+      )}
       <h1>{necesidad.nombre}</h1>
       <p class="secundario">
         {textoConMenu(necesidad, aporte)} · {NOMBRE_CATEGORIA[necesidad.categoria]}

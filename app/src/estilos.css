@@ -992,3 +992,18 @@ body:has(input:focus:not([type='radio'])) .pestanas {
   gap: 8px;
   margin-top: 10px;
 }
+
+/* Avisos de la despensa en la lista */
+.avisos-casa strong {
+  font-weight: 600;
+}
+
+.avisos-casa a:not(.boton) {
+  color: inherit;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.avisos-casa__ver {
+  margin-top: 10px;
+}

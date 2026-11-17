@@ -45,12 +45,36 @@ export function diasQueQuedan(cantidad: number, semanal: number): number {
   return semanal > 0 ? Math.floor((cantidad * 7) / semanal + 1e-9) : Infinity;
 }
 
+/** La cantidad en la unidad de la necesidad, con un decimal. */
+function valorEnUnidad(cantidad: number, n: Pick<Necesidad, 'unidad'>): number {
+  const base = unidadDeComparacion(n.unidad) as UnidadNecesidad;
+  return Math.round(convertir(cantidad, base, n.unidad) * 10) / 10;
+}
+
 /** «600 g», «1,5 litros», «3 unidades», en la unidad de la necesidad. */
 export function textoEnUnidad(cantidad: number, n: Pick<Necesidad, 'unidad'>): string {
-  const base = unidadDeComparacion(n.unidad) as UnidadNecesidad;
-  const valor = Math.round(convertir(cantidad, base, n.unidad) * 10) / 10;
+  const valor = valorEnUnidad(cantidad, n);
   const nombre = valor === 1 ? NOMBRE_UNIDAD[n.unidad].una : NOMBRE_UNIDAD[n.unidad].varias;
   return `${escribirCantidad(valor)} ${nombre}`;
+}
+
+/**
+ * Lo que queda, aproximado: «unos 600 g», «unas 3 unidades» o «alrededor de 1 litro».
+ * `una` es true si es una sola (para concordar el verbo: «te queda» o «te quedan»).
+ */
+export function textoAproximado(
+  cantidad: number,
+  n: Pick<Necesidad, 'unidad'>,
+): { texto: string; una: boolean } {
+  const texto = textoEnUnidad(cantidad, n);
+  if (valorEnUnidad(cantidad, n) === 1) return { texto: `alrededor de ${texto}`, una: true };
+  return { texto: `${n.unidad === 'ud' ? 'unas' : 'unos'} ${texto}`, una: false };
+}
+
+/** «para menos de un día», «para 1 día», «para unos 9 días». */
+export function textoDias(dias: number): string {
+  if (dias === 0) return 'para menos de un día';
+  return dias === 1 ? 'para 1 día' : `para unos ${dias} días`;
 }
 
 export type EstadoDespensa =
@@ -63,17 +87,13 @@ export function estadoDespensa(n: Necesidad, semanal: number, hoy: string): Esta
   return { tipo: 'queda', cantidad, dias: diasQueQuedan(cantidad, semanal) };
 }
 
-/** «Te quedan unos 600 g, para 9 días», «Se ha acabado» o «No se sabe todavía». */
+/** «Te quedan unos 600 g, para unos 9 días», «Se ha acabado» o «No se sabe todavía». */
 export function textoDespensa(n: Necesidad, estado: EstadoDespensa): string {
   if (estado.tipo === 'desconocido') return 'No se sabe todavía cuánto te queda.';
   if (estado.tipo === 'acabado') return 'Se ha acabado (según lo que gastas).';
-  const para =
-    estado.dias === Infinity
-      ? ''
-      : estado.dias === 0
-        ? ', para menos de un día'
-        : `, para unos ${estado.dias} ${estado.dias === 1 ? 'día' : 'días'}`;
-  return `Te quedan unos ${textoEnUnidad(estado.cantidad, n)}${para}.`;
+  const para = estado.dias === Infinity ? '' : `, ${textoDias(estado.dias)}`;
+  const { texto, una } = textoAproximado(estado.cantidad, n);
+  return `${una ? 'Te queda' : 'Te quedan'} ${texto}${para}.`;
 }
 
 /** Correcciones rápidas: guardan lo que hay hoy. */
