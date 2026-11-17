@@ -138,7 +138,7 @@ export function ModoCompra({
               : conseguida
                 ? 'La pantalla no se apagará mientras estés en esta lista.'
                 : pantallaDisponible()
-                  ? 'Se activará al volver a la app.'
+                  ? 'Se activará en cuanto toques la pantalla.'
                   : 'Tu iPhone no lo permite desde la app. Actualiza iOS o cambia el bloqueo automático en Ajustes del iPhone.'
           }
           encendido={pantallaEncendida}

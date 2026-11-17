@@ -1,6 +1,7 @@
 /**
  * Mantener la pantalla encendida mientras se compra (Screen Wake Lock). El iPhone la suelta
- * al cambiar de app o bloquear el móvil, así que se vuelve a pedir al volver a la app.
+ * al cambiar de app o bloquear el móvil, así que se vuelve a pedir al volver a la app o al
+ * tocar la pantalla.
  */
 import { useEffect, useState } from 'preact/hooks';
 
@@ -45,12 +46,18 @@ export function usePantallaEncendida(activa: boolean): boolean {
       }
     };
 
-    const alCambiarVisibilidad = () => void pedir();
-    document.addEventListener('visibilitychange', alCambiarVisibilidad);
+    // Safari solo la concede tras tocar la pantalla: al abrir la app se vuelve a pedir con el
+    // primer toque (si ya se tiene, `pedir` no hace nada).
+    const alCambiar = () => void pedir();
+    document.addEventListener('visibilitychange', alCambiar);
+    document.addEventListener('click', alCambiar);
+    document.addEventListener('touchend', alCambiar);
     void pedir();
     return () => {
       terminado = true;
-      document.removeEventListener('visibilitychange', alCambiarVisibilidad);
+      document.removeEventListener('visibilitychange', alCambiar);
+      document.removeEventListener('click', alCambiar);
+      document.removeEventListener('touchend', alCambiar);
       void cerrojo?.release().catch(() => {});
       cerrojo = null;
     };
