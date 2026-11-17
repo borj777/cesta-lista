@@ -87,6 +87,9 @@ function problemaNecesidad(
   if (n.ultimaCompra !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(String(n.ultimaCompra))) {
     return 'la fecha de la última compra no es válida';
   }
+  if (n.duraHasta !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(String(n.duraHasta))) {
+    return 'la fecha hasta la que dura no es válida';
+  }
   if (n.equivalencias !== undefined) {
     if (!esObjeto(n.equivalencias)) return 'los productos elegidos no son válidos';
     for (const [tienda, e] of Object.entries(n.equivalencias)) {

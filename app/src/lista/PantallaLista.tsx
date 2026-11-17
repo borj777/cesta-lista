@@ -14,6 +14,8 @@ import { textoNecesidad, type Necesidad } from '../necesidades/modelo.ts';
 import { empezarCompra, repartirNecesidades, seAcaba, tocaComprar } from './compra.ts';
 import { guardarAdelantadas, guardarCompra, useCompra } from './estado.ts';
 import { ModoCompra } from './ModoCompra.tsx';
+import { useRecetas } from '../menu/estado.ts';
+import { aportesDelMenu, necesidadesConMenu } from '../menu/menu.ts';
 import {
   planificar,
   type Compra,
@@ -46,18 +48,19 @@ export function PantallaLista({ datos, ahora }: { datos: DatosApp | null; ahora:
   const semanas = ajustes ? semanasDe(ajustes.periodo) : 1;
 
   // Lo que dura más que una compra y aún no se ha acabado se deja fuera («puede que aún te quede»).
-  const reparto = useMemo(
+  // Las necesidades con lo que gasta el menú sumado (las que son solo para recetas y no están
+  // en el menú no se compran).
+  const { recetas, menu } = useRecetas();
+  const conMenu = useMemo(
     () =>
-      necesidades
-        ? repartirNecesidades(
-            // Lo que es solo para recetas se comprará según el menú.
-            necesidades.filter((n) => !n.soloRecetas),
-            hoy,
-            semanas,
-            adelantadas,
-          )
+      necesidades && recetas
+        ? necesidadesConMenu(necesidades, aportesDelMenu(menu, recetas, necesidades))
         : null,
-    [necesidades, hoy, semanas, adelantadas],
+    [necesidades, recetas, menu],
+  );
+  const reparto = useMemo(
+    () => (conMenu ? repartirNecesidades(conMenu, hoy, semanas, adelantadas) : null),
+    [conMenu, hoy, semanas, adelantadas],
   );
 
   const plan = useMemo(
@@ -182,7 +185,7 @@ export function PantallaLista({ datos, ahora }: { datos: DatosApp | null; ahora:
           {plan.mejor && <ComprasPorTienda mejor={plan.mejor} tiendas={tiendas} />}
           {reparto && (
             <PuedeQueTeQuede
-              necesidades={necesidades ?? []}
+              necesidades={conMenu ?? []}
               quedan={reparto.quedan}
               adelantadas={adelantadas}
               hoy={hoy}

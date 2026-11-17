@@ -2,15 +2,20 @@
 import { useEffect, useState } from 'preact/hooks';
 import {
   borrarReceta as borrarRecetaBD,
+  guardarAjuste,
   guardarRecetaYNecesidades,
+  leerAjuste,
   listarRecetas,
 } from '../almacen.ts';
 import { recargarNecesidades } from '../necesidades/estado.ts';
 import type { Necesidad } from '../necesidades/modelo.ts';
+import { leerMenu, type PlatoMenu } from './menu.ts';
 import type { Receta } from './recetas.ts';
 
-type Estado = { recetas: Receta[] | null; error: string | null };
-let estado: Estado = { recetas: null, error: null };
+export const AJUSTE_MENU = 'menu';
+
+type Estado = { recetas: Receta[] | null; menu: PlatoMenu[]; error: string | null };
+let estado: Estado = { recetas: null, menu: [], error: null };
 const oyentes = new Set<(e: Estado) => void>();
 
 function publicar(nuevo: Estado) {
@@ -20,7 +25,8 @@ function publicar(nuevo: Estado) {
 
 export async function recargarRecetas(): Promise<void> {
   try {
-    publicar({ recetas: await listarRecetas(), error: null });
+    const [recetas, menu] = await Promise.all([listarRecetas(), leerAjuste(AJUSTE_MENU)]);
+    publicar({ recetas, menu: leerMenu(menu), error: null });
   } catch (error) {
     const motivo = error instanceof Error ? error.message : String(error);
     publicar({ ...estado, error: `No se han podido leer tus recetas (${motivo}).` });
@@ -33,9 +39,19 @@ export async function guardarReceta(r: Receta, nuevas: Necesidad[] = []): Promis
   await Promise.all([recargarRecetas(), nuevas.length > 0 ? recargarNecesidades() : null]);
 }
 
+/** Borra la receta y la quita del menú. */
 export async function borrarReceta(id: string): Promise<void> {
   await borrarRecetaBD(id);
+  if (estado.menu.some((p) => p.receta === id)) {
+    await guardarMenu(estado.menu.filter((p) => p.receta !== id));
+  }
   await recargarRecetas();
+}
+
+/** Guarda el menú al momento (cada cambio de veces o personas). */
+export async function guardarMenu(menu: PlatoMenu[]): Promise<void> {
+  publicar({ ...estado, menu });
+  await guardarAjuste(AJUSTE_MENU, menu);
 }
 
 export function useRecetas(): Estado {

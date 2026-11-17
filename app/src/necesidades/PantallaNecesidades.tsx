@@ -4,6 +4,7 @@ import { Icono } from '../componentes/Icono.tsx';
 import { Opciones } from '../componentes/Opciones.tsx';
 import { Punto } from '../componentes/Tienda.tsx';
 import { useRecetas } from '../menu/estado.ts';
+import { aportesDelMenu, textoConMenu } from '../menu/menu.ts';
 import { recetasCon } from '../menu/recetas.ts';
 import { useTiendas } from '../tiendas/estado.ts';
 import type { InfoTienda } from '../tiendas/modelo.ts';
@@ -124,6 +125,8 @@ function ListaNecesidades({
   necesidades: Necesidad[];
   tiendas: InfoTienda[];
 }) {
+  const { recetas, menu } = useRecetas();
+  const aportes = aportesDelMenu(menu, recetas ?? [], necesidades);
   if (necesidades.length === 0) {
     return (
       <>
@@ -161,7 +164,7 @@ function ListaNecesidades({
                 <a class="fila fila--enlace" href={`#necesidades/${n.id}`}>
                   <div class="fila__texto">
                     <span>{n.nombre}</span>
-                    <span class="secundario">{textoNecesidad(n)}</span>
+                    <span class="secundario">{textoConMenu(n, aportes.get(n.id))}</span>
                   </div>
                   <TiendasElegidas necesidad={n} tiendas={tiendas} />
                   <span class="chevron" aria-hidden="true">

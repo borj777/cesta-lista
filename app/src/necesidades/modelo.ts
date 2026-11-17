@@ -70,6 +70,11 @@ export type Necesidad = {
    * Se crea al añadir un ingrediente nuevo a una receta.
    */
   soloRecetas?: true;
+  /**
+   * Día (AAAA-MM-DD) hasta el que dura lo que se compró la última vez, según lo que se gasta
+   * (un paquete de 1 kg de arroz para 320 g a la semana dura unas 3 semanas).
+   */
+  duraHasta?: string;
   /** Día (AAAA-MM-DD, de España) en que se compró por última vez con la app. */
   ultimaCompra?: string;
   creada: string;

@@ -25,22 +25,34 @@ export function duraMasQueElPeriodo(n: Necesidad, semanasPeriodo: number): boole
   return SEMANAS[n.frecuencia] > semanasPeriodo + 1e-9;
 }
 
+/**
+ * Lo que se gasta a la semana, en la unidad de comparación (g → kg, ml → l). Sirve para saber
+ * cuánto dura lo comprado.
+ */
+export function consumoSemanal(n: Necesidad): number {
+  const semanal = n.cantidad / SEMANAS[n.frecuencia];
+  return n.unidad === 'g' || n.unidad === 'ml' ? semanal / 1000 : semanal;
+}
+
 /** Día en que se acaba lo comprado la última vez (o null si nunca se ha comprado). */
 export function seAcaba(n: Necesidad): string | null {
+  if (n.duraHasta) return n.duraHasta;
   if (!n.ultimaCompra) return null;
   return sumarDias(n.ultimaCompra, Math.round(SEMANAS[n.frecuencia] * DIAS_SEMANA));
 }
 
 /**
- * ¿Hay que comprarla esta vez? Lo que se gasta antes de la siguiente compra, siempre. Lo que
- * dura más (el detergente del mes en una compra semanal) solo si nunca se ha comprado con la
- * app o si se acaba antes de la siguiente compra.
+ * ¿Hay que comprarla esta vez? Si se sabe hasta cuándo dura lo comprado la última vez, solo si
+ * se acaba antes de la siguiente compra (el paquete de 1 kg de arroz no se compra cada semana).
+ * Si no, lo que se gasta antes de la siguiente compra se compra siempre, y lo que dura más
+ * (el detergente del mes en una compra semanal) solo cuando se va a acabar.
  */
 export function tocaComprar(n: Necesidad, hoy: string, semanasPeriodo: number): boolean {
+  const siguienteCompra = sumarDias(hoy, Math.round(semanasPeriodo * DIAS_SEMANA));
+  if (n.duraHasta) return n.duraHasta <= siguienteCompra;
   if (!duraMasQueElPeriodo(n, semanasPeriodo)) return true;
   const fin = seAcaba(n);
   if (!fin) return true;
-  const siguienteCompra = sumarDias(hoy, Math.round(semanasPeriodo * DIAS_SEMANA));
   return fin <= siguienteCompra;
 }
 
@@ -72,6 +84,8 @@ export type LineaCompra = {
   coste: number;
   porEnvase: boolean;
   enCarro: boolean;
+  /** Días que dura lo que se compra, según lo que se gasta (si se sabe). */
+  duraDias?: number;
 };
 
 export type CompraEnCurso = {
@@ -99,6 +113,11 @@ export function empezarCompra(
         formato: producto.formato,
       };
       if (producto.marca) copia.marca = producto.marca;
+      // Lo que se compra (en kg, l, ud...) entre lo que se gasta a la semana.
+      const semanal = consumoSemanal(c.analisis.necesidad);
+      const cubierto = porEnvase ? envases : envases * producto.formato.cantidad;
+      const duraDias =
+        semanal > 0 ? Math.floor((DIAS_SEMANA * cubierto) / semanal + 1e-9) : undefined;
       lineas.push({
         necesidad: c.analisis.necesidad.id,
         nombre: c.analisis.necesidad.nombre,
@@ -109,6 +128,7 @@ export function empezarCompra(
         coste,
         porEnvase,
         enCarro: false,
+        ...(duraDias !== undefined ? { duraDias } : {}),
       });
     }
   }
@@ -167,10 +187,18 @@ export function terminarCompra(
   hoy: string,
   tambienEstanteria: boolean,
 ): Necesidad[] {
-  const compradas = new Set(
-    compra.lineas.filter((l) => l.enCarro || tambienEstanteria).map((l) => l.necesidad),
+  const compradas = new Map(
+    compra.lineas.filter((l) => l.enCarro || tambienEstanteria).map((l) => [l.necesidad, l]),
   );
-  return necesidades.filter((n) => compradas.has(n.id)).map((n) => ({ ...n, ultimaCompra: hoy }));
+  return necesidades
+    .filter((n) => compradas.has(n.id))
+    .map((n) => {
+      const linea = compradas.get(n.id);
+      const nueva: Necesidad = { ...n, ultimaCompra: hoy };
+      if (linea?.duraDias !== undefined) nueva.duraHasta = sumarDias(hoy, linea.duraDias);
+      else delete nueva.duraHasta;
+      return nueva;
+    });
 }
 
 const esFecha = (v: unknown): v is string => typeof v === 'string' && !Number.isNaN(Date.parse(v));
@@ -204,7 +232,8 @@ export function leerCompra(valor: unknown): CompraEnCurso | null {
       esNumero(l.precio) &&
       esNumero(l.coste) &&
       typeof l.porEnvase === 'boolean' &&
-      typeof l.enCarro === 'boolean',
+      typeof l.enCarro === 'boolean' &&
+      (l.duraDias === undefined || esNumero(l.duraDias)),
   );
   return tiendasValidas && lineasValidas ? (valor as CompraEnCurso) : null;
 }

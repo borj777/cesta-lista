@@ -12,7 +12,8 @@ import {
   type Necesidad,
   type UnidadNecesidad,
 } from '../necesidades/modelo.ts';
-import { borrarReceta, guardarReceta, useRecetas } from './estado.ts';
+import { borrarReceta, guardarMenu, guardarReceta, useRecetas } from './estado.ts';
+import { aportesDelMenu, MAX_PERSONAS, MAX_VECES, type PlatoMenu } from './menu.ts';
 import {
   necesidadParaIngrediente,
   sugerirNecesidades,
@@ -35,7 +36,7 @@ const conProducto = (n: Necesidad) =>
 
 /** Rutas: #menu, #menu/receta/nueva y #menu/receta/<id>. */
 export function PantallaMenu({ sub }: { sub: string | null }) {
-  const { recetas, error } = useRecetas();
+  const { recetas, menu, error } = useRecetas();
   const { necesidades } = useNecesidades();
 
   if (error) {
@@ -59,8 +60,219 @@ export function PantallaMenu({ sub }: { sub: string | null }) {
   if (existente) {
     return <FormReceta key={existente.id} existente={existente} necesidades={necesidades} />;
   }
-  return <ListaRecetas recetas={recetas} necesidades={necesidades} />;
+  return (
+    <>
+      <h1>Menú</h1>
+      <MenuSemanal recetas={recetas} menu={menu} necesidades={necesidades} />
+      <ListaRecetas recetas={recetas} necesidades={necesidades} />
+    </>
+  );
 }
+
+/** Botones − y + para un número pequeño. */
+function Contador({
+  valor,
+  min = 1,
+  max,
+  etiqueta,
+  alCambiar,
+}: {
+  valor: number;
+  min?: number;
+  max: number;
+  etiqueta: string;
+  alCambiar: (v: number) => void;
+}) {
+  return (
+    <div class="contador">
+      <span class="contador__etiqueta">{etiqueta}</span>
+      <button
+        type="button"
+        class="contador__boton"
+        aria-label={`${etiqueta}: uno menos`}
+        disabled={valor <= min}
+        onClick={() => alCambiar(valor - 1)}
+      >
+        −
+      </button>
+      <span class="contador__valor" aria-live="polite">
+        {valor}
+      </span>
+      <button
+        type="button"
+        class="contador__boton"
+        aria-label={`${etiqueta}: uno más`}
+        disabled={valor >= max}
+        onClick={() => alCambiar(valor + 1)}
+      >
+        +
+      </button>
+    </div>
+  );
+}
+
+/** Qué platos se comen cada semana, cuántas veces y para cuántas personas. */
+function MenuSemanal({
+  recetas,
+  menu,
+  necesidades,
+}: {
+  recetas: Receta[];
+  menu: PlatoMenu[];
+  necesidades: Necesidad[];
+}) {
+  const [eligiendo, setEligiendo] = useState(false);
+  const [fallo, setFallo] = useState<string | null>(null);
+  const porId = new Map(recetas.map((r) => [r.id, r]));
+  const platos = menu.filter((p) => porId.has(p.receta));
+  const fuera = recetas
+    .filter((r) => !menu.some((p) => p.receta === r.id))
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
+  const aportes = aportesDelMenu(platos, recetas, necesidades);
+  const gasto = necesidades
+    .filter((n) => aportes.has(n.id))
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+
+  const guardar = (nuevo: PlatoMenu[]) => {
+    setFallo(null);
+    guardarMenu(nuevo).catch((e: unknown) => setFallo(falloDe(e)));
+  };
+  const cambiar = (receta: string, cambios: Partial<PlatoMenu>) =>
+    guardar(menu.map((p) => (p.receta === receta ? { ...p, ...cambios } : p)));
+  const anadir = (receta: string) => {
+    // Para las mismas personas que el último plato añadido.
+    const personas = platos.at(-1)?.personas ?? 1;
+    guardar([...menu, { receta, veces: 1, personas }]);
+    setEligiendo(false);
+  };
+
+  return (
+    <>
+      <h2 class="grupo__titulo">Menú de la semana</h2>
+      {platos.length === 0 && (
+        <p class="secundario">
+          Elige qué platos comes cada semana y para cuántas personas. Sus ingredientes se sumarán a
+          tu lista de la compra.
+        </p>
+      )}
+      {fallo && (
+        <p class="aviso aviso--error" role="alert">
+          <Icono nombre="alerta" tamano={20} />
+          <span>{fallo}</span>
+        </p>
+      )}
+      {platos.length > 0 && (
+        <ul class="filas tarjeta tarjeta--lista">
+          {platos.map((p) => (
+            <li key={p.receta} class="plato-menu">
+              <div class="plato-menu__cabecera">
+                <a href={`#menu/receta/${p.receta}`}>{porId.get(p.receta)?.nombre}</a>
+                <button
+                  type="button"
+                  class="boton boton--pequeno"
+                  onClick={() => guardar(menu.filter((x) => x.receta !== p.receta))}
+                >
+                  Quitar
+                </button>
+              </div>
+              <Contador
+                etiqueta="Veces a la semana"
+                valor={p.veces}
+                max={MAX_VECES}
+                alCambiar={(veces) => cambiar(p.receta, { veces })}
+              />
+              <Contador
+                etiqueta="Personas"
+                valor={p.personas}
+                max={MAX_PERSONAS}
+                alCambiar={(personas) => cambiar(p.receta, { personas })}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {eligiendo ? (
+        <section class="tarjeta">
+          <h3 class="tienda__titulo">¿Qué plato añades?</h3>
+          <ul class="filas">
+            {fuera.map((r) => (
+              <li key={r.id}>
+                <button type="button" class="fila fila--compra" onClick={() => anadir(r.id)}>
+                  <span class="fila__texto">
+                    <span>{r.nombre}</span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          <button type="button" class="boton boton--ancho" onClick={() => setEligiendo(false)}>
+            Cancelar
+          </button>
+        </section>
+      ) : (
+        <div class="acciones">
+          {fuera.length > 0 ? (
+            <button
+              type="button"
+              class="boton boton--principal boton--ancho"
+              onClick={() => setEligiendo(true)}
+            >
+              Añadir un plato al menú
+            </button>
+          ) : recetas.length === 0 ? (
+            <p class="secundario">Primero añade las recetas de tus platos, aquí debajo.</p>
+          ) : null}
+          {platos.length > 0 && (
+            <button
+              type="button"
+              class="boton boton--ancho"
+              onClick={() => {
+                if (confirm('¿Vaciar el menú?\n\nTus recetas se conservan para otros meses.')) {
+                  guardar([]);
+                }
+              }}
+            >
+              Vaciar el menú (nueva dieta)
+            </button>
+          )}
+        </div>
+      )}
+
+      {gasto.length > 0 && (
+        <>
+          <h2 class="grupo__titulo grupo__titulo--separado">Lo que gastas a la semana</h2>
+          <ul class="filas tarjeta tarjeta--lista">
+            {gasto.map((n) => {
+              const aporte = aportes.get(n.id);
+              return (
+                <li key={n.id}>
+                  <a class="fila fila--enlace" href={`#necesidades/${n.id}`}>
+                    <div class="fila__texto">
+                      <span>{n.nombre}</span>
+                      <span class="secundario">
+                        {aporte?.platos.map((x) => x.receta.nombre).join(', ')}
+                      </span>
+                    </div>
+                    <span class="fila__importe">
+                      {aporte ? textoCantidad(redondearTexto(aporte.semanal), n.unidad) : ''}
+                    </span>
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+          <p class="secundario">
+            Se suma a lo que gastas aparte. La lista de la compra lo tiene en cuenta.
+          </p>
+        </>
+      )}
+    </>
+  );
+}
+
+/** 333,333333 g → 333,3 g para mostrarlo. */
+const redondearTexto = (n: number) => Math.round(n * 10) / 10;
 
 function ListaRecetas({ recetas, necesidades }: { recetas: Receta[]; necesidades: Necesidad[] }) {
   const porId = new Map(necesidades.map((n) => [n.id, n]));
@@ -75,7 +287,7 @@ function ListaRecetas({ recetas, necesidades }: { recetas: Receta[]; necesidades
 
   return (
     <>
-      <h1>Menú</h1>
+      <h2 class="grupo__titulo grupo__titulo--separado">Mis recetas</h2>
       <p class="secundario">
         Apunta los platos de tu dieta con sus ingredientes. Cada ingrediente es una necesidad: en
         Necesidades eliges qué producto compras de cada tienda, como siempre.
@@ -95,7 +307,6 @@ function ListaRecetas({ recetas, necesidades }: { recetas: Receta[]; necesidades
           </span>
         </p>
       )}
-      <h2 class="grupo__titulo grupo__titulo--separado">Mis recetas</h2>
       {ordenadas.length === 0 ? (
         <section class="tarjeta">
           <p class="secundario">
