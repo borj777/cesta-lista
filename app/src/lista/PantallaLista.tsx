@@ -47,7 +47,16 @@ export function PantallaLista({ datos, ahora }: { datos: DatosApp | null; ahora:
 
   // Lo que dura más que una compra y aún no se ha acabado se deja fuera («puede que aún te quede»).
   const reparto = useMemo(
-    () => (necesidades ? repartirNecesidades(necesidades, hoy, semanas, adelantadas) : null),
+    () =>
+      necesidades
+        ? repartirNecesidades(
+            // Lo que es solo para recetas se comprará según el menú.
+            necesidades.filter((n) => !n.soloRecetas),
+            hoy,
+            semanas,
+            adelantadas,
+          )
+        : null,
     [necesidades, hoy, semanas, adelantadas],
   );
 

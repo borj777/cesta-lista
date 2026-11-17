@@ -3,6 +3,8 @@ import { Icono } from '../componentes/Icono.tsx';
 import { InfoProducto } from '../componentes/Producto.tsx';
 import { Punto } from '../componentes/Tienda.tsx';
 import { textoDia, unidadDeComparacion } from '../formato.ts';
+import { useRecetas } from '../menu/estado.ts';
+import { recetasCon } from '../menu/recetas.ts';
 import { useTiendas } from '../tiendas/estado.ts';
 import type { IdTienda, InfoTienda } from '../tiendas/modelo.ts';
 import { notaPrecio, precioAntiguo } from '../tiendas/productos.ts';
@@ -33,6 +35,8 @@ export function DetalleNecesidad({
 }) {
   const [fallo, setFallo] = useState<string | null>(null);
   const { productos: propios } = useTiendas();
+  const { recetas } = useRecetas();
+  const usadaEn = recetas ? recetasCon(recetas, necesidad.id) : [];
   const activas = (tiendas ?? []).filter((t) => t.activa);
   const apagadas = (tiendas ?? []).filter((t) => !t.activa);
   const hoy = new Date();
@@ -56,6 +60,18 @@ export function DetalleNecesidad({
         {textoNecesidad(necesidad)} · {NOMBRE_CATEGORIA[necesidad.categoria]}
         {necesidad.notas ? ` · ${necesidad.notas}` : ''}
       </p>
+      {usadaEn.length > 0 && (
+        <p class="secundario">
+          En tus recetas:{' '}
+          {usadaEn.map((r, i) => (
+            <span key={r.id}>
+              {i > 0 && ', '}
+              <a href={`#menu/receta/${r.id}`}>{r.nombre}</a>
+            </span>
+          ))}
+          .
+        </p>
+      )}
       {necesidad.ultimaCompra && (
         <p class="secundario">Comprado por última vez el {textoDia(necesidad.ultimaCompra)}.</p>
       )}

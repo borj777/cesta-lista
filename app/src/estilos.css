@@ -872,3 +872,30 @@ body:has(input:focus:not([type='radio'])) .pestanas {
   margin-top: 12px;
   gap: 8px;
 }
+
+/* Recetas: editor de ingredientes y sugerencias. */
+.editor-ingrediente {
+  margin-top: 12px;
+}
+
+.sugerencias {
+  margin: 0 0 12px;
+}
+
+/* Cinco pestañas: que quepan los nombres en los iPhone más estrechos. */
+.pestana {
+  min-width: 0;
+}
+
+.pestana span {
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 360px) {
+  .pestana {
+    font-size: 10.5px;
+  }
+}

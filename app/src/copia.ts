@@ -10,14 +10,16 @@ import {
   type Necesidad,
 } from './necesidades/modelo.ts';
 import { crearLidl, esAutomatica, problemaTienda, type TiendaPropia } from './tiendas/modelo.ts';
+import { problemaReceta, type Receta } from './menu/recetas.ts';
 import { problemaProducto, type ProductoPropio } from './tiendas/productos.ts';
 
 /**
  * Sube cuando cambie el formato de la copia, para poder convertir las antiguas.
  * Versión 1: necesidades, lidl (precios de Lidl) y ajustes.
  * Versión 2: necesidades, tiendas (las propias), productos (de las tiendas propias) y ajustes.
+ * Versión 3: además, recetas.
  */
-export const VERSION_COPIA = 2;
+export const VERSION_COPIA = 3;
 
 export type Copia = {
   app: 'cesta-lista';
@@ -25,6 +27,7 @@ export type Copia = {
   exportada: string;
   necesidades: Necesidad[];
   tiendas: TiendaPropia[];
+  recetas: Receta[];
   productos: ProductoPropio[];
   ajustes: Record<string, unknown>;
 };
@@ -37,6 +40,7 @@ export function crearCopia(contenido: ContenidoBD, ahora: string): Copia {
     necesidades: contenido.necesidades,
     tiendas: contenido.tiendas,
     productos: contenido.productos,
+    recetas: contenido.recetas,
     ajustes: contenido.ajustes,
   };
 }
@@ -70,7 +74,10 @@ function problemaNecesidad(
   if (typeof n.id !== 'string' || !n.id) return 'le falta el identificador';
   if (typeof n.nombre !== 'string' || !n.nombre.trim()) return 'le falta el nombre';
   if (!CATEGORIAS.includes(n.categoria as never)) return 'la categoría no es válida';
-  if (typeof n.cantidad !== 'number' || !Number.isFinite(n.cantidad) || n.cantidad <= 0) {
+  if (n.soloRecetas !== undefined && n.soloRecetas !== true)
+    return 'la marca de recetas no es válida';
+  const minima = n.soloRecetas ? 0 : Number.MIN_VALUE;
+  if (typeof n.cantidad !== 'number' || !Number.isFinite(n.cantidad) || n.cantidad < minima) {
     return 'la cantidad no es válida';
   }
   if (!UNIDADES_NECESIDAD.includes(n.unidad as never)) return 'la unidad no es válida';
@@ -207,6 +214,28 @@ export function leerCopia(texto: string): ResultadoLectura {
     idsProductos.add(id);
   }
 
+  // Las copias anteriores a la versión 3 no tienen recetas.
+  const recetas = datos.recetas === undefined ? [] : datos.recetas;
+  if (!Array.isArray(recetas)) {
+    return { ok: false, error: 'La copia tiene partes dañadas y no se puede importar.' };
+  }
+  const unidades = new Map((datos.necesidades as Necesidad[]).map((n) => [n.id, n.unidad]));
+  const idsRecetas = new Set<string>();
+  for (const [i, r] of recetas.entries()) {
+    const problema = esObjeto(r) ? problemaReceta(r, unidades) : 'no tiene el formato esperado';
+    if (problema) {
+      return {
+        ok: false,
+        error: `La receta n.º ${i + 1}${nombreDe(r)} no es válida: ${problema}.`,
+      };
+    }
+    const id = (r as Receta).id;
+    if (idsRecetas.has(id)) {
+      return { ok: false, error: `La receta n.º ${i + 1}${nombreDe(r)} está repetida.` };
+    }
+    idsRecetas.add(id);
+  }
+
   return {
     ok: true,
     copia: {
@@ -216,6 +245,7 @@ export function leerCopia(texto: string): ResultadoLectura {
       necesidades: datos.necesidades as Necesidad[],
       tiendas: tiendas as TiendaPropia[],
       productos: productos as ProductoPropio[],
+      recetas: recetas as Receta[],
       ajustes,
     },
   };

@@ -3,6 +3,8 @@ import { useCatalogo } from '../catalogo.ts';
 import { Icono } from '../componentes/Icono.tsx';
 import { Opciones } from '../componentes/Opciones.tsx';
 import { Punto } from '../componentes/Tienda.tsx';
+import { useRecetas } from '../menu/estado.ts';
+import { recetasCon } from '../menu/recetas.ts';
 import { useTiendas } from '../tiendas/estado.ts';
 import type { InfoTienda } from '../tiendas/modelo.ts';
 import type { DatosApp } from '../tipos.ts';
@@ -191,8 +193,12 @@ function FormNecesidad({ existente }: { existente?: Necesidad }) {
   const [nombre, setNombre] = useState(existente?.nombre ?? '');
   const [categoria, setCategoria] = useState<Categoria>(existente?.categoria ?? 'alimentacion');
   const [cantidadTexto, setCantidadTexto] = useState(
-    existente ? escribirCantidad(existente.cantidad) : '',
+    existente && !existente.soloRecetas ? escribirCantidad(existente.cantidad) : '',
   );
+  const { recetas } = useRecetas();
+  const usadaEn = existente && recetas ? recetasCon(recetas, existente.id) : [];
+  // Una necesidad de recetas puede quedarse sin cantidad propia.
+  const sinCantidadPropia = !!existente?.soloRecetas && !cantidadTexto.trim();
   const [unidad, setUnidad] = useState<UnidadNecesidad>(existente?.unidad ?? 'kg');
   const [frecuencia, setFrecuencia] = useState<Frecuencia>(existente?.frecuencia ?? 'semana');
   const [notas, setNotas] = useState(existente?.notas ?? '');
@@ -204,12 +210,19 @@ function FormNecesidad({ existente }: { existente?: Necesidad }) {
 
   const alGuardar = async (evento: Event) => {
     evento.preventDefault();
-    const nuevosErrores = validarBorrador({ nombre, cantidad });
+    const nuevosErrores = validarBorrador({ nombre, cantidad: sinCantidadPropia ? 0 : cantidad });
     setErrores(nuevosErrores);
-    if (Object.keys(nuevosErrores).length > 0 || cantidad === null) return;
+    if (Object.keys(nuevosErrores).length > 0 || (cantidad === null && !sinCantidadPropia)) return;
     setGuardando(true);
     setFallo(null);
-    const borrador = { nombre, categoria, cantidad, unidad, frecuencia, notas };
+    const borrador = {
+      nombre,
+      categoria,
+      cantidad: sinCantidadPropia ? 0 : (cantidad ?? 0),
+      unidad,
+      frecuencia,
+      notas,
+    };
     const ahora = new Date().toISOString();
     try {
       const guardada = existente
@@ -225,7 +238,11 @@ function FormNecesidad({ existente }: { existente?: Necesidad }) {
   };
 
   const alBorrar = async () => {
-    if (!existente || !confirm(`¿Borrar «${existente.nombre}» de tus necesidades?`)) return;
+    const aviso =
+      usadaEn.length > 0
+        ? `\n\nSe quitará también de tus recetas: ${usadaEn.map((r) => r.nombre).join(', ')}.`
+        : '';
+    if (!existente || !confirm(`¿Borrar «${existente.nombre}» de tus necesidades?${aviso}`)) return;
     await borrar(existente.id);
     ir('necesidades');
   };
@@ -274,7 +291,9 @@ function FormNecesidad({ existente }: { existente?: Necesidad }) {
 
       <div class="campo">
         <label class="campo__etiqueta" for="cantidad">
-          Cuánto gastáis
+          {existente?.soloRecetas
+            ? 'Cuánto gastáis aparte de las recetas (opcional)'
+            : 'Cuánto gastáis'}
         </label>
         <input
           id="cantidad"
@@ -333,6 +352,11 @@ function FormNecesidad({ existente }: { existente?: Necesidad }) {
         />
       </div>
 
+      {existente?.soloRecetas && (
+        <p class="secundario">
+          Ahora solo se compra para tus recetas. Si también lo gastáis aparte, escribe cuánto.
+        </p>
+      )}
       {cantidad !== null && nombre.trim() && (
         <p class="resumen-necesidad">
           {nombre.trim()}: {textoNecesidad({ cantidad, unidad, frecuencia })}

@@ -65,6 +65,11 @@ export type Necesidad = {
   notas?: string;
   /** Producto elegido en cada tienda (por id, nunca por nombre) o «no lo compro aquí». */
   equivalencias?: Equivalencias;
+  /**
+   * Solo se compra para las recetas del menú: no tiene cantidad propia (`cantidad` es 0).
+   * Se crea al añadir un ingrediente nuevo a una receta.
+   */
+  soloRecetas?: true;
   /** Día (AAAA-MM-DD, de España) en que se compró por última vez con la app. */
   ultimaCompra?: string;
   creada: string;
@@ -106,7 +111,10 @@ export function textoCantidad(cantidad: number, unidad: UnidadNecesidad): string
 }
 
 /** "1,5 kg a la semana". */
-export function textoNecesidad(n: Pick<Necesidad, 'cantidad' | 'unidad' | 'frecuencia'>): string {
+export function textoNecesidad(
+  n: Pick<Necesidad, 'cantidad' | 'unidad' | 'frecuencia' | 'soloRecetas'>,
+): string {
+  if (n.soloRecetas) return 'Solo para tus recetas';
   return `${textoCantidad(n.cantidad, n.unidad)} ${NOMBRE_FRECUENCIA[n.frecuencia]}`;
 }
 
@@ -139,9 +147,14 @@ export function crearNecesidad(b: BorradorNecesidad, ahora: string, id: string):
   return limpiar({ ...b, id, creada: ahora, actualizada: ahora });
 }
 
-/** Aplica los cambios del formulario a una necesidad existente. */
+/**
+ * Aplica los cambios del formulario a una necesidad existente. Si era solo para recetas y
+ * ahora tiene cantidad propia, deja de serlo.
+ */
 export function editarNecesidad(n: Necesidad, b: BorradorNecesidad, ahora: string): Necesidad {
-  return limpiar({ ...n, ...b, actualizada: ahora });
+  const editada = limpiar({ ...n, ...b, actualizada: ahora });
+  if (b.cantidad > 0) delete editada.soloRecetas;
+  return editada;
 }
 
 /** Quita espacios sobrantes y las notas vacías. */

@@ -4,6 +4,7 @@ import { AvisosPrecios } from './componentes/EstadoPrecios.tsx';
 import { Icono, type NombreIcono } from './componentes/Icono.tsx';
 import { cargarDatos } from './datos.ts';
 import { avisosPrecios } from './estado.ts';
+import { PantallaMenu } from './menu/PantallaMenu.tsx';
 import { PantallaNecesidades } from './necesidades/PantallaNecesidades.tsx';
 import { PantallaLista } from './lista/PantallaLista.tsx';
 import { PantallaAjustes } from './pantallas.tsx';
@@ -13,6 +14,7 @@ import type { DatosApp } from './tipos.ts';
 const PESTANAS = [
   { id: 'lista', nombre: 'Lista', icono: 'carrito' },
   { id: 'necesidades', nombre: 'Necesidades', icono: 'lista' },
+  { id: 'menu', nombre: 'Menú', icono: 'cubiertos' },
   { id: 'tiendas', nombre: 'Tiendas', icono: 'tienda' },
   { id: 'ajustes', nombre: 'Ajustes', icono: 'ajustes' },
 ] as const satisfies readonly { id: string; nombre: string; icono: NombreIcono }[];
@@ -95,6 +97,7 @@ export function App() {
         {datos && <AvisosPrecios avisos={avisosPrecios(datos, ahora)} />}
         {pestana === 'lista' && <PantallaLista datos={datos} ahora={ahora} />}
         {pestana === 'necesidades' && <PantallaNecesidades sub={sub} datos={datos} />}
+        {pestana === 'menu' && <PantallaMenu sub={sub} />}
         {pestana === 'tiendas' && <PantallaTiendas sub={sub} datos={datos} ahora={ahora} />}
         {pestana === 'ajustes' && (
           <PantallaAjustes datos={datos} ahora={ahora} guardados={guardados} error={error} />

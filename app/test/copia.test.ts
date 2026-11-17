@@ -13,6 +13,7 @@ import {
 } from '../src/almacen.ts';
 import { leerCompra } from '../src/lista/compra.ts';
 import { crearCopia, leerCopia, nombreArchivo, textoCopia, VERSION_COPIA } from '../src/copia.ts';
+import type { Receta } from '../src/menu/recetas.ts';
 import { crearNecesidad, type Necesidad } from '../src/necesidades/modelo.ts';
 import { crearLidl, crearTienda } from '../src/tiendas/modelo.ts';
 import { crearProducto } from '../src/tiendas/productos.ts';
@@ -87,7 +88,22 @@ const copiaV1 = (extra: Record<string, unknown> = {}) =>
     ...extra,
   });
 
-const vacio: ContenidoBD = { necesidades: [], tiendas: [], productos: [], ajustes: {} };
+const vacio: ContenidoBD = {
+  necesidades: [],
+  tiendas: [],
+  productos: [],
+  recetas: [],
+  ajustes: {},
+};
+
+const paella: Receta = {
+  id: 'paella',
+  nombre: 'Paella',
+  raciones: 2,
+  ingredientes: [{ necesidad: 'pollo', cantidad: 300, unidad: 'g' }],
+  creada: AHORA,
+  actualizada: AHORA,
+};
 
 describe('leerCopia', () => {
   it('acepta una copia creada por la app', () => {
@@ -96,13 +112,46 @@ describe('leerCopia', () => {
         necesidades: [pollo, detergente],
         tiendas: [lidl, fruteria],
         productos: [lecheLidl, naranjas],
+        recetas: [paella],
         ajustes: { tiendasApagadas: ['consum'] },
       },
       AHORA,
     );
-    expect(copia.version).toBe(2);
+    expect(copia.version).toBe(3);
     const leida = leerCopia(textoCopia(copia));
     expect(leida).toEqual({ ok: true, copia });
+  });
+
+  it('una copia de la versión 2 se importa sin recetas', () => {
+    const r = leerCopia(copiaTexto([pollo]));
+    expect(r).toMatchObject({ ok: true, copia: { recetas: [] } });
+  });
+
+  it('acepta una necesidad solo para recetas, sin cantidad propia', () => {
+    const arroz = { ...pollo, id: 'arroz', nombre: 'Arroz', cantidad: 0, soloRecetas: true };
+    expect(leerCopia(copiaTexto([arroz])).ok).toBe(true);
+    // Sin la marca, la cantidad 0 no vale.
+    expect(leerCopia(copiaTexto([{ ...arroz, soloRecetas: undefined }])).ok).toBe(false);
+  });
+
+  it.each([
+    ['sin raciones', { ...paella, raciones: 0 }, 'las raciones no son válidas'],
+    [
+      'con un ingrediente que no está en las necesidades',
+      { ...paella, ingredientes: [{ necesidad: 'no', cantidad: 1, unidad: 'g' }] },
+      'algún ingrediente no está en tus necesidades',
+    ],
+    [
+      'con una unidad que no encaja',
+      { ...paella, ingredientes: [{ necesidad: 'pollo', cantidad: 1, unidad: 'ml' }] },
+      'la unidad de algún ingrediente no encaja con su necesidad',
+    ],
+  ])('rechaza una receta %s', (_caso, mala, motivo) => {
+    const r = leerCopia(copiaTexto([pollo], { version: 3, recetas: [mala] }));
+    expect(r).toEqual({
+      ok: false,
+      error: `La receta n.º 1 («Paella») no es válida: ${motivo}.`,
+    });
   });
 
   it('una copia de la versión 1 pasa los precios de Lidl a la tienda «Lidl»', () => {
