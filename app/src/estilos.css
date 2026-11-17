@@ -899,3 +899,10 @@ body:has(input:focus:not([type='radio'])) .pestanas {
     font-size: 10.5px;
   }
 }
+
+@media (max-width: 340px) {
+  .pestana {
+    font-size: 9.5px;
+    letter-spacing: -0.2px;
+  }
+}
