@@ -4,7 +4,8 @@ import { InfoProducto } from '../componentes/Producto.tsx';
 import { Punto } from '../componentes/Tienda.tsx';
 import { textoDia, unidadDeComparacion } from '../formato.ts';
 import { useRecetas } from '../menu/estado.ts';
-import { aportesDelMenu, textoConMenu } from '../menu/menu.ts';
+import { EnCasa } from '../despensa/EnCasa.tsx';
+import { aportesDelMenu, necesidadesConMenu, textoConMenu } from '../menu/menu.ts';
 import { recetasCon } from '../menu/recetas.ts';
 import { useTiendas } from '../tiendas/estado.ts';
 import type { IdTienda, InfoTienda } from '../tiendas/modelo.ts';
@@ -91,6 +92,18 @@ export function DetalleNecesidad({
       <a class="boton boton--ancho" href={`#necesidades/${necesidad.id}/editar`}>
         Editar cantidad y frecuencia
       </a>
+
+      {(!necesidad.soloRecetas || aporte) && (
+        <EnCasa
+          necesidad={necesidad}
+          conMenu={
+            necesidadesConMenu(
+              [necesidad],
+              aporte ? new Map([[necesidad.id, aporte]]) : new Map(),
+            )[0] ?? necesidad
+          }
+        />
+      )}
 
       <h2 class="grupo__titulo grupo__titulo--separado">Qué compras en cada tienda</h2>
       {fallo && (

@@ -3,6 +3,7 @@
  * donde quiera (Archivos, iCloud, correo...) y puede volver a importar.
  */
 import type { ContenidoBD } from './almacen.ts';
+import { despensaValida } from './despensa/despensa.ts';
 import {
   CATEGORIAS,
   FRECUENCIAS,
@@ -89,6 +90,9 @@ function problemaNecesidad(
   }
   if (n.duraHasta !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(String(n.duraHasta))) {
     return 'la fecha hasta la que dura no es válida';
+  }
+  if (n.despensa !== undefined && !despensaValida(n.despensa)) {
+    return 'lo que queda en casa no es válido';
   }
   if (n.equivalencias !== undefined) {
     if (!esObjeto(n.equivalencias)) return 'los productos elegidos no son válidos';

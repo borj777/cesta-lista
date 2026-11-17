@@ -2,7 +2,9 @@
  * La compra: qué toca comprar esta vez y la lista fija que se usa en la tienda, con lo que
  * queda en la estantería y lo que ya va en el carro. Funciones puras.
  */
+import { despuesDeComprar, diasQueQuedan, existencias } from '../despensa/despensa.ts';
 import { SEMANAS, type Necesidad } from '../necesidades/modelo.ts';
+import { cantidadEnPeriodo } from '../optimizador.ts';
 import type { Plan } from '../optimizador.ts';
 import type { IdTienda, InfoTienda } from '../tiendas/modelo.ts';
 import type { ProductoApp } from '../tipos.ts';
@@ -36,20 +38,26 @@ export function consumoSemanal(n: Necesidad): number {
 
 /** Día en que se acaba lo comprado la última vez (o null si nunca se ha comprado). */
 export function seAcaba(n: Necesidad): string | null {
+  if (n.despensa) {
+    const dias = diasQueQuedan(n.despensa.cantidad, consumoSemanal(n));
+    return dias === Infinity ? null : sumarDias(n.despensa.fecha, dias);
+  }
   if (n.duraHasta) return n.duraHasta;
   if (!n.ultimaCompra) return null;
   return sumarDias(n.ultimaCompra, Math.round(SEMANAS[n.frecuencia] * DIAS_SEMANA));
 }
 
 /**
- * ¿Hay que comprarla esta vez? Si se sabe hasta cuándo dura lo comprado la última vez, solo si
- * se acaba antes de la siguiente compra (el paquete de 1 kg de arroz no se compra cada semana).
- * Si no, lo que se gasta antes de la siguiente compra se compra siempre, y lo que dura más
- * (el detergente del mes en una compra semanal) solo cuando se va a acabar.
+ * ¿Hay que comprarla esta vez? Si se sabe lo que queda en casa, solo si no llega hasta la
+ * siguiente compra (el paquete de 1 kg de arroz no se compra cada semana). Si no se sabe, lo
+ * que se gasta antes de la siguiente compra se compra siempre, y lo que dura más (el
+ * detergente del mes en una compra semanal) solo cuando se va a acabar.
  */
 export function tocaComprar(n: Necesidad, hoy: string, semanasPeriodo: number): boolean {
   const siguienteCompra = sumarDias(hoy, Math.round(semanasPeriodo * DIAS_SEMANA));
-  if (n.duraHasta) return n.duraHasta <= siguienteCompra;
+  const semanal = consumoSemanal(n);
+  const queda = existencias(n, semanal, hoy);
+  if (queda !== null && semanal > 0) return queda < semanal * semanasPeriodo - 1e-9;
   if (!duraMasQueElPeriodo(n, semanasPeriodo)) return true;
   const fin = seAcaba(n);
   if (!fin) return true;
@@ -86,6 +94,10 @@ export type LineaCompra = {
   enCarro: boolean;
   /** Días que dura lo que se compra, según lo que se gasta (si se sabe). */
   duraDias?: number;
+  /** Lo que se compra, en kg, l, ud... (para sumarlo a la despensa). */
+  comprado?: number;
+  /** Lo que se gasta a la semana, en la misma unidad, al empezar la compra. */
+  semanal?: number;
 };
 
 export type CompraEnCurso = {
@@ -129,6 +141,8 @@ export function empezarCompra(
         porEnvase,
         enCarro: false,
         ...(duraDias !== undefined ? { duraDias } : {}),
+        comprado: cubierto,
+        semanal,
       });
     }
   }
@@ -195,8 +209,13 @@ export function terminarCompra(
     .map((n) => {
       const linea = compradas.get(n.id);
       const nueva: Necesidad = { ...n, ultimaCompra: hoy };
-      if (linea?.duraDias !== undefined) nueva.duraHasta = sumarDias(hoy, linea.duraDias);
-      else delete nueva.duraHasta;
+      delete nueva.duraHasta;
+      if (linea?.comprado !== undefined && linea.semanal !== undefined) {
+        // Lo que quedaba en casa más lo comprado.
+        nueva.despensa = despuesDeComprar(n, linea.semanal, linea.comprado, hoy);
+      } else if (linea?.duraDias !== undefined) {
+        nueva.duraHasta = sumarDias(hoy, linea.duraDias);
+      }
       return nueva;
     });
 }
@@ -233,7 +252,9 @@ export function leerCompra(valor: unknown): CompraEnCurso | null {
       esNumero(l.coste) &&
       typeof l.porEnvase === 'boolean' &&
       typeof l.enCarro === 'boolean' &&
-      (l.duraDias === undefined || esNumero(l.duraDias)),
+      (l.duraDias === undefined || esNumero(l.duraDias)) &&
+      (l.comprado === undefined || esNumero(l.comprado)) &&
+      (l.semanal === undefined || esNumero(l.semanal)),
   );
   return tiendasValidas && lineasValidas ? (valor as CompraEnCurso) : null;
 }
@@ -241,4 +262,22 @@ export function leerCompra(valor: unknown): CompraEnCurso | null {
 /** Lee la lista de necesidades adelantadas guardada en los ajustes. */
 export function leerAdelantadas(valor: unknown): string[] {
   return Array.isArray(valor) ? valor.filter((v): v is string => typeof v === 'string') : [];
+}
+
+/**
+ * Lo que queda en casa de cada necesidad que se sabe, para comprar solo lo que falta.
+ * Las necesidades deben llevar ya sumado el menú.
+ */
+export function existenciasDe(necesidades: readonly Necesidad[], hoy: string): Map<string, number> {
+  const mapa = new Map<string, number>();
+  for (const n of necesidades) {
+    const queda = existencias(n, consumoSemanal(n), hoy);
+    if (queda !== null && queda > 0) mapa.set(n.id, queda);
+  }
+  return mapa;
+}
+
+/** Lo que falta comprar para el periodo: lo que se gasta menos lo que queda en casa. */
+export function faltaParaElPeriodo(n: Necesidad, semanas: number, queda: number): number {
+  return Math.max(0, cantidadEnPeriodo(n, semanas) - queda);
 }

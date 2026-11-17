@@ -11,7 +11,15 @@ import { useTiendas } from '../tiendas/estado.ts';
 import type { InfoTienda } from '../tiendas/modelo.ts';
 import { precioAntiguo } from '../tiendas/productos.ts';
 import { textoNecesidad, type Necesidad } from '../necesidades/modelo.ts';
-import { empezarCompra, repartirNecesidades, seAcaba, tocaComprar } from './compra.ts';
+import { existencias, textoEnUnidad } from '../despensa/despensa.ts';
+import {
+  consumoSemanal,
+  empezarCompra,
+  existenciasDe,
+  repartirNecesidades,
+  seAcaba,
+  tocaComprar,
+} from './compra.ts';
 import { guardarAdelantadas, guardarCompra, useCompra } from './estado.ts';
 import { ModoCompra } from './ModoCompra.tsx';
 import { useRecetas } from '../menu/estado.ts';
@@ -71,6 +79,8 @@ export function PantallaLista({ datos, ahora }: { datos: DatosApp | null; ahora:
             costeVisita: ajustes.costeVisita,
             hoy,
             tiendas: tiendas.filter((t) => t.activa).map((t) => t.id),
+            // Lo que queda en casa: se compra solo lo que falta.
+            existencias: existenciasDe(reparto.tocan, hoy),
           })
         : null,
     [reparto, buscarProducto, ajustes, hoy, tiendas, semanas],
@@ -166,7 +176,7 @@ export function PantallaLista({ datos, ahora }: { datos: DatosApp | null; ahora:
               <h2>Esta vez no hace falta comprar nada</h2>
               <p class="secundario">
                 Todo lo que compras te dura más que esta compra y aún te queda. Si se te ha acabado
-                algo, añádelo desde «Puede que aún te quede».
+                algo, añádelo desde «Aún te queda en casa».
               </p>
             </section>
           ) : (
@@ -224,14 +234,18 @@ function PuedeQueTeQuede({
   const cambiar = (ids: string[]) => void guardarAdelantadas(ids);
   const fila = (n: Necesidad, anadida: boolean) => {
     const fin = seAcaba(n);
+    const queda = existencias(n, consumoSemanal(n), hoy);
     return (
       <li key={n.id} class="fila">
         <div class="fila__texto">
-          <span>{n.nombre}</span>
+          <a href={`#necesidades/${n.id}`} class="enlace-fila">
+            {n.nombre}
+          </a>
           <span class="secundario">
-            {textoNecesidad(n)}
-            {n.ultimaCompra ? ` · comprado el ${textoDia(n.ultimaCompra)}` : ''}
-            {fin ? `, te dura hasta el ${textoDia(fin)} más o menos` : ''}
+            {queda !== null
+              ? `Te quedan unos ${textoEnUnidad(queda, n)}`
+              : `${textoNecesidad(n)}${n.ultimaCompra ? ` · comprado el ${textoDia(n.ultimaCompra)}` : ''}`}
+            {fin ? `, hasta el ${textoDia(fin)} más o menos` : ''}
           </span>
         </div>
         <button
@@ -248,10 +262,10 @@ function PuedeQueTeQuede({
   };
   return (
     <section class="grupo">
-      <h2 class="grupo__titulo grupo__titulo--separado">Puede que aún te quede</h2>
+      <h2 class="grupo__titulo grupo__titulo--separado">Aún te queda en casa</h2>
       <p class="secundario">
-        Lo compraste hace poco y te dura más que esta compra, así que no se cuenta. Si se te ha
-        acabado antes, añádelo.
+        Te llega hasta la siguiente compra, así que no se cuenta. Si se te ha acabado antes,
+        añádelo, o toca su nombre para corregir lo que te queda.
       </p>
       <ul class="filas tarjeta tarjeta--lista">
         {anadidas.map((n) => fila(n, true))}

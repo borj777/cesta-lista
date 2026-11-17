@@ -967,3 +967,28 @@ body:has(input:focus:not([type='radio'])) .pestanas {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+
+.enlace-fila {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Ficha de necesidad: lo que queda en casa. */
+.en-casa {
+  margin-top: 16px;
+}
+
+.en-casa p {
+  margin: 4px 0;
+}
+
+.en-casa__nota {
+  font-size: 14px;
+}
+
+.en-casa__botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}

@@ -129,9 +129,9 @@ describe('la compra en la tienda', () => {
 
   it('al terminar apunta la fecha en lo que va en el carro', () => {
     const conPan = alternar(compra, 'pan');
-    // 2 panes para 2 a la semana: duran justo una semana.
+    // 2 panes: en casa quedan 2 (para justo una semana).
     expect(terminarCompra(conPan, [pan, queso], HOY, false)).toEqual([
-      { ...pan, ultimaCompra: HOY, duraHasta: '2026-11-24' },
+      { ...pan, ultimaCompra: HOY, despensa: { cantidad: 2, fecha: HOY, lleno: 2 } },
     ]);
     // «También lo he comprado»: también lo que quedó en la estantería.
     expect(terminarCompra(conPan, [pan, queso], HOY, true).map((n) => n.id)).toEqual([

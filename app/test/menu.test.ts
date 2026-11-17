@@ -4,6 +4,7 @@ import {
   empezarCompra,
   alternar,
   repartirNecesidades,
+  seAcaba,
   terminarCompra,
   tocaComprar,
 } from '../src/lista/compra.ts';
@@ -165,16 +166,26 @@ describe('hasta cuándo dura lo comprado', () => {
 
   it('al terminar apunta hasta cuándo dura, y no vuelve a la lista hasta que se acaba', () => {
     const [compradoArroz] = terminarCompra(alternar(compra, 'arroz'), conProductos, HOY, false);
-    expect(compradoArroz).toMatchObject({ ultimaCompra: HOY, duraHasta: '2026-12-08' });
+    expect(compradoArroz).toMatchObject({
+      ultimaCompra: HOY,
+      despensa: { cantidad: 1, fecha: HOY, lleno: 1 },
+    });
     if (!compradoArroz) throw new Error('falta');
-    expect(tocaComprar(compradoArroz, '2026-11-24', 1)).toBe(false); // siguiente: 01/12
-    expect(tocaComprar(compradoArroz, '2026-12-01', 1)).toBe(true); // siguiente: 08/12
-    const { tocan, quedan } = repartirNecesidades([compradoArroz], '2026-11-24', 1, []);
+    // Con el menú, 320 g a la semana: el kilo se acaba hacia el 08/12.
+    const conGasto = { ...compradoArroz, cantidad: 320, frecuencia: 'semana' as const };
+    delete (conGasto as Partial<Necesidad>).soloRecetas;
+    expect(seAcaba(conGasto)).toBe('2026-12-08');
+    expect(tocaComprar(conGasto, '2026-11-24', 1)).toBe(false); // quedan 680 g
+    expect(tocaComprar(conGasto, '2026-12-01', 1)).toBe(false); // quedan 360 g: llegan
+    expect(tocaComprar(conGasto, '2026-12-08', 1)).toBe(true); // quedan 40 g
+    const { tocan, quedan } = repartirNecesidades([conGasto], '2026-11-24', 1, []);
     expect([tocan.length, quedan.length]).toEqual([0, 1]);
   });
 
   it('lo que se gasta justo en una semana vuelve a la lista la semana siguiente', () => {
+    // Compras de antes de la despensa: solo se sabía hasta cuándo duraba.
     const leche = { ...pollo, duraHasta: '2026-11-24' };
-    expect(tocaComprar(leche, HOY, 1)).toBe(true);
+    expect(tocaComprar(leche, HOY, 1)).toBe(false);
+    expect(tocaComprar(leche, '2026-11-24', 1)).toBe(true);
   });
 });

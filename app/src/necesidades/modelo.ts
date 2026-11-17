@@ -1,4 +1,5 @@
 /** Necesidades: lo que hace falta comprar, con su cantidad y cada cuánto. */
+import type { Despensa } from '../despensa/despensa.ts';
 import type { IdTienda } from '../tiendas/modelo.ts';
 
 export const CATEGORIAS = ['alimentacion', 'limpieza', 'higiene', 'mascota'] as const;
@@ -75,6 +76,8 @@ export type Necesidad = {
    * (un paquete de 1 kg de arroz para 320 g a la semana dura unas 3 semanas).
    */
   duraHasta?: string;
+  /** Lo que queda en casa (despensa), estimado desde la última compra o corrección. */
+  despensa?: Despensa;
   /** Día (AAAA-MM-DD, de España) en que se compró por última vez con la app. */
   ultimaCompra?: string;
   creada: string;

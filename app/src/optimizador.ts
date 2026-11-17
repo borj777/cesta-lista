@@ -111,6 +111,10 @@ export type OpcionesPlan = {
    * tiendas apagadas no se tiene en cuenta. El orden decide los empates.
    */
   tiendas: Tiendas;
+  /**
+   * Lo que queda en casa de cada necesidad (en kg, l, ud...): se compra solo lo que falta.
+   */
+  existencias?: ReadonlyMap<string, number>;
 };
 
 const centimos = (n: number) => Math.round(n * 100) / 100;
@@ -159,9 +163,12 @@ export function analizar(
   semanas: number,
   hoy: string,
   tiendas: Tiendas,
+  existencias?: ReadonlyMap<string, number>,
 ): AnalisisNecesidad[] {
   return necesidades.map((necesidad) => {
-    const cantidad = cantidadEnPeriodo(necesidad, semanas);
+    const queda = existencias?.get(necesidad.id) ?? 0;
+    // Lo que se gasta en el periodo menos lo que queda en casa (sin bajar de casi nada).
+    const cantidad = Math.max(1e-6, cantidadEnPeriodo(necesidad, semanas) - queda);
     const unidad = unidadDeComparacion(necesidad.unidad);
     const opciones: AnalisisNecesidad['opciones'] = {};
     const problemas: ProblemaTienda[] = [];
@@ -242,7 +249,14 @@ export function planificar(
   opciones: OpcionesPlan,
 ): Plan {
   const { tiendas } = opciones;
-  const analisis = analizar(necesidades, buscarProducto, opciones.semanas, opciones.hoy, tiendas);
+  const analisis = analizar(
+    necesidades,
+    buscarProducto,
+    opciones.semanas,
+    opciones.hoy,
+    tiendas,
+    opciones.existencias,
+  );
   const sinProducto = analisis
     .filter((a) => Object.keys(a.opciones).length === 0)
     .map((a) => a.necesidad);

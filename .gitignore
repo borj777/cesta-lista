@@ -20,3 +20,6 @@ data/*.tmp
 
 # Configuración local de Claude Code (contiene rutas de este Mac)
 .claude/
+
+# Documentos personales (dietas en PDF): nunca al repositorio público.
+*.pdf
