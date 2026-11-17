@@ -9,13 +9,24 @@ import {
 } from '../almacen.ts';
 import { recargarNecesidades } from '../necesidades/estado.ts';
 import type { Necesidad } from '../necesidades/modelo.ts';
+import { clavePlato } from './dieta/leer.ts';
+import { AJUSTE_SIN_COMPRA } from './dieta/revision.ts';
 import { leerMenu, type PlatoMenu } from './menu.ts';
 import type { Receta } from './recetas.ts';
 
 export const AJUSTE_MENU = 'menu';
 
-type Estado = { recetas: Receta[] | null; menu: PlatoMenu[]; error: string | null };
-let estado: Estado = { recetas: null, menu: [], error: null };
+type Estado = {
+  recetas: Receta[] | null;
+  menu: PlatoMenu[];
+  /** Platos de la dieta para los que no se compra nada. */
+  sinCompra: string[];
+  error: string | null;
+};
+let estado: Estado = { recetas: null, menu: [], sinCompra: [], error: null };
+
+const textos = (v: unknown): string[] =>
+  Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
 const oyentes = new Set<(e: Estado) => void>();
 
 function publicar(nuevo: Estado) {
@@ -25,8 +36,12 @@ function publicar(nuevo: Estado) {
 
 export async function recargarRecetas(): Promise<void> {
   try {
-    const [recetas, menu] = await Promise.all([listarRecetas(), leerAjuste(AJUSTE_MENU)]);
-    publicar({ recetas, menu: leerMenu(menu), error: null });
+    const [recetas, menu, sinCompra] = await Promise.all([
+      listarRecetas(),
+      leerAjuste(AJUSTE_MENU),
+      leerAjuste(AJUSTE_SIN_COMPRA),
+    ]);
+    publicar({ recetas, menu: leerMenu(menu), sinCompra: textos(sinCompra), error: null });
   } catch (error) {
     const motivo = error instanceof Error ? error.message : String(error);
     publicar({ ...estado, error: `No se han podido leer tus recetas (${motivo}).` });
@@ -52,6 +67,35 @@ export async function borrarReceta(id: string): Promise<void> {
 export async function guardarMenu(menu: PlatoMenu[]): Promise<void> {
   publicar({ ...estado, menu });
   await guardarAjuste(AJUSTE_MENU, menu);
+}
+
+/**
+ * Decide qué es un plato de la dieta: una receta (se guarda el texto del PDF en ella para
+ * reconocerlo otros meses y se quita de las demás), «no se compra nada» o nada todavía (null).
+ */
+export async function asignarPlato(
+  texto: string,
+  destino: { receta: string } | 'sin-compra' | null,
+): Promise<void> {
+  const k = clavePlato(texto);
+  const recetas = estado.recetas ?? (await listarRecetas());
+  const receta = destino && destino !== 'sin-compra' ? destino.receta : null;
+  for (const r of recetas) {
+    const tiene = r.alias?.some((a) => clavePlato(a) === k) ?? false;
+    const debe = r.id === receta;
+    if (tiene === debe) continue;
+    const alias = (r.alias ?? []).filter((a) => clavePlato(a) !== k);
+    if (debe) alias.push(texto);
+    const cambiada: Receta = { ...r, alias };
+    if (alias.length === 0) delete cambiada.alias;
+    await guardarRecetaYNecesidades(cambiada, []);
+  }
+  const sinCompra = estado.sinCompra.filter((s) => clavePlato(s) !== k);
+  if (destino === 'sin-compra') sinCompra.push(texto);
+  if (sinCompra.length !== estado.sinCompra.length || destino === 'sin-compra') {
+    await guardarAjuste(AJUSTE_SIN_COMPRA, sinCompra);
+  }
+  await recargarRecetas();
 }
 
 export function useRecetas(): Estado {

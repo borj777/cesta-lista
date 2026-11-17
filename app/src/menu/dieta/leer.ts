@@ -69,11 +69,12 @@ const COMIDAS = [
 ];
 const VINETAS = /^[•·●▪◦‣∙•●-]\s*/;
 
-/** «Miércoles:» → «miercoles». */
-const clave = (texto: string) =>
+/** «Miércoles:» → «miercoles». También sirve para reconocer un plato en otro PDF. */
+export const clavePlato = (texto: string) =>
   normalizar(texto)
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
+const clave = clavePlato;
 
 const arriba = (t: Texto) => t.y - t.alto;
 const abajo = (t: Texto) => t.y + t.alto * 0.25;

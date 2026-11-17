@@ -21,6 +21,8 @@ export type Receta = {
   raciones: number;
   ingredientes: Ingrediente[];
   notas?: string;
+  /** Cómo aparece el plato en el PDF de la dieta, para reconocerlo otros meses. */
+  alias?: string[];
   creada: string;
   actualizada: string;
 };
@@ -168,6 +170,14 @@ export function problemaReceta(
     }
   }
   if (r.notas !== undefined && typeof r.notas !== 'string') return 'las notas no son texto';
+  if (
+    r.alias !== undefined &&
+    (!Array.isArray(r.alias) ||
+      r.alias.length > 50 ||
+      !r.alias.every((a) => typeof a === 'string' && a.trim() && a.length <= 300))
+  ) {
+    return 'los nombres de la dieta no son válidos';
+  }
   if (!esFecha(r.creada) || !esFecha(r.actualizada)) return 'las fechas no son válidas';
   return null;
 }
