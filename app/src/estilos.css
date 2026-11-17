@@ -805,3 +805,70 @@ body:has(input:focus:not([type='radio'])) .pestanas {
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
 }
+
+/* La compra en la tienda: estantería y carro. */
+.subtitulo-compra {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--texto-2);
+  margin: 14px 4px 6px;
+}
+
+.fila--compra {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--borde);
+  gap: 12px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tarjeta--lista li:last-child .fila--compra {
+  border-bottom: none;
+}
+
+.fila--compra:active {
+  background: var(--superficie-2);
+}
+
+.fila__nombre {
+  font-weight: 600;
+}
+
+.casilla {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--borde-fuerte);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sobre-marca);
+}
+
+.fila--en-carro .casilla {
+  background: var(--marca);
+  border-color: var(--marca);
+}
+
+.fila--en-carro .fila__texto,
+.fila--en-carro .fila__importe {
+  opacity: 0.55;
+}
+
+.fila--en-carro .fila__nombre {
+  text-decoration: line-through;
+}
+
+.plan .boton {
+  margin-top: 12px;
+  gap: 8px;
+}

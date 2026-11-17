@@ -65,6 +65,8 @@ export type Necesidad = {
   notas?: string;
   /** Producto elegido en cada tienda (por id, nunca por nombre) o «no lo compro aquí». */
   equivalencias?: Equivalencias;
+  /** Día (AAAA-MM-DD, de España) en que se compró por última vez con la app. */
+  ultimaCompra?: string;
   creada: string;
   actualizada: string;
 };

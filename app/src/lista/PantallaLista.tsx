@@ -1,16 +1,19 @@
-import { useMemo } from 'preact/hooks';
+import { useMemo, useState } from 'preact/hooks';
 import { semanasDe, useAjustesCompra, NOMBRE_PERIODO } from '../ajustes.ts';
 import { useCatalogo } from '../catalogo.ts';
 import { ComoInstalar } from '../componentes/Banderas.tsx';
 import { FechaPrecios } from '../componentes/EstadoPrecios.tsx';
 import { Icono } from '../componentes/Icono.tsx';
 import { NombreTienda } from '../componentes/Tienda.tsx';
-import { hoyEnEspana, textoFormato, textoPrecio } from '../formato.ts';
+import { hoyEnEspana, textoDia, textoFormato, textoPrecio } from '../formato.ts';
 import { useNecesidades } from '../necesidades/estado.ts';
 import { useTiendas } from '../tiendas/estado.ts';
 import type { InfoTienda } from '../tiendas/modelo.ts';
 import { precioAntiguo } from '../tiendas/productos.ts';
-import type { Necesidad } from '../necesidades/modelo.ts';
+import { textoNecesidad, type Necesidad } from '../necesidades/modelo.ts';
+import { empezarCompra, repartirNecesidades, seAcaba, tocaComprar } from './compra.ts';
+import { guardarAdelantadas, guardarCompra, useCompra } from './estado.ts';
+import { ModoCompra } from './ModoCompra.tsx';
 import {
   planificar,
   type Compra,
@@ -36,19 +39,29 @@ export function PantallaLista({ datos, ahora }: { datos: DatosApp | null; ahora:
   const { productos: propios, lista: tiendas } = useTiendas();
   const ajustes = useAjustesCompra();
   const { buscarProducto } = useCatalogo(datos);
+  const { listo, compra, adelantadas, pantallaEncendida } = useCompra();
+  const [mensaje, setMensaje] = useState<string | null>(null);
+  const [fallo, setFallo] = useState<string | null>(null);
   const hoy = hoyEnEspana(ahora);
+  const semanas = ajustes ? semanasDe(ajustes.periodo) : 1;
+
+  // Lo que dura más que una compra y aún no se ha acabado se deja fuera («puede que aún te quede»).
+  const reparto = useMemo(
+    () => (necesidades ? repartirNecesidades(necesidades, hoy, semanas, adelantadas) : null),
+    [necesidades, hoy, semanas, adelantadas],
+  );
 
   const plan = useMemo(
     () =>
-      necesidades && buscarProducto && ajustes && tiendas
-        ? planificar(necesidades, buscarProducto, {
-            semanas: semanasDe(ajustes.periodo),
+      reparto && buscarProducto && ajustes && tiendas
+        ? planificar(reparto.tocan, buscarProducto, {
+            semanas,
             costeVisita: ajustes.costeVisita,
             hoy,
             tiendas: tiendas.filter((t) => t.activa).map((t) => t.id),
           })
         : null,
-    [necesidades, buscarProducto, ajustes, hoy, tiendas],
+    [reparto, buscarProducto, ajustes, hoy, tiendas, semanas],
   );
 
   // Precios apuntados a mano con más de 30 días que se usan en la compra elegida.
@@ -65,9 +78,49 @@ export function PantallaLista({ datos, ahora }: { datos: DatosApp | null; ahora:
       }));
   }, [plan, propios, tiendas, ahora]);
 
+  if (!listo) return <h1>Lista de compra</h1>;
+  if (compra && necesidades) {
+    return (
+      <ModoCompra
+        compra={compra}
+        necesidades={necesidades}
+        pantallaEncendida={pantallaEncendida}
+        alTerminar={(texto) => {
+          setMensaje(texto);
+          window.scrollTo(0, 0);
+        }}
+      />
+    );
+  }
+
+  const empezar = () => {
+    if (!plan || !tiendas) return;
+    const nueva = empezarCompra(plan, tiendas, new Date().toISOString());
+    if (!nueva) return;
+    setMensaje(null);
+    setFallo(null);
+    guardarCompra(nueva)
+      .then(() => window.scrollTo(0, 0))
+      .catch((e: unknown) =>
+        setFallo(`No se ha podido empezar (${e instanceof Error ? e.message : String(e)}).`),
+      );
+  };
+
   return (
     <>
       <h1>Lista de compra</h1>
+      {mensaje && (
+        <p class="aviso aviso--bien" role="status">
+          <Icono nombre="hecho" tamano={20} />
+          <span>{mensaje}</span>
+        </p>
+      )}
+      {fallo && (
+        <p class="aviso aviso--error" role="alert">
+          <Icono nombre="alerta" tamano={20} />
+          <span>{fallo}</span>
+        </p>
+      )}
       {datos && <FechaPrecios datos={datos} ahora={ahora} />}
       <ComoInstalar />
       {necesidades?.length === 0 && (
@@ -94,6 +147,7 @@ export function PantallaLista({ datos, ahora }: { datos: DatosApp | null; ahora:
               mejor={plan.mejor}
               periodo={NOMBRE_PERIODO[ajustes.periodo]}
               tiendas={tiendas}
+              alEmpezar={empezar}
             />
           ) : (
             <section class="tarjeta">
@@ -109,10 +163,81 @@ export function PantallaLista({ datos, ahora }: { datos: DatosApp | null; ahora:
           )}
           <Avisos plan={plan} antiguos={antiguos} tiendas={tiendas} />
           {plan.mejor && <ComprasPorTienda mejor={plan.mejor} tiendas={tiendas} />}
+          {reparto && (
+            <PuedeQueTeQuede
+              necesidades={necesidades ?? []}
+              quedan={reparto.quedan}
+              adelantadas={adelantadas}
+              hoy={hoy}
+              semanas={semanas}
+            />
+          )}
           {plan.mejor && <OtrasOpciones plan={plan} mejor={plan.mejor} tiendas={tiendas} />}
         </>
       )}
     </>
+  );
+}
+
+/**
+ * Lo que dura más que una compra y aún no se ha acabado (p. ej. el detergente del mes en una
+ * compra semanal): no entra en esta compra, pero se puede añadir si se ha acabado antes.
+ */
+function PuedeQueTeQuede({
+  necesidades,
+  quedan,
+  adelantadas,
+  hoy,
+  semanas,
+}: {
+  necesidades: Necesidad[];
+  quedan: Necesidad[];
+  adelantadas: string[];
+  hoy: string;
+  semanas: number;
+}) {
+  // Las añadidas a mano que, si no, no tocarían.
+  const anadidas = necesidades.filter(
+    (n) => adelantadas.includes(n.id) && !tocaComprar(n, hoy, semanas),
+  );
+  if (quedan.length === 0 && anadidas.length === 0) return null;
+  const cambiar = (ids: string[]) => void guardarAdelantadas(ids);
+  const fila = (n: Necesidad, anadida: boolean) => {
+    const fin = seAcaba(n);
+    return (
+      <li key={n.id} class="fila">
+        <div class="fila__texto">
+          <span>{n.nombre}</span>
+          <span class="secundario">
+            {textoNecesidad(n)}
+            {n.ultimaCompra ? ` · comprado el ${textoDia(n.ultimaCompra)}` : ''}
+            {fin ? `, te dura hasta el ${textoDia(fin)} más o menos` : ''}
+          </span>
+        </div>
+        <button
+          type="button"
+          class="boton boton--pequeno"
+          onClick={() =>
+            cambiar(anadida ? adelantadas.filter((id) => id !== n.id) : [...adelantadas, n.id])
+          }
+        >
+          {anadida ? 'Quitar' : 'Añadir'}
+        </button>
+      </li>
+    );
+  };
+  return (
+    <section class="grupo">
+      <h2 class="grupo__titulo grupo__titulo--separado">Puede que aún te quede</h2>
+      <p class="secundario">
+        Lo compraste hace poco y te dura más que esta compra, así que no se cuenta. Si se te ha
+        acabado antes, añádelo.
+      </p>
+      <ul class="filas tarjeta tarjeta--lista">
+        {anadidas.map((n) => fila(n, true))}
+        {quedan.map((n) => fila(n, false))}
+      </ul>
+    </section>
   );
 }
 
@@ -121,11 +246,13 @@ function ResumenPlan({
   mejor,
   periodo,
   tiendas,
+  alEmpezar,
 }: {
   plan: Plan;
   mejor: Resultado;
   periodo: string;
   tiendas: InfoTienda[];
+  alEmpezar: () => void;
 }) {
   const { unaTienda, ahorro } = plan;
   const nombres = (t: Tiendas) => nombresTiendas(t, tiendas);
@@ -150,6 +277,9 @@ function ResumenPlan({
           {euros(mejor.costeVisitas / (mejor.tiendas.length - 1))} de tiempo y desplazamiento.
         </p>
       )}
+      <button type="button" class="boton boton--principal boton--ancho" onClick={alEmpezar}>
+        <Icono nombre="carrito" tamano={20} /> Empezar la compra
+      </button>
     </section>
   );
 }

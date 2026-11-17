@@ -3,6 +3,7 @@ import { recargarAjustesCompra } from '../ajustes.ts';
 import { guardarAjuste, leerAjuste, leerTodo, reemplazarTodo } from '../almacen.ts';
 import { crearCopia, leerCopia, nombreArchivo, ofrecerArchivo, textoCopia } from '../copia.ts';
 import { fechaHora } from '../estado.ts';
+import { recargarCompra } from '../lista/estado.ts';
 import { recargarNecesidades, useNecesidades } from '../necesidades/estado.ts';
 import { recargarTiendas, useTiendas } from '../tiendas/estado.ts';
 import { Icono } from './Icono.tsx';
@@ -75,7 +76,12 @@ export function CopiaSeguridad() {
         ...copia,
         ajustes: { ...copia.ajustes, ultimaCopia: copia.exportada },
       });
-      await Promise.all([recargarNecesidades(), recargarTiendas(), recargarAjustesCompra()]);
+      await Promise.all([
+        recargarNecesidades(),
+        recargarTiendas(),
+        recargarAjustesCompra(),
+        recargarCompra(),
+      ]);
       setUltima(copia.exportada);
       setMensaje({
         tipo: 'bien',

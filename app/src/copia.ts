@@ -77,6 +77,9 @@ function problemaNecesidad(
   if (!FRECUENCIAS.includes(n.frecuencia as never)) return 'la frecuencia no es válida';
   if (n.notas !== undefined && typeof n.notas !== 'string') return 'las notas no son texto';
   if (!esFecha(n.creada) || !esFecha(n.actualizada)) return 'las fechas no son válidas';
+  if (n.ultimaCompra !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(String(n.ultimaCompra))) {
+    return 'la fecha de la última compra no es válida';
+  }
   if (n.equivalencias !== undefined) {
     if (!esObjeto(n.equivalencias)) return 'los productos elegidos no son válidos';
     for (const [tienda, e] of Object.entries(n.equivalencias)) {

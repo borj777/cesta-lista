@@ -158,6 +158,11 @@ describe('leerCopia', () => {
       'la frecuencia no es válida',
     ],
     ['sin fechas', { ...pollo, creada: 'ayer' }, 'las fechas no son válidas'],
+    [
+      'con la última compra mal escrita',
+      { ...pollo, ultimaCompra: '17/11/2026' },
+      'la fecha de la última compra no es válida',
+    ],
   ])('rechaza una necesidad %s y dice cuál es', (_caso, mala, motivo) => {
     const r = leerCopia(copiaTexto([detergente, mala]));
     const nombre = (mala as Necesidad).nombre.trim();

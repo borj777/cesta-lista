@@ -117,9 +117,13 @@ const centimos = (n: number) => Math.round(n * 100) / 100;
 /** Margen para que 1,5 / 0,5 no dé 3,0000000004 y se redondee a 4 envases. */
 const MARGEN = 1e-6;
 
-/** Cantidad que se gasta en el periodo, pasada a la unidad de comparación (g → kg, ml → l). */
+/**
+ * Cantidad que hay que comprar, pasada a la unidad de comparación (g → kg, ml → l): lo que se
+ * gasta en el periodo de la compra. Lo que dura más que el periodo (el detergente del mes en
+ * una compra semanal) se compra entero cuando toca, para todo su tiempo.
+ */
 export function cantidadEnPeriodo(n: Necesidad, semanas: number): number {
-  const enPeriodo = (n.cantidad * semanas) / SEMANAS[n.frecuencia];
+  const enPeriodo = (n.cantidad * Math.max(semanas, SEMANAS[n.frecuencia])) / SEMANAS[n.frecuencia];
   return n.unidad === 'g' || n.unidad === 'ml' ? enPeriodo / 1000 : enPeriodo;
 }
 
