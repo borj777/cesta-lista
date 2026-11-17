@@ -416,7 +416,9 @@ function FormTienda({
     const usos = usosDe(necesidades, existente.id);
     const partes = [
       productos > 0 &&
-        `Se borrarán también sus ${productos === 1 ? 'un producto' : `${productos} productos`}.`,
+        (productos === 1
+          ? 'Se borrará también su producto.'
+          : `Se borrarán también sus ${productos} productos.`),
       usos.length > 0 &&
         `Lo que tienes elegido en ella se quitará de: ${usos.map((n) => n.nombre).join(', ')}.`,
     ].filter(Boolean);

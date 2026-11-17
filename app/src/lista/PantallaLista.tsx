@@ -149,6 +149,14 @@ export function PantallaLista({ datos, ahora }: { datos: DatosApp | null; ahora:
               tiendas={tiendas}
               alEmpezar={empezar}
             />
+          ) : necesidades?.length === 0 ? null : reparto?.tocan.length === 0 ? (
+            <section class="tarjeta">
+              <h2>Esta vez no hace falta comprar nada</h2>
+              <p class="secundario">
+                Todo lo que compras te dura más que esta compra y aún te queda. Si se te ha acabado
+                algo, añádelo desde «Puede que aún te quede».
+              </p>
+            </section>
           ) : (
             <section class="tarjeta">
               <h2>Elige qué compras en cada tienda</h2>

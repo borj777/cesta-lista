@@ -102,7 +102,12 @@ function TiendasElegidas({ necesidad, tiendas }: { necesidad: Necesidad; tiendas
   if (decididas === 0) return <span class="sin-elegir">Sin elegir</span>;
   if (elegidas.length === 0) return <span class="sin-elegir">No lo compras</span>;
   return (
-    <span class="puntos" aria-label={`Elegido en ${elegidas.length} tiendas`}>
+    <span
+      class="puntos"
+      aria-label={
+        elegidas.length === 1 ? 'Elegido en 1 tienda' : `Elegido en ${elegidas.length} tiendas`
+      }
+    >
       {elegidas.map((t) => (
         <Punto key={t.id} color={t.color} />
       ))}

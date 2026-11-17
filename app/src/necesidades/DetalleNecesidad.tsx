@@ -109,8 +109,8 @@ export function DetalleNecesidad({
                     <p class="aviso aviso--atencion">
                       <Icono nombre="alerta" tamano={20} />
                       <span>
-                        Este producto se vende por otra unidad que tu necesidad: no se podrá
-                        comparar su precio por unidad con las otras tiendas.
+                        Este producto se vende en una unidad distinta de la de tu necesidad: no se
+                        podrá comparar su precio por unidad con las otras tiendas.
                       </span>
                     </p>
                   )}

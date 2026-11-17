@@ -1,6 +1,6 @@
 # Cesta Lista
 
-Aplicación web para iPhone que compara los precios de **Mercadona, Consum y Lidl** y reparte la lista de la compra entre los supermercados para gastar lo mínimo.
+Aplicación web para iPhone que compara los precios de **Mercadona, Consum, Lidl** y las tiendas que añadas, y reparte la lista de la compra entre ellas para gastar lo mínimo.
 
 - Se instala desde Safari con «Añadir a pantalla de inicio» y funciona sin conexión.
 - Los precios se obtienen de las webs públicas de los supermercados una vez al día, con pausas entre peticiones.
@@ -12,13 +12,30 @@ Es un proyecto personal y sin ánimo de lucro.
 
 - **Fase 0 (terminada):** Mercadona y Consum responden desde GitHub Actions.
 - **Fase 1 (terminada):** descarga diaria completa de Mercadona y Consum.
-- **Fase 2 (en curso):** la app para el iPhone, en pasos pequeños.
+- **Fase 2 (terminada):** la app para el iPhone: necesidades, buscador, tiendas propias, cálculo de la compra más barata y lista para ir a comprar.
+- **Siguiente:** convertir la dieta en necesidades.
 
 ## La app
 
 Está en **https://borj777.github.io/cesta-lista/**. Para instalarla en el iPhone: ábrela en Safari, pulsa **Compartir** y luego **Añadir a pantalla de inicio**. Funciona sin conexión con los últimos precios descargados.
 
 Se publica sola (workflow «Publicar la app») cada vez que se sube un cambio a `main` y cada mañana después de la descarga de precios, siempre que pasen los tests. Tus datos (necesidades, equivalencias, listas) se guardan solo en el iPhone.
+
+### Cómo se usa
+
+1. **Necesidades:** apunta lo que compras, con la cantidad y cada cuánto (por ejemplo, leche semidesnatada, 6 litros a la semana; detergente, 50 lavados al mes).
+2. **Qué compras en cada tienda:** en la ficha de cada necesidad, elige el producto concreto de cada tienda con el buscador, o «No lo compro aquí». Se compara por precio por kg, litro, unidad o lavado.
+3. **Tiendas:** Mercadona y Consum tienen precios automáticos. En Lidl y en las tiendas que añadas (hasta 8, por ejemplo la frutería) apuntas tú los precios mirando el ticket; la app avisa si un precio tiene más de 30 días. Cualquier tienda se puede apagar si no vas nunca.
+4. **Lista:** dice a qué tiendas ir, cuánto pagarás y cuánto ahorras frente a comprarlo todo en una sola tienda. En **Ajustes** eliges para cuánto tiempo compras (1 semana, 2 semanas o 1 mes) y cuánto te compensa ir a una tienda más.
+5. **Empezar la compra:** en la tienda, toca cada cosa al cogerla de la estantería y pasará al carro. La pantalla no se apaga mientras tanto. Al terminar, la app apunta qué has comprado: lo que dura más que una compra (el detergente del mes en una compra semanal) no vuelve a salir hasta que se vaya a acabar, y mientras tanto aparece en «Puede que aún te quede».
+
+### Copia de seguridad
+
+Tus datos solo están en el iPhone. Haz de vez en cuando **Ajustes → Copia de seguridad → Exportar copia** y guárdala en Archivos o en iCloud. Para recuperarla, en un iPhone nuevo o tras borrar la app, usa **Importar copia**: sustituye todo lo que haya por lo de la copia. Las copias de versiones anteriores de la app se pueden seguir importando.
+
+### Si algo falla
+
+En **Ajustes → Diagnóstico** están la versión de la app, la fecha de los precios guardados, si el modo sin conexión está activo y un resumen de tus datos. Si la app no arranca en 8 segundos, sale un botón **Reparar**, que vuelve a descargarla sin borrar tus datos.
 
 ## Precios diarios
 
@@ -122,4 +139,9 @@ npm run build    # versión para publicar, en app/dist
 | `scraper/test/` | Tests |
 | `scraper/fixtures/` | Respuestas reales de las tiendas para los tests |
 | `app/` | La app (Vite, Preact y TypeScript) |
+| `app/src/necesidades/` | Necesidades, buscador y elección de productos |
+| `app/src/tiendas/` | Tiendas propias, sus productos y tiendas apagadas |
+| `app/src/optimizador.ts` | Cálculo de la combinación de tiendas más barata |
+| `app/src/lista/` | Lista de compra, compra en la tienda y pantalla encendida |
+| `app/sw/sw.js` | Service worker (funcionamiento sin conexión) |
 | `.github/workflows/` | `scrape.yml` (precios diarios), `deploy.yml` (publicar la app), `ci.yml` (tests de las propuestas de cambio) y `fase0.yml` (prueba de acceso) |

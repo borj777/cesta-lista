@@ -11,6 +11,7 @@ import {
   reemplazarTodo,
   type ContenidoBD,
 } from '../src/almacen.ts';
+import { leerCompra } from '../src/lista/compra.ts';
 import { crearCopia, leerCopia, nombreArchivo, textoCopia, VERSION_COPIA } from '../src/copia.ts';
 import { crearNecesidad, type Necesidad } from '../src/necesidades/modelo.ts';
 import { crearLidl, crearTienda } from '../src/tiendas/modelo.ts';
@@ -319,6 +320,44 @@ describe('exportar e importar con la base de datos', () => {
       lecheLidl,
       naranjas,
     ]);
+  });
+
+  it('la copia guarda también la compra empezada, lo marcado y las fechas de compra', async () => {
+    const compra = {
+      empezada: AHORA,
+      tiendas: [{ id: 'lidl', nombre: 'Lidl', color: lidl.color }],
+      lineas: [
+        {
+          necesidad: 'detergente',
+          nombre: 'Detergente',
+          tienda: 'lidl',
+          producto: { id: 'leche-lidl', nombre: 'Leche', formato: { cantidad: 6, unidad: 'l' } },
+          envases: 1,
+          precio: 4.74,
+          coste: 4.74,
+          porEnvase: false,
+          enCarro: true,
+        },
+      ],
+    };
+    await guardarNecesidad({ ...detergente, ultimaCompra: '2026-11-10' });
+    await guardarAjuste('compraEnCurso', compra);
+    await guardarAjuste('adelantadas', ['detergente']);
+    await guardarAjuste('pantallaEncendida', false);
+    const texto = textoCopia(crearCopia(await leerTodo(), AHORA));
+    await reemplazarTodo(vacio);
+
+    const leida = leerCopia(texto);
+    if (!leida.ok) throw new Error(leida.error);
+    await reemplazarTodo(leida.copia);
+    const contenido = await leerTodo();
+    expect(contenido.necesidades).toEqual([{ ...detergente, ultimaCompra: '2026-11-10' }]);
+    expect(contenido.ajustes).toEqual({
+      compraEnCurso: compra,
+      adelantadas: ['detergente'],
+      pantallaEncendida: false,
+    });
+    expect(leerCompra(contenido.ajustes.compraEnCurso)).toEqual(compra);
   });
 
   it('importar sustituye lo que había', async () => {
