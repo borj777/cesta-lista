@@ -1,16 +1,16 @@
 {
-  "generado": "2026-11-16T08:05:11.343Z",
+  "generado": "2026-11-17T06:55:57.167Z",
   "tiendas": {
     "mercadona": {
       "estado": "ok",
-      "actualizado": "2026-11-16T08:05:11.343Z",
-      "productos": 4345,
-      "comprobado": "2026-11-16T08:05:11.343Z",
-      "duracionSegundos": 267,
+      "actualizado": "2026-11-17T06:55:57.167Z",
+      "productos": 4421,
+      "comprobado": "2026-11-17T06:55:57.167Z",
+      "duracionSegundos": 291,
       "peticiones": 154,
-      "sinVerificar": 0,
-      "descartados": 40,
-      "avisosPrecioRef": 66,
+      "sinVerificar": 215,
+      "descartados": 0,
+      "avisosPrecioRef": 12,
       "ejemplosAvisos": [
         {
           "id": "29540",
@@ -34,41 +34,6 @@
           "tienda": 12.92
         },
         {
-          "id": "55108",
-          "nombre": "Fuet espetec Hacendado",
-          "unidad": "kg",
-          "calculado": 10.4167,
-          "tienda": 2.5
-        },
-        {
-          "id": "55125",
-          "nombre": "Longaniza clásica extra Hacendado",
-          "unidad": "kg",
-          "calculado": 10,
-          "tienda": 2.8
-        },
-        {
-          "id": "16282",
-          "nombre": "Longaniza de payés extra Hacendado",
-          "unidad": "kg",
-          "calculado": 14.1071,
-          "tienda": 3.95
-        },
-        {
-          "id": "55028",
-          "nombre": "Salami montañés extra El Pozo",
-          "unidad": "kg",
-          "calculado": 9.25,
-          "tienda": 1.85
-        },
-        {
-          "id": "54105",
-          "nombre": "Chorizo de Tarancón Bricio",
-          "unidad": "kg",
-          "calculado": 8.7143,
-          "tienda": 3.05
-        },
-        {
           "id": "58293",
           "nombre": "Jamón serrano Incarlopsa",
           "unidad": "kg",
@@ -83,108 +48,66 @@
           "tienda": 18.75
         },
         {
-          "id": "45297",
-          "nombre": "Envase rellenable Deliplus tamaño viaje",
-          "unidad": "l",
-          "calculado": 10.5,
-          "tienda": 1.05
-        },
-        {
-          "id": "12754",
-          "nombre": "Cuchillas para perfilar cejas y vello facial Deliplus",
+          "id": "72641",
+          "nombre": "Insecticida antimosquitos eléctrico recambio líquido",
           "unidad": "ud",
-          "calculado": 0.9333,
-          "tienda": 2.8
+          "calculado": 1.9,
+          "tienda": 42.22
         },
         {
-          "id": "42222",
-          "nombre": "Tratamiento para uñas base 9 en 1 Deliplus vitaminada y alisadora",
-          "unidad": "l",
-          "calculado": 350,
-          "tienda": 3.5
+          "id": "43057",
+          "nombre": "Pastillas desinfectantes multiusos Bosque Verde",
+          "unidad": "kg",
+          "calculado": 10,
+          "tienda": 0.03
         },
         {
-          "id": "42286",
-          "nombre": "Tratamiento para uñas gel brillo top coat Deliplus secado rápido",
-          "unidad": "l",
-          "calculado": 350,
-          "tienda": 3.5
+          "id": "46703",
+          "nombre": "Pañuelos de papel Aloe Vera Bosque Verde",
+          "unidad": "ud",
+          "calculado": 0.165,
+          "tienda": 0.02
         },
         {
-          "id": "41692",
-          "nombre": "Laca de uñas manicura francesa Deliplus 01 blanco punta",
-          "unidad": "l",
-          "calculado": 250,
-          "tienda": 2.75
+          "id": "47620",
+          "nombre": "Pañuelos de papel Extra Suaves Bosque Verde",
+          "unidad": "ud",
+          "calculado": 0.11,
+          "tienda": 0.01
         },
         {
-          "id": "41685",
-          "nombre": "Laca de uñas manicura francesa Deliplus 03 rosa",
-          "unidad": "l",
-          "calculado": 250,
-          "tienda": 2.75
+          "id": "47618",
+          "nombre": "Pañuelos de papel Mentol Bosque Verde",
+          "unidad": "ud",
+          "calculado": 0.185,
+          "tienda": 0.02
         },
         {
-          "id": "42293",
-          "nombre": "Laca de uñas alto brillo Deliplus 15 perla rosada",
-          "unidad": "l",
-          "calculado": 227.2727,
-          "tienda": 2.5
+          "id": "18382",
+          "nombre": "Postre Caramel Cake Hacendado con queso y caramelo salado",
+          "unidad": "kg",
+          "calculado": 1.0625,
+          "tienda": 10.63
         },
         {
-          "id": "42294",
-          "nombre": "Laca de uñas alto brillo Deliplus 18 suave peonia",
-          "unidad": "l",
-          "calculado": 227.2727,
-          "tienda": 2.5
-        },
-        {
-          "id": "42295",
-          "nombre": "Laca de uñas alto brillo Deliplus 20 rosa magnético",
-          "unidad": "l",
-          "calculado": 227.2727,
-          "tienda": 2.5
-        },
-        {
-          "id": "42296",
-          "nombre": "Laca de uñas alto brillo Deliplus 22 granate sublime",
-          "unidad": "l",
-          "calculado": 227.2727,
-          "tienda": 2.5
+          "id": "13053",
+          "nombre": "Cheesecake con arándanos Hacendado",
+          "unidad": "kg",
+          "calculado": 9.4444,
+          "tienda": 10.63
         }
       ],
-      "ejemplosDescartados": [
-        "62048 Preparado de paella y sopa Hacendado ultracongelado",
-        "24147 Gambón congelado",
-        "24708 Alistado pequeño congelado",
-        "24712 Langostino crudo Hacendado ultracongelado",
-        "24477 Langostino cocido y pelado Hacendado ultracongelado",
-        "24181 Gamba pelada cruda tamaño mediano Hacendado ultracongelada",
-        "24486 Langostino crudo y pelado Hacendado ultracongelado",
-        "24230 Gamba pelada cruda tamaño grande Hacendado ultracongelada",
-        "62380 Bogavante americano crudo Hacendado ultracongelado",
-        "62396 Carne de mejillón cocido Hacendado ultracongelado",
-        "62228 Filetes de merluza del Cabo sin piel Hacendado ultracongelados",
-        "24345 Rodaja de emperador Hacendado ultracongelado",
-        "24016 Filetes de bacalao MareDeus ultracongelado",
-        "24203 Tubo de pota Argentina limpio Hacendado congelado",
-        "24200 Sepia faraónica limpia Hacendado congelada",
-        "24350 Filete de salmón rosado salvaje con piel Hacendado ultracongelado",
-        "62145 Rodajas de emperador pequeñas Hacendado ultracongeladas",
-        "24274 Sepia faraónica troceada limpia Hacendado congelada",
-        "24242 Calamar troceado limpio Hacendado congelado",
-        "62191 Filetes de panga Hacendado ultracongelados"
-      ]
+      "ejemplosDescartados": []
     },
     "consum": {
       "estado": "ok",
-      "actualizado": "2026-11-16T08:05:11.343Z",
-      "productos": 9236,
-      "comprobado": "2026-11-16T08:05:11.343Z",
-      "duracionSegundos": 179,
+      "actualizado": "2026-11-17T06:55:57.167Z",
+      "productos": 9301,
+      "comprobado": "2026-11-17T06:55:57.167Z",
+      "duracionSegundos": 172,
       "peticiones": 94,
-      "sinVerificar": 416,
-      "descartados": 140,
+      "sinVerificar": 412,
+      "descartados": 0,
       "avisosPrecioRef": 9,
       "ejemplosAvisos": [
         {
@@ -251,28 +174,7 @@
           "tienda": 17.95
         }
       ],
-      "ejemplosDescartados": [
-        "4980 Detergente Líquido Prendas Delicadas 25 Lv",
-        "5818 Aluminio 30 M",
-        "5819 Aluminio 50 M",
-        "6102 Huevos M Medianos Docena 1 Dc",
-        "6103 Huevos L Grandes Docena 1 Dc",
-        "6104 Huevos L Grandes 1/2 Docena 0,5 Dc",
-        "6260 Huevos Camperos M/L 1/2 Docena 0,5 Dc",
-        "6463 Infusión Cola de Caballo Plus 3 Bolsitas 20 Unid. 20 Do",
-        "7611 Lavavajillas en Gel Excellence Antigrasa 50 Lv",
-        "9480 Film Transparente 30 M",
-        "10648 Papel de Horno 8 M",
-        "14313 Huevo XL Jumbo 1/2 Docena 0,5 Dc",
-        "14652 Detergente Concentrado Ropa Blanca y Color 25 Lv",
-        "15869 Lavavajillas en Gel Excellence Limón 50 Lv",
-        "17453 Detergente Líquido P.Delicadas Máquina 37 Lv",
-        "17498 Detergente Líquido Prendas Delicadas Bebé 32 Lv",
-        "17577 Detergente Líquido Prendas Delicadas Mano 45 Lv",
-        "17662 Detergente Cápsulas Eco 20 Lv",
-        "18019 Detergente Líquido Max 50 Lv",
-        "19298 Detergente Polvo Marsella 36 Lv"
-      ]
+      "ejemplosDescartados": []
     }
   }
 }
