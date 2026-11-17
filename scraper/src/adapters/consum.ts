@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { Pedir } from '../http.ts';
-import { cerrarProducto, idDe, normalizarTodos, validar } from '../normalizar.ts';
+import { cerrarProducto, idDe, normalizarTodos, seccionesUsadas, validar } from '../normalizar.ts';
 import { ErrorFormato, UNIDADES, type Normalizado, type ResultadoAdaptador } from '../tipos.ts';
 import {
   calcularPrecioRef,
@@ -12,6 +12,8 @@ import {
 } from '../unidades.ts';
 
 export const CONSUM_API = 'https://tienda.consum.es/api/rest/V1.0/catalog/product';
+/** Árbol de secciones de la tienda (comprobado el 17/11/2026). */
+export const CONSUM_SECCIONES = 'https://tienda.consum.es/api/rest/V1.0/shopping/category/menu';
 /** Consum no devuelve más de 100 productos por página (comprobado el 15/11/2026). */
 export const TAMANO_PAGINA = 100;
 /** Límite de seguridad: 300 páginas son 30.000 productos, el triple del catálogo actual. */
@@ -44,6 +46,9 @@ const ProductoCrudoSchema = z.object({
     prices: z.array(z.object({ id: z.string(), value: ValorPrecio })),
     unitPriceUnitType: texto,
   }),
+  categories: z
+    .array(z.object({ id: z.union([z.string(), z.number()]), type: z.number().nullish() }))
+    .nullish(),
   offers: z
     .array(
       z.object({
@@ -56,6 +61,46 @@ const ProductoCrudoSchema = z.object({
     .nullish(),
 });
 type Oferta = NonNullable<z.infer<typeof ProductoCrudoSchema>['offers']>[number];
+
+type NodoSeccion = { id: string | number; name: string; subcategories?: NodoSeccion[] | null };
+const NodoSeccionSchema: z.ZodType<NodoSeccion> = z.lazy(() =>
+  z.object({
+    id: z.union([z.string(), z.number()]),
+    name: z.string(),
+    subcategories: z.array(NodoSeccionSchema).nullish(),
+  }),
+);
+const ArbolSeccionesSchema = z.array(NodoSeccionSchema).min(1);
+
+/** Nombre completo de cada sección del árbol de Consum («Frescos > Frutas > Cítricos»), por su id. */
+export function rutasConsum(arbol: unknown): Map<string, string> {
+  const r = ArbolSeccionesSchema.safeParse(arbol);
+  const rutas = new Map<string, string>();
+  const recorrer = (nodo: NodoSeccion, padre: string) => {
+    const ruta = padre ? `${padre} > ${nodo.name.trim()}` : nodo.name.trim();
+    rutas.set(String(nodo.id), ruta);
+    for (const hijo of nodo.subcategories ?? []) recorrer(hijo, ruta);
+  };
+  for (const nodo of r.success ? r.data : []) recorrer(nodo, '');
+  return rutas;
+}
+
+/**
+ * Sección de un producto: la primera de sus categorías normales (type 0) que está en el árbol.
+ * «Ecológico y saludable» repite productos de otras secciones: se usa solo si no hay otra.
+ */
+export function seccionConsum(
+  categorias: { id: string | number; type?: number | null }[] | null | undefined,
+  rutas: ReadonlyMap<string, string>,
+): string | undefined {
+  const normales = (categorias ?? []).filter((c) => !c.type).map((c) => String(c.id));
+  const conocidas = normales.filter((id) => rutas.has(id));
+  return (
+    conocidas.find((id) => !rutas.get(id)?.startsWith('Ecológico')) ??
+    conocidas[0] ??
+    (rutas.size === 0 ? normales[0] : undefined)
+  );
+}
 
 const PaginaSchema = z.object({
   totalCount: z.number().int().nonnegative(),
@@ -111,7 +156,11 @@ export function fotoConsum(
  * El formato sale de la descripción ("... 250 Gr"); si no lo indica (fruta suelta,
  * "Pieza precio aprox."), se usa el precio por kg de la tienda y se marca como sin verificar.
  */
-export function normalizarConsum(crudo: unknown, ahora: string): Normalizado {
+export function normalizarConsum(
+  crudo: unknown,
+  ahora: string,
+  rutas: ReadonlyMap<string, string> = new Map(),
+): Normalizado {
   const r = ProductoCrudoSchema.safeParse(crudo);
   if (!r.success) return { ok: false };
   const p = r.data;
@@ -170,6 +219,7 @@ export function normalizarConsum(crudo: unknown, ahora: string): Normalizado {
     ...ofertaVigente(p.offers, ahora),
     url: p.productData.url,
     imagen: fotoConsum(p.media, p.productData.imageURL),
+    seccion: seccionConsum(p.categories, rutas),
   });
   if (!producto) return { ok: false };
 
@@ -195,6 +245,15 @@ export async function descargarConsum(
   ahora: string,
   registrar: (mensaje: string) => void = () => {},
 ): Promise<ResultadoAdaptador> {
+  // Las secciones no son imprescindibles: si el árbol falla, los precios se guardan sin ellas.
+  let rutas = new Map<string, string>();
+  try {
+    rutas = rutasConsum((await pedir(CONSUM_SECCIONES)).datos);
+    registrar(`Consum: ${rutas.size} secciones`);
+  } catch (error) {
+    registrar(`Consum: no se ha podido leer el árbol de secciones (${String(error)})`);
+  }
+
   const crudos = new Map<string, unknown>();
   let total: number;
 
@@ -221,6 +280,10 @@ export async function descargarConsum(
     if (ultima) break;
   }
 
-  const resultado = normalizarTodos(crudos.values(), (c) => normalizarConsum(c, ahora));
-  return { ...resultado, esperados: total };
+  const resultado = normalizarTodos(crudos.values(), (c) => normalizarConsum(c, ahora, rutas));
+  return {
+    ...resultado,
+    esperados: total,
+    secciones: seccionesUsadas(resultado.productos, Object.fromEntries(rutas)),
+  };
 }

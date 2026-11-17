@@ -141,6 +141,19 @@ describe('descargarMercadona', () => {
     expect(r.descartados).toBe(0);
   });
 
+  it('apunta la sección de cada producto con su nombre completo', async () => {
+    const { pedir } = tienda();
+    const r = await descargarMercadona(pedir, AHORA);
+    const subs = (fruta as { categories: { id: number; name: string }[] }).categories;
+    expect(r.productos.every((p) => subs.some((s) => String(s.id) === p.seccion))).toBe(true);
+    // La fruta sale en todas las categorías: se queda con la primera en la que aparece.
+    const seccion = r.productos[0]?.seccion ?? '';
+    expect(r.secciones?.[seccion]).toMatch(/^Aceite, especias y salsas > Aceite, vinagre y sal > /);
+    expect(Object.keys(r.secciones ?? {})).toEqual(
+      [...new Set(r.productos.map((p) => p.seccion))].sort((a, b) => Number(a) - Number(b)),
+    );
+  });
+
   it('se detiene si el código postal deja de ser del almacén de Valencia', async () => {
     const { pedir, llamadas } = tienda('mad1');
     await expect(descargarMercadona(pedir, AHORA)).rejects.toBeInstanceOf(ErrorZona);

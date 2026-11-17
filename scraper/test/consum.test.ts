@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CONSUM_SECCIONES,
   descargarConsum,
   fotoConsum,
   normalizarConsum,
   ofertaVigente,
+  rutasConsum,
+  seccionConsum,
 } from '../src/adapters/consum.ts';
+import { normalizarTodos } from '../src/normalizar.ts';
 import { ErrorFormato, ProductoSchema, type Producto } from '../src/tipos.ts';
 import { AHORA, fixture, pedirFalso, respuesta } from './ayudas.ts';
 
@@ -95,7 +99,8 @@ describe('descargarConsum', () => {
   it('recorre todas las páginas con limit y offset', async () => {
     const { pedir, llamadas } = catalogo(250);
     const r = await descargarConsum(pedir, AHORA);
-    expect(llamadas.map((l) => new URL(l.url).search)).toEqual([
+    expect(llamadas[0]?.url).toBe(CONSUM_SECCIONES);
+    expect(llamadas.slice(1).map((l) => new URL(l.url).search)).toEqual([
       '?limit=100&offset=0',
       '?limit=100&offset=100',
       '?limit=100&offset=200',
@@ -124,6 +129,66 @@ describe('descargarConsum', () => {
   it('detecta un cambio de formato', async () => {
     const { pedir } = pedirFalso(() => respuesta({ items: [] }));
     await expect(descargarConsum(pedir, AHORA)).rejects.toBeInstanceOf(ErrorFormato);
+  });
+});
+
+describe('secciones de Consum', () => {
+  const arbol = fixture('consum-categorias.json');
+  const rutas = rutasConsum(arbol);
+
+  it('lee el árbol de secciones real con el nombre completo de cada una', () => {
+    expect(rutas.size).toBeGreaterThan(500);
+    expect(rutas.get('2065')).toBe('Despensa > Lácteos y huevos > Huevos');
+    expect(rutasConsum({ otra: 'cosa' }).size).toBe(0);
+  });
+
+  it('cada producto de la página real tiene su sección', () => {
+    const productos = normalizarTodos(pagina.products, (c) =>
+      normalizarConsum(c, AHORA, rutas),
+    ).productos;
+    expect(productos.every((p) => p.seccion && rutas.has(p.seccion))).toBe(true);
+    const manzana = productos.find((p) => p.nombre === 'Manzana Golden');
+    expect(rutas.get(manzana?.seccion ?? '')).toBe('Frescos > Frutas > Manzana, pera y uva');
+  });
+
+  it('prefiere una sección que no sea «Ecológico y saludable» y no usa las de ofertas', () => {
+    const r = new Map([
+      ['1', 'Ecológico y saludable > Frutas'],
+      ['2', 'Frescos > Frutas'],
+      ['3', 'Ahora más barato'],
+    ]);
+    expect(
+      seccionConsum(
+        [
+          { id: 3, type: 1 },
+          { id: 1, type: 0 },
+          { id: 2, type: 0 },
+        ],
+        r,
+      ),
+    ).toBe('2');
+    expect(seccionConsum([{ id: 1, type: 0 }], r)).toBe('1');
+    expect(seccionConsum([{ id: 3, type: 1 }], r)).toBeUndefined();
+    expect(seccionConsum([{ id: 77, type: 0 }], new Map())).toBe('77');
+    expect(seccionConsum(null, r)).toBeUndefined();
+  });
+
+  it('descarga el árbol una vez y, si falla, guarda los precios sin secciones', async () => {
+    const base = pagina.products[0];
+    const pagina1 = { totalCount: 1, hasMore: false, products: [base] };
+    const conArbol = pedirFalso((url) => respuesta(url === CONSUM_SECCIONES ? arbol : pagina1));
+    const r = await descargarConsum(conArbol.pedir, AHORA);
+    expect(conArbol.llamadas.filter((l) => l.url === CONSUM_SECCIONES)).toHaveLength(1);
+    const seccion = r.productos[0]?.seccion ?? '';
+    expect(r.secciones).toEqual({ [seccion]: rutas.get(seccion) });
+
+    const sinArbol = pedirFalso((url) => {
+      if (url === CONSUM_SECCIONES) throw new Error('503');
+      return respuesta(pagina1);
+    });
+    const r2 = await descargarConsum(sinArbol.pedir, AHORA);
+    expect(r2.productos).toHaveLength(1);
+    expect(r2.secciones).toEqual({});
   });
 });
 

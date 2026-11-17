@@ -19,6 +19,8 @@ export type ProductoApp = {
   precioAnterior?: number;
   oferta?: string;
   ofertaHasta?: string;
+  /** Id de la sección de la tienda (su nombre, en `DatosApp.secciones`). */
+  seccion?: string;
 };
 
 export type EstadoTienda = { estado: 'ok' | 'fallida'; actualizado: string | null };
@@ -26,5 +28,7 @@ export type EstadoTienda = { estado: 'ok' | 'fallida'; actualizado: string | nul
 export type DatosApp = {
   generado: string;
   tiendas: Partial<Record<Tienda, EstadoTienda>>;
+  /** Nombre completo de cada sección («Carne > Aves y pollo > Pollo»), por tienda y por id. Falta en los precios guardados antes del 18/11/2026. */
+  secciones?: Partial<Record<Tienda, Record<string, string>>>;
   productos: ProductoApp[];
 };

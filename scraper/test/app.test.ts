@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { normalizarConsum } from '../src/adapters/consum.ts';
 import { normalizarMercadona } from '../src/adapters/mercadona.ts';
-import { CAMPOS_APP, construirApp, serializarApp, serializarImagenes } from '../src/app.ts';
+import {
+  CAMPOS_APP,
+  construirApp,
+  leerSecciones,
+  serializarApp,
+  serializarImagenes,
+  serializarSecciones,
+  unirSecciones,
+  type Secciones,
+} from '../src/app.ts';
 import type { Meta } from '../src/meta.ts';
 import { normalizarTodos } from '../src/normalizar.ts';
 import { AHORA, fixture } from './ayudas.ts';
@@ -58,6 +67,7 @@ describe('archivo ligero para la app', () => {
       formato: { cantidad: 1, unidad: 'l' },
       precio: 1.35,
       precioRef: 1.35,
+      seccion: expect.any(String),
     });
   });
 
@@ -82,6 +92,45 @@ describe('archivo ligero para la app', () => {
   it('pesa bastante menos que los archivos completos', () => {
     const completo = JSON.stringify([...mercadona, ...consum]).length;
     expect(serializarApp(datos).length).toBeLessThan(completo * 0.75);
+  });
+});
+
+describe('secciones de las tiendas', () => {
+  const nombres: Secciones = {
+    mercadona: {
+      '72': 'Huevos, leche y mantequilla > Leche y bebidas vegetales > Leche',
+      '999': 'Sin productos',
+    },
+  };
+  const conSecciones = construirApp(meta, { mercadona }, nombres);
+
+  it('app.json lleva solo los nombres de las secciones que tienen productos', () => {
+    expect(mercadona.every((p) => p.seccion === undefined)).toBe(true);
+    const leche = mercadona.map((p) => ({ ...p, seccion: '72' }));
+    const datos = construirApp(meta, { mercadona: leche }, nombres);
+    expect(datos.secciones).toEqual({
+      mercadona: { '72': 'Huevos, leche y mantequilla > Leche y bebidas vegetales > Leche' },
+    });
+    expect(datos.productos[0]?.seccion).toBe('72');
+    expect(JSON.parse(serializarApp(datos))).toEqual(datos);
+    expect(conSecciones.secciones).toEqual({});
+  });
+
+  it('conserva los nombres de otros días si hoy faltan y los ordena por id', () => {
+    const guardadas: Secciones = { mercadona: { '10': 'A', '2': 'B' }, consum: { '5': 'C' } };
+    const unidas = unirSecciones(guardadas, 'mercadona', { '10': 'A nueva', '3': 'D' });
+    expect(unidas).toEqual({
+      mercadona: { '2': 'B', '3': 'D', '10': 'A nueva' },
+      consum: { '5': 'C' },
+    });
+    expect(Object.keys(unidas.mercadona ?? {})).toEqual(['2', '3', '10']);
+    expect(unirSecciones(guardadas, 'consum', undefined)).toEqual(guardadas);
+
+    const texto = serializarSecciones(unidas);
+    expect(leerSecciones(JSON.parse(texto))).toEqual(unidas);
+    expect(texto.split('\n')).toHaveLength(11);
+    expect(leerSecciones(null)).toEqual({});
+    expect(leerSecciones({ consum: { '1': 2, '3': 'ok' } })).toEqual({ consum: { '3': 'ok' } });
   });
 });
 

@@ -1,6 +1,6 @@
 /** Lectura y escritura de los archivos de /data. */
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
-import { construirApp, serializarApp, serializarImagenes } from './app.ts';
+import { construirApp, leerSecciones, serializarApp, serializarImagenes } from './app.ts';
 import { leerProductos, MetaSchema, type Meta } from './meta.ts';
 import { TIENDAS, type Producto, type Tienda } from './tipos.ts';
 
@@ -38,7 +38,8 @@ export async function actualizarApp(meta: Meta): Promise<number> {
     const productos = leerProductos(await leerJson(`${tienda}.json`));
     if (productos) porTienda[tienda] = productos;
   }
-  const contenido = serializarApp(construirApp(meta, porTienda));
+  const secciones = leerSecciones(await leerJson('secciones.json'));
+  const contenido = serializarApp(construirApp(meta, porTienda, secciones));
   await escribir('app.json', contenido);
   await escribir('imagenes.json', serializarImagenes(meta.generado, porTienda));
   return Buffer.byteLength(contenido);

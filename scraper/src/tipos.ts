@@ -26,6 +26,8 @@ export const ProductoSchema = z.object({
   ofertaHasta: z.iso.date().optional(),
   url: z.string().min(1).optional(),
   imagen: z.string().min(1).optional(),
+  /** Id de la sección de la tienda donde está el producto (su nombre, en data/secciones.json). */
+  seccion: z.string().min(1).optional(),
 });
 // La fecha de actualización no va en cada producto, sino en data/meta.json (una por tienda),
 // para que cada commit diario solo muestre los productos cuyo precio cambia.
@@ -55,6 +57,8 @@ export type ResultadoAdaptador = {
   esperados?: number;
   /** "id nombre" de algunos productos descartados, para poder revisarlos. */
   ejemplosDescartados?: string[];
+  /** Nombre completo de cada sección usada («Carne > Aves y pollo > Pollo»), por su id. */
+  secciones?: Record<string, string>;
 };
 
 /** La respuesta de la tienda no tiene la forma esperada: posible cambio de formato. */

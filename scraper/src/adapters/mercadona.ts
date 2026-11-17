@@ -1,6 +1,14 @@
 import { z } from 'zod';
 import type { Pedir } from '../http.ts';
-import { cerrarProducto, descripcionCruda, idDe, normalizarTodos, validar } from '../normalizar.ts';
+import {
+  cerrarProducto,
+  conSeccion,
+  descripcionCruda,
+  idDe,
+  normalizarTodos,
+  seccionesUsadas,
+  validar,
+} from '../normalizar.ts';
 import type { Normalizado, ResultadoAdaptador, Unidad } from '../tipos.ts';
 import { calcularPrecioRef, coincidePrecioRef, redondear, type Formato } from '../unidades.ts';
 
@@ -61,7 +69,13 @@ const ArbolSchema = z.object({
 
 const DetalleSchema = z.object({
   id: z.number(),
-  categories: z.array(z.object({ products: z.array(z.unknown()) })),
+  categories: z.array(
+    z.object({
+      id: z.number().nullish(),
+      name: z.string().nullish(),
+      products: z.array(z.unknown()),
+    }),
+  ),
 });
 
 /** Cómo se interpreta un producto de Mercadona. */
@@ -283,8 +297,14 @@ export async function descargarMercadona(
   registrar(`Mercadona: ${ids.length} categorías`);
 
   // 3. Productos de cada categoría (un producto puede estar en varias: se guarda una vez,
-  //    recordando si alguna de ellas es de detergentes o lavavajillas).
-  const crudos = new Map<string, { crudo: unknown; categoria: number }>();
+  //    recordando si alguna de ellas es de detergentes o lavavajillas). La sección de cada
+  //    producto es la subcategoría donde aparece primero («Carne > Aves y pollo > Pollo»).
+  const rutas = new Map<number, string>();
+  for (const grupo of arbol.results) {
+    for (const c of grupo.categories) rutas.set(c.id, `${grupo.name.trim()} > ${c.name.trim()}`);
+  }
+  const secciones: Record<string, string> = {};
+  const crudos = new Map<string, { crudo: unknown; categoria: number; seccion?: string }>();
   for (const [i, id] of ids.entries()) {
     const detalle = validar(
       DetalleSchema,
@@ -292,12 +312,18 @@ export async function descargarMercadona(
       `la categoría ${id} de Mercadona`,
     );
     for (const sub of detalle.categories) {
+      const seccion = sub.id != null ? String(sub.id) : undefined;
+      if (seccion && sub.name?.trim()) {
+        secciones[seccion] ??= `${rutas.get(id) ?? ''} > ${sub.name.trim()}`.replace(/^ > /, '');
+      }
       for (const crudo of sub.products) {
         const pid = idDe(crudo);
         const publicado = (crudo as { published?: unknown }).published !== false;
         if (!pid || !publicado) continue;
-        if (!crudos.has(pid) || CATEGORIAS_LAVADO.has(id))
-          crudos.set(pid, { crudo, categoria: id });
+        const previo = crudos.get(pid);
+        if (!previo || CATEGORIAS_LAVADO.has(id)) {
+          crudos.set(pid, { crudo, categoria: id, seccion: previo?.seccion ?? seccion });
+        }
       }
     }
     if ((i + 1) % 25 === 0 || i === ids.length - 1) {
@@ -305,9 +331,10 @@ export async function descargarMercadona(
     }
   }
 
-  return normalizarTodos(
+  const resultado = normalizarTodos(
     crudos.values(),
-    ({ crudo, categoria }) => normalizarMercadona(crudo, categoria),
+    ({ crudo, categoria, seccion }) => conSeccion(normalizarMercadona(crudo, categoria), seccion),
     ({ crudo }) => descripcionCruda(crudo),
   );
+  return { ...resultado, secciones: seccionesUsadas(resultado.productos, secciones) };
 }

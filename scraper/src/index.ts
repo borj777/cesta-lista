@@ -5,6 +5,7 @@
  */
 import { descargarConsum } from './adapters/consum.ts';
 import { descargarMercadona } from './adapters/mercadona.ts';
+import { leerSecciones, serializarSecciones, unirSecciones } from './app.ts';
 import { actualizarApp, escribir, leerJson, leerMeta } from './archivos.ts';
 import { crearCliente, type Pedir } from './http.ts';
 import {
@@ -52,6 +53,11 @@ async function procesar(
 
   if (veredicto.valido && resultado) {
     await escribir(`${tienda}.json`, serializarProductos(resultado.productos));
+    const secciones = leerSecciones(await leerJson('secciones.json'));
+    await escribir(
+      'secciones.json',
+      serializarSecciones(unirSecciones(secciones, tienda, resultado.secciones)),
+    );
     registrar(`${tienda}: OK, ${resultado.productos.length} productos guardados`);
   } else if (!veredicto.valido) {
     registrar(`${tienda}: FALLIDA, se conservan los datos anteriores. Motivo: ${veredicto.motivo}`);

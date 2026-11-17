@@ -82,3 +82,22 @@ export function normalizarTodos<T>(
   productos.sort((a, b) => a.id.localeCompare(b.id, 'es', { numeric: true }));
   return { productos, avisos, sinVerificar, descartados, recibidos, ejemplosDescartados };
 }
+
+/** Añade al producto normalizado la sección de la tienda donde está, si se conoce. */
+export function conSeccion(r: Normalizado, seccion: string | undefined): Normalizado {
+  return r.ok && seccion ? { ...r, producto: { ...r.producto, seccion } } : r;
+}
+
+/** Solo los nombres de las secciones que tienen algún producto, ordenados por id. */
+export function seccionesUsadas(
+  productos: Producto[],
+  nombres: Readonly<Record<string, string>>,
+): Record<string, string> {
+  const usadas = new Set(productos.map((p) => p.seccion).filter((s) => s !== undefined));
+  return Object.fromEntries(
+    [...usadas]
+      .filter((id) => nombres[id])
+      .sort((a, b) => a.localeCompare(b, 'es', { numeric: true }))
+      .map((id) => [id, nombres[id] as string]),
+  );
+}
