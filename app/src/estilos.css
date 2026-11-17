@@ -1035,3 +1035,7 @@ body:has(input:focus:not([type='radio'])) .pestanas {
 .dieta-dias__dia p {
   margin: 2px 0;
 }
+
+.boton-dieta {
+  margin-bottom: 20px;
+}

@@ -65,7 +65,7 @@ export function PantallaMenu({ sub }: { sub: string | null }) {
   return (
     <>
       <h1>Menú</h1>
-      <a class="boton boton--ancho" href="#menu/dieta">
+      <a class="boton boton--ancho boton-dieta" href="#menu/dieta">
         <Icono nombre="documento" tamano={20} /> Leer el PDF de la dieta
       </a>
       <MenuSemanal recetas={recetas} menu={menu} necesidades={necesidades} />
