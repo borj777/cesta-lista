@@ -1007,3 +1007,31 @@ body:has(input:focus:not([type='radio'])) .pestanas {
 .avisos-casa__ver {
   margin-top: 10px;
 }
+
+/* Leer la dieta en PDF */
+.elegir-pdf {
+  position: relative;
+  margin-top: 16px;
+}
+
+.elegir-pdf__entrada {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.dieta-dias summary {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dieta-dias__dia h3 {
+  margin: 14px 0 4px;
+  font-size: 16px;
+}
+
+.dieta-dias__dia p {
+  margin: 2px 0;
+}

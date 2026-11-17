@@ -25,9 +25,13 @@ function datosLocales(): Plugin {
   };
 }
 
+/** Archivos del lector de PDF (pdf.js): pesan mucho y solo se descargan al usarlos. */
+const esDelLector = (nombre: string) => /^assets\/pdf[.-]/.test(nombre);
+
 /**
  * Genera sw.js a partir de sw/sw.js con la lista de archivos de la app (para que funcione
- * sin conexión) y una versión que cambia cuando cambia cualquier archivo.
+ * sin conexión) y una versión que cambia cuando cambia cualquier archivo. Los del lector de
+ * PDF van aparte: se guardan la primera vez que se usan y se conservan entre versiones.
  */
 function serviceWorker(): Plugin {
   return {
@@ -35,9 +39,11 @@ function serviceWorker(): Plugin {
     apply: 'build',
     generateBundle(_opciones, bundle) {
       const publicos = readdirSync(PUBLICO).filter((n) => !n.startsWith('.'));
-      const archivos = [...Object.keys(bundle), ...publicos]
+      const todos = [...Object.keys(bundle), ...publicos]
         .filter((n) => !n.endsWith('.map') && n !== 'index.html')
         .sort();
+      const archivos = todos.filter((n) => !esDelLector(n));
+      const lector = todos.filter(esDelLector);
       const huella = createHash('sha256');
       for (const nombre of Object.keys(bundle).sort()) {
         const parte = bundle[nombre];
@@ -51,7 +57,8 @@ function serviceWorker(): Plugin {
         fileName: 'sw.js',
         source: plantilla
           .replace('__VERSION__', huella.digest('hex').slice(0, 12))
-          .replace('__ARCHIVOS__', JSON.stringify(['./', ...archivos])),
+          .replace('__ARCHIVOS__', JSON.stringify(['./', ...archivos]))
+          .replace('__LECTOR__', JSON.stringify(lector)),
       });
     },
   };

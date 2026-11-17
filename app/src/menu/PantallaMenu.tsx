@@ -1,3 +1,4 @@
+import { PantallaDieta } from './dieta/PantallaDieta.tsx';
 import { useMemo, useState } from 'preact/hooks';
 import { Icono } from '../componentes/Icono.tsx';
 import { Opciones } from '../componentes/Opciones.tsx';
@@ -34,7 +35,7 @@ const falloDe = (error: unknown) =>
 const conProducto = (n: Necesidad) =>
   Object.values(n.equivalencias ?? {}).some((e) => e && 'id' in e);
 
-/** Rutas: #menu, #menu/receta/nueva y #menu/receta/<id>. */
+/** Rutas: #menu, #menu/receta/nueva, #menu/receta/<id> y #menu/dieta (leer el PDF). */
 export function PantallaMenu({ sub }: { sub: string | null }) {
   const { recetas, menu, error } = useRecetas();
   const { necesidades } = useNecesidades();
@@ -53,6 +54,7 @@ export function PantallaMenu({ sub }: { sub: string | null }) {
   if (!recetas || !necesidades) return <h1>Menú</h1>;
 
   const [seccion, id] = sub?.split('/') ?? [];
+  if (seccion === 'dieta') return <PantallaDieta />;
   if (seccion === 'receta' && id === 'nueva') {
     return <FormReceta key="nueva" necesidades={necesidades} />;
   }
@@ -63,6 +65,9 @@ export function PantallaMenu({ sub }: { sub: string | null }) {
   return (
     <>
       <h1>Menú</h1>
+      <a class="boton boton--ancho" href="#menu/dieta">
+        <Icono nombre="documento" tamano={20} /> Leer el PDF de la dieta
+      </a>
       <MenuSemanal recetas={recetas} menu={menu} necesidades={necesidades} />
       <ListaRecetas recetas={recetas} necesidades={necesidades} />
     </>

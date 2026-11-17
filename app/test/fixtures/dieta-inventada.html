@@ -1,0 +1,155 @@
+<!doctype html>
+<!--
+  Dieta inventada para los tests del lector del PDF. Imita el diseño de una tabla semanal
+  (días en columnas y comidas en filas), con nombres y platos inventados.
+  Para regenerar el PDF, desde esta carpeta:
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --no-pdf-header-footer --print-to-pdf=dieta-inventada.pdf "file://$PWD/dieta-inventada.html"
+-->
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      @page {
+        size: A4 landscape;
+        margin: 12mm;
+      }
+      body {
+        font-family: Calibri, Arial, sans-serif;
+        font-size: 9pt;
+        color: #000;
+      }
+      .cabecera {
+        display: flex;
+        gap: 0;
+        margin-bottom: 8px;
+      }
+      .cabecera div {
+        background: #a9d18e;
+        border: 1px solid #000;
+        padding: 1px 6px;
+        font-weight: bold;
+      }
+      .anotaciones {
+        border: 1px solid #000;
+        margin: 6px 0 14px;
+        width: 100%;
+      }
+      .anotaciones span {
+        background: #a9d18e;
+        padding: 1px 4px;
+        border-right: 1px solid #000;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        table-layout: fixed;
+      }
+      td,
+      th {
+        border: 1px solid #000;
+        padding: 2px 4px;
+        vertical-align: top;
+        line-height: 1.25;
+      }
+      th {
+        background: #a9d18e;
+        font-weight: bold;
+        text-align: center;
+      }
+      th:first-child {
+        width: 9%;
+      }
+      td.comida {
+        background: #a9d18e;
+        text-align: center;
+        vertical-align: middle;
+        font-weight: bold;
+        font-size: 10.5pt;
+      }
+      td.comida small {
+        display: block;
+        font-weight: normal;
+        font-size: 8pt;
+      }
+      td.alta {
+        height: 70px;
+      }
+      .notas {
+        margin-top: 18px;
+      }
+      .pie {
+        margin-top: 30px;
+        text-align: center;
+        font-size: 8pt;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="cabecera">
+      <div>Nombre: Persona Inventada</div>
+      <div>Objetivo: Comer variado</div>
+      <div>Semana: 1.2027</div>
+    </div>
+    <div class="anotaciones"><span>Anotaciones:</span></div>
+    <table>
+      <tr>
+        <th></th>
+        <th>Lunes</th>
+        <th>Martes</th>
+        <th>Miércoles</th>
+        <th>Jueves</th>
+        <th>Viernes</th>
+        <th>Sábado</th>
+        <th>Domingo</th>
+      </tr>
+      <tr>
+        <td class="comida alta">Desayuno</td>
+        <td colspan="7">
+          Opciones:<br /><br />• Café con leche y tostada de pan integral con tomate.<br />• Yogur
+          natural con avena.
+        </td>
+      </tr>
+      <tr>
+        <td class="comida alta">Almuerzo<small>(opcional)</small></td>
+        <td colspan="7">Opciones:<br />• 1 fruta.<br />• 1 puñado de frutos secos (20-30g).</td>
+      </tr>
+      <tr>
+        <td class="comida">Comida<small>(El postre es opcional)</small></td>
+        <td>• Arroz (70g) con verduras y gambas<br />• 1 fruta</td>
+        <td>• Garbanzos con espinacas y huevo duro<br />• 1 fruta</td>
+        <td>• Pollo al horno con patata, pimiento y cebolla<br />• 1 fruta</td>
+        <td>• Lentejas estofadas con verduras<br />• 1 fruta</td>
+        <td>• Macarrones (60g) con tomate y pavo<br />• 1 fruta</td>
+        <td>Libre con moderación</td>
+        <td>• Paella de verduras<br />• 1 fruta</td>
+      </tr>
+      <tr>
+        <td class="comida">Merienda</td>
+        <td colspan="7">
+          Opciones:<br />• Yogur natural.<br />• 1 puñado de frutos secos (20-30g).<br />• Hummus
+          con palitos de zanahoria
+        </td>
+      </tr>
+      <tr>
+        <td class="comida alta">Cena<small>(El postre es opcional)</small></td>
+        <td>• Crema de calabaza<br />• Merluza al horno<br />• 1 fruta</td>
+        <td>• Ensalada de lechuga, tomate y atún<br />• Tortilla francesa<br />• 1 fruta</td>
+        <td>• Crema de calabaza<br />• Revuelto de champiñones<br />• 1 fruta</td>
+        <td>
+          • Ensalada de lechuga, tomate y atún<br />• Salmón a la plancha con limón<br />• 1 fruta
+        </td>
+        <td>• Pollo al horno con patata, pimiento y cebolla<br />• 1 fruta</td>
+        <td>• Pizza casera de verduras</td>
+        <td>Libre con moderación</td>
+      </tr>
+    </table>
+    <div class="notas">
+      <b><u>NOTAS</u></b>
+      <ul>
+        <li>Los menús son ideas, no pautas cerradas.</li>
+        <li>Puedes cambiar unas verduras por otras.</li>
+      </ul>
+    </div>
+    <div class="pie">Consulta de Nutrición Inventada · nutricion@ejemplo.invalid</div>
+  </body>
+</html>
