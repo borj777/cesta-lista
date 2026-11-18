@@ -80,6 +80,11 @@ export type Necesidad = {
   despensa?: Despensa;
   /** Día (AAAA-MM-DD, de España) en que se compró por última vez con la app. */
   ultimaCompra?: string;
+  /**
+   * Ingrediente del catálogo (`app/src/ingredientes/catalogo.ts`) con el que la app elige sola
+   * el producto de cada tienda. Si falta, se busca por el nombre de la necesidad.
+   */
+  ingrediente?: string;
   creada: string;
   actualizada: string;
 };
@@ -88,7 +93,11 @@ export type Necesidad = {
  * Lo elegido en cada tienda, por el id de la tienda ('mercadona', 'consum' o el de una tienda
  * propia, como 'lidl').
  */
-export type Equivalencia = { id: string } | { noCompro: true };
+/**
+ * `auto`: lo eligió la app (el más barato de su ingrediente) y lo cambia sola si aparece otro
+ * más barato. Lo elegido a mano no lleva `auto` y no cambia nunca.
+ */
+export type Equivalencia = { id: string; auto?: true } | { noCompro: true };
 export type Equivalencias = Partial<Record<IdTienda, Equivalencia>>;
 
 /** Datos que rellena el usuario en el formulario. */
@@ -174,7 +183,7 @@ function limpiar(n: Necesidad): Necesidad {
   return limpia;
 }
 
-/** Elige un producto de una tienda para una necesidad (se guarda por id). */
+/** Elige a mano un producto de una tienda para una necesidad (se guarda por id y queda fijo). */
 export function elegirProducto(
   n: Necesidad,
   tienda: IdTienda,
@@ -183,6 +192,26 @@ export function elegirProducto(
 ): Necesidad {
   return { ...n, equivalencias: { ...n.equivalencias, [tienda]: { id } }, actualizada: ahora };
 }
+
+/** La app elige el producto de una tienda (el más barato de su ingrediente); se puede cambiar solo. */
+export function elegirAutomatico(
+  n: Necesidad,
+  tienda: IdTienda,
+  id: string,
+  ahora: string,
+): Necesidad {
+  return {
+    ...n,
+    equivalencias: { ...n.equivalencias, [tienda]: { id, auto: true } },
+    actualizada: ahora,
+  };
+}
+
+/** ¿Lo elegido en esta tienda lo eligió la app? */
+export const elegidoPorLaApp = (n: Necesidad, tienda: IdTienda): boolean => {
+  const e = n.equivalencias?.[tienda];
+  return !!e && 'id' in e && e.auto === true;
+};
 
 /** Marca que esta necesidad no se compra en una tienda. */
 export function noComprarEn(n: Necesidad, tienda: IdTienda, ahora: string): Necesidad {

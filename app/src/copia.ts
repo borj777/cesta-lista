@@ -84,6 +84,9 @@ function problemaNecesidad(
   if (!UNIDADES_NECESIDAD.includes(n.unidad as never)) return 'la unidad no es válida';
   if (!FRECUENCIAS.includes(n.frecuencia as never)) return 'la frecuencia no es válida';
   if (n.notas !== undefined && typeof n.notas !== 'string') return 'las notas no son texto';
+  if (n.ingrediente !== undefined && (typeof n.ingrediente !== 'string' || !n.ingrediente)) {
+    return 'el ingrediente no es válido';
+  }
   if (!esFecha(n.creada) || !esFecha(n.actualizada)) return 'las fechas no son válidas';
   if (n.ultimaCompra !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(String(n.ultimaCompra))) {
     return 'la fecha de la última compra no es válida';
@@ -100,9 +103,12 @@ function problemaNecesidad(
       if (!esAutomatica(tienda) && !tiendas.has(tienda)) {
         return `la tienda «${tienda}» no existe`;
       }
+      const claves = esObjeto(e) ? Object.keys(e).sort().join(',') : '';
       const valida =
         esObjeto(e) &&
-        ((typeof e.id === 'string' && e.id.length > 0 && Object.keys(e).length === 1) ||
+        ((typeof e.id === 'string' &&
+          e.id.length > 0 &&
+          (claves === 'id' || (claves === 'auto,id' && e.auto === true))) ||
           (e.noCompro === true && Object.keys(e).length === 1));
       if (!valida) return `el producto elegido en ${tienda} no es válido`;
     }

@@ -5,6 +5,7 @@ import { Icono, type NombreIcono } from './componentes/Icono.tsx';
 import { cargarDatos } from './datos.ts';
 import { NumeroEnIcono } from './despensa/PantallaDespensa.tsx';
 import { avisosPrecios } from './estado.ts';
+import { PonerAlDia } from './ingredientes/ElegirPorMi.tsx';
 import { PantallaMenu } from './menu/PantallaMenu.tsx';
 import { PantallaNecesidades } from './necesidades/PantallaNecesidades.tsx';
 import { PantallaLista } from './lista/PantallaLista.tsx';
@@ -69,6 +70,7 @@ export function App() {
   return (
     <>
       <NumeroEnIcono />
+      <PonerAlDia datos={datos} />
       <main class="contenido">
         <VersionNueva />
         <SinConexion />

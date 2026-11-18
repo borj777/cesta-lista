@@ -1,0 +1,133 @@
+/**
+ * «Elegir por mí»: qué ingrediente del catálogo es cada necesidad y qué producto elige la app
+ * en Mercadona y Consum. Lo elegido por la app (`auto`) se pone al día con los precios de cada
+ * día; lo elegido a mano no se toca nunca. Funciones puras.
+ */
+import { palabras } from '../buscador.ts';
+import { unidadDeComparacion } from '../formato.ts';
+import { elegidoPorLaApp, elegirAutomatico, type Necesidad } from '../necesidades/modelo.ts';
+import { TIENDAS_AUTOMATICAS } from '../tiendas/modelo.ts';
+import type { DatosApp } from '../tipos.ts';
+import { INGREDIENTES, type Ingrediente } from './catalogo.ts';
+import { elegirProducto } from './elegir.ts';
+
+type Datos = Pick<DatosApp, 'productos' | 'secciones'>;
+
+const porId = new Map(INGREDIENTES.map((i) => [i.id, i]));
+
+/** Texto comparable: sin tildes, mayúsculas, signos ni plurales sencillos. */
+const clave = (texto: string) => palabras(texto).join(' ');
+
+/**
+ * El ingrediente que corresponde a un texto («Pechuga de pollo», «pollo», «Leche»): primero el
+ * que se llama exactamente así; si no, aquel cuyas palabras están todas en el texto (el de más
+ * palabras gana: «tomate frito» antes que «tomate»).
+ */
+export function ingredientePorNombre(texto: string): Ingrediente | undefined {
+  const k = clave(texto);
+  if (!k) return undefined;
+  const nombres = (i: Ingrediente) => [i.nombre, ...(i.nombres ?? [])];
+  const exacto = INGREDIENTES.find((i) => nombres(i).some((n) => clave(n) === k));
+  if (exacto) return exacto;
+  const suyas = new Set(palabras(texto));
+  let mejor: { ingrediente: Ingrediente; palabras: number } | undefined;
+  for (const i of INGREDIENTES) {
+    for (const n of nombres(i)) {
+      // Lo que va entre paréntesis («Fruta (la más barata del día)») no cuenta.
+      const ps = palabras(n.replace(/\(.*?\)/g, ''));
+      if (ps.length === 0 || !ps.every((p) => suyas.has(p))) continue;
+      if (!mejor || ps.length > mejor.palabras) mejor = { ingrediente: i, palabras: ps.length };
+    }
+  }
+  return mejor?.ingrediente;
+}
+
+/** El ingrediente de una necesidad: el que tiene apuntado o, si no, el de su nombre. */
+export function ingredienteDe(
+  n: Pick<Necesidad, 'nombre' | 'ingrediente'>,
+): Ingrediente | undefined {
+  return (n.ingrediente ? porId.get(n.ingrediente) : undefined) ?? ingredientePorNombre(n.nombre);
+}
+
+/** ¿Se puede comparar el ingrediente con la necesidad? (kg con kg o g, l con l o ml, ud con ud). */
+export const unidadCompatible = (i: Ingrediente, n: Pick<Necesidad, 'unidad'>) =>
+  unidadDeComparacion(n.unidad) === i.unidad;
+
+/** ¿En qué tiendas con catálogo puede elegir la app? Donde no hay nada o lo eligió ella. */
+export function tiendasPorElegir(n: Necesidad): string[] {
+  return TIENDAS_AUTOMATICAS.filter((t) => !n.equivalencias?.[t] || elegidoPorLaApp(n, t));
+}
+
+export type ResultadoEleccion = {
+  necesidad: Necesidad;
+  ingrediente: Ingrediente;
+  /** Tiendas en las que la app ha elegido producto. */
+  elegidas: string[];
+  /** Tiendas en las que no hay ningún producto que valga. */
+  sinProducto: string[];
+};
+
+/**
+ * Elige el producto más barato del ingrediente en cada tienda con catálogo, sin tocar lo
+ * elegido a mano ni lo marcado como «no lo compro aquí». Devuelve null si la necesidad no
+ * corresponde a ningún ingrediente o se mide en otra unidad.
+ */
+export function elegirPorMi(
+  n: Necesidad,
+  datos: Datos,
+  hoy: string,
+  ahora: string,
+): ResultadoEleccion | null {
+  const ingrediente = ingredienteDe(n);
+  if (!ingrediente || !unidadCompatible(ingrediente, n)) return null;
+  let necesidad: Necesidad = { ...n, ingrediente: ingrediente.id };
+  const elegidas: string[] = [];
+  const sinProducto: string[] = [];
+  for (const tienda of tiendasPorElegir(n)) {
+    const producto = elegirProducto(ingrediente, datos, tienda, hoy);
+    if (!producto) {
+      sinProducto.push(tienda);
+      continue;
+    }
+    elegidas.push(tienda);
+    const actual = necesidad.equivalencias?.[tienda];
+    if (!actual || !('id' in actual) || actual.id !== producto.id || !actual.auto) {
+      necesidad = elegirAutomatico(necesidad, tienda, producto.id, ahora);
+    }
+  }
+  return { necesidad, ingrediente, elegidas, sinProducto };
+}
+
+/**
+ * Pone al día lo elegido por la app con los precios de hoy: si en su sección hay otro producto
+ * más barato por kg (o el elegido ha desaparecido), lo cambia. Devuelve solo las necesidades
+ * que cambian.
+ */
+export function actualizarAutomaticas(
+  necesidades: readonly Necesidad[],
+  datos: Datos,
+  hoy: string,
+  ahora: string,
+): Necesidad[] {
+  const cambiadas: Necesidad[] = [];
+  for (const n of necesidades) {
+    const automaticas = TIENDAS_AUTOMATICAS.filter((t) => elegidoPorLaApp(n, t));
+    if (automaticas.length === 0) continue;
+    const ingrediente = ingredienteDe(n);
+    if (!ingrediente || !unidadCompatible(ingrediente, n)) continue;
+    let nueva = n;
+    for (const tienda of automaticas) {
+      const producto = elegirProducto(ingrediente, datos, tienda, hoy);
+      const actual = n.equivalencias?.[tienda];
+      if (producto && actual && 'id' in actual && actual.id !== producto.id) {
+        nueva = elegirAutomatico(nueva, tienda, producto.id, ahora);
+      }
+    }
+    if (nueva !== n) cambiadas.push(nueva);
+  }
+  return cambiadas;
+}
+
+/** «por kg», «por litro» o «por unidad», para explicar cómo elige la app. */
+export const textoPorUnidad = (i: Ingrediente) =>
+  i.unidad === 'kg' ? 'por kg' : i.unidad === 'l' ? 'por litro' : 'por unidad';

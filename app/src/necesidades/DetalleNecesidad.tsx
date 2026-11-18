@@ -10,9 +10,11 @@ import { recetasCon } from '../menu/recetas.ts';
 import { useTiendas } from '../tiendas/estado.ts';
 import type { IdTienda, InfoTienda } from '../tiendas/modelo.ts';
 import { notaPrecio, precioAntiguo } from '../tiendas/productos.ts';
-import type { ProductoApp } from '../tipos.ts';
+import type { DatosApp, ProductoApp } from '../tipos.ts';
+import { ElegirPorMi, NotaAutomatica } from '../ingredientes/ElegirPorMi.tsx';
 import { guardar } from './estado.ts';
 import {
+  elegidoPorLaApp,
   estadoEquivalencia,
   NOMBRE_CATEGORIA,
   noComprarEn,
@@ -27,11 +29,13 @@ const ir = (ruta: string) => {
 /** Detalle de una necesidad: el producto elegido en cada tienda encendida. */
 export function DetalleNecesidad({
   necesidad,
+  datos,
   buscarProducto,
   tiendas,
   desdeCasa = false,
 }: {
   necesidad: Necesidad;
+  datos: DatosApp | null;
   buscarProducto: ((tienda: IdTienda, id: string) => ProductoApp | undefined) | null;
   tiendas: InfoTienda[] | null;
   /** Abierta desde «En casa»: vuelve allí. */
@@ -122,6 +126,14 @@ export function DetalleNecesidad({
         </p>
       )}
       {(!buscarProducto || !tiendas) && <p class="secundario">Cargando precios…</p>}
+      {datos && buscarProducto && (
+        <ElegirPorMi
+          necesidad={necesidad}
+          datos={datos}
+          buscarProducto={buscarProducto}
+          alCambiar={cambiar}
+        />
+      )}
       {buscarProducto &&
         activas.map((info) => {
           const tienda = info.id;
@@ -148,6 +160,7 @@ export function DetalleNecesidad({
                       nota={apuntado ? notaPrecio(apuntado, hoy) : undefined}
                     />
                   </div>
+                  {elegidoPorLaApp(necesidad, tienda) && <NotaAutomatica necesidad={necesidad} />}
                   {apuntado && precioAntiguo(apuntado, hoy) && (
                     <a
                       class="boton boton--ancho"

@@ -26,6 +26,13 @@ export async function guardar(n: Necesidad): Promise<void> {
   await recargarNecesidades();
 }
 
+/** Guarda varias necesidades de una vez (p. ej. lo elegido por la app puesto al día). */
+export async function guardarVarias(ns: readonly Necesidad[]): Promise<void> {
+  if (ns.length === 0) return;
+  for (const n of ns) await guardarNecesidad(n);
+  await recargarNecesidades();
+}
+
 /** Borra la necesidad (y la quita de las recetas que la usaban). */
 export async function borrar(id: string): Promise<void> {
   await borrarNecesidad(id);

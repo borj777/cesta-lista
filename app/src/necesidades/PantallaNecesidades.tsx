@@ -7,10 +7,11 @@ import { useRecetas } from '../menu/estado.ts';
 import { aportesDelMenu, textoConMenu } from '../menu/menu.ts';
 import { recetasCon } from '../menu/recetas.ts';
 import { useTiendas } from '../tiendas/estado.ts';
-import type { InfoTienda } from '../tiendas/modelo.ts';
-import type { DatosApp } from '../tipos.ts';
+import type { IdTienda, InfoTienda } from '../tiendas/modelo.ts';
+import type { DatosApp, ProductoApp } from '../tipos.ts';
 import { VistaDespensa } from '../despensa/PantallaDespensa.tsx';
 import { DetalleNecesidad } from './DetalleNecesidad.tsx';
+import { ElegirEnTodas } from '../ingredientes/ElegirPorMi.tsx';
 import { ElegirProducto } from './ElegirProducto.tsx';
 import { borrar, guardar, useNecesidades } from './estado.ts';
 import {
@@ -92,13 +93,21 @@ export function PantallaNecesidades({
       return (
         <DetalleNecesidad
           necesidad={existente}
+          datos={datos}
           buscarProducto={buscarProducto}
           tiendas={tiendas}
           desdeCasa={accion === 'casa'}
         />
       );
   }
-  return <ListaNecesidades necesidades={necesidades} tiendas={tiendas ?? []} />;
+  return (
+    <ListaNecesidades
+      necesidades={necesidades}
+      tiendas={tiendas ?? []}
+      datos={datos}
+      buscarProducto={buscarProducto}
+    />
+  );
 }
 
 /** Puntos de color de las tiendas encendidas con producto elegido, o «Sin elegir». */
@@ -129,9 +138,13 @@ function TiendasElegidas({ necesidad, tiendas }: { necesidad: Necesidad; tiendas
 function ListaNecesidades({
   necesidades,
   tiendas,
+  datos,
+  buscarProducto,
 }: {
   necesidades: Necesidad[];
   tiendas: InfoTienda[];
+  datos: DatosApp | null;
+  buscarProducto: ((tienda: IdTienda, id: string) => ProductoApp | undefined) | null;
 }) {
   const { recetas, menu } = useRecetas();
   const aportes = aportesDelMenu(menu, recetas ?? [], necesidades);
@@ -166,6 +179,9 @@ function ListaNecesidades({
       <a class="boton boton--ancho" href="#necesidades/en-casa">
         <Icono nombre="casa" tamano={20} /> Lo que tienes en casa
       </a>
+      {datos && buscarProducto && (
+        <ElegirEnTodas necesidades={necesidades} datos={datos} buscarProducto={buscarProducto} />
+      )}
       {agruparPorCategoria(necesidades).map((grupo) => (
         <section key={grupo.categoria} class="grupo">
           <h2 class="grupo__titulo">{NOMBRE_CATEGORIA[grupo.categoria]}</h2>

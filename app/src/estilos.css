@@ -1168,3 +1168,18 @@ body:has(input:focus:not([type='radio'])) .pestanas {
 .boton-recetas {
   margin-top: 8px;
 }
+
+/* «Elegir por mí»: la app elige el producto más barato de cada tienda. */
+.elegir-por-mi {
+  display: grid;
+  gap: 10px;
+}
+
+.elegir-por-mi p {
+  margin: 0;
+}
+
+.nota-automatica {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
