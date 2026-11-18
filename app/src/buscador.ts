@@ -120,6 +120,35 @@ export function buscar(
   };
 }
 
+/**
+ * Productos de una tienda que tienen alguna de las palabras buscadas, primero los que tienen
+ * más. Para listas cortas, como las ofertas de la semana, donde los nombres no coinciden del
+ * todo («Pechuga de pollo» y «Filete de pechuga»).
+ */
+export function buscarParecidos(
+  productos: ProductoApp[],
+  opciones: { consulta: string; tienda: string; unidad: Unidad; limite?: number },
+): ProductoApp[] {
+  const { consulta, tienda, unidad, limite = 20 } = opciones;
+  const buscadas = palabras(consulta);
+  if (buscadas.length === 0) return [];
+  return productos
+    .filter((p) => p.tienda === tienda)
+    .map((p) => {
+      const suyas = palabrasDe(productos, p);
+      return { p, aciertos: buscadas.filter((b) => suyas.some((s) => s.startsWith(b))).length };
+    })
+    .filter((x) => x.aciertos > 0)
+    .sort(
+      (a, b) =>
+        b.aciertos - a.aciertos ||
+        Number(b.p.formato.unidad === unidad) - Number(a.p.formato.unidad === unidad) ||
+        a.p.precioRef - b.p.precioRef,
+    )
+    .slice(0, limite)
+    .map((x) => x.p);
+}
+
 /** Busca un producto por tienda e id. */
 export function indicePorId(productos: ProductoApp[]): Map<string, ProductoApp> {
   return new Map(productos.map((p) => [`${p.tienda}:${p.id}`, p]));

@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useAjustesCompra } from './ajustes.ts';
 import { SinConexion, VersionNueva } from './componentes/Banderas.tsx';
 import { AvisosPrecios } from './componentes/EstadoPrecios.tsx';
 import { Icono, type NombreIcono } from './componentes/Icono.tsx';
@@ -11,6 +12,7 @@ import { PantallaNecesidades } from './necesidades/PantallaNecesidades.tsx';
 import { PantallaLista } from './lista/PantallaLista.tsx';
 import { PantallaAjustes } from './pantallas.tsx';
 import { PantallaTiendas } from './tiendas/PantallaTiendas.tsx';
+import { aplicarLidlPlus } from './tiendas/ofertas.ts';
 import type { DatosApp } from './tipos.ts';
 
 const PESTANAS = [
@@ -38,7 +40,13 @@ function rutaDeLaDireccion(): Ruta {
 export function App() {
   const [ruta, setRuta] = useState<Ruta>(rutaDeLaDireccion);
   const { pestana, sub } = ruta;
-  const [datos, setDatos] = useState<DatosApp | null>(null);
+  const [descargados, setDatos] = useState<DatosApp | null>(null);
+  const lidlPlus = useAjustesCompra()?.lidlPlus ?? false;
+  // Con Lidl Plus, sus ofertas cuentan con ese precio en toda la app.
+  const datos = useMemo(
+    () => (descargados ? aplicarLidlPlus(descargados, lidlPlus) : null),
+    [descargados, lidlPlus],
+  );
   const [guardados, setGuardados] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);

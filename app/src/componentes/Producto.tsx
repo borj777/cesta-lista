@@ -8,6 +8,7 @@ import {
 } from '../formato.ts';
 import { useImagen } from '../imagenes.ts';
 import { esAutomatica } from '../tiendas/modelo.ts';
+import { esOfertaSemanal, etiquetaOferta, notaLidlPlus } from '../tiendas/ofertas.ts';
 import type { ProductoApp } from '../tipos.ts';
 
 /** Foto del producto: se descarga solo cuando aparece en pantalla. */
@@ -37,6 +38,7 @@ export function FotoProducto({ producto }: { producto: ProductoApp }) {
  * Datos de un producto: foto, nombre, marca, formato, precio y precio por unidad.
  * El formato se muestra siempre (regla de la fase 2). Los apuntados a mano no tienen foto:
  * llevan una etiqueta; `nota` añade una línea, por ejemplo cuándo se comprobó su precio.
+ * Las ofertas semanales de Lidl llevan foto, sus fechas y, si lo tienen, el precio con Lidl Plus.
  */
 export function InfoProducto({
   producto,
@@ -47,10 +49,14 @@ export function InfoProducto({
   comparable?: boolean;
   nota?: { texto: string; atencion?: boolean };
 }) {
-  const vigente = precioVigente(producto, hoyEnEspana());
+  const hoy = hoyEnEspana();
+  const vigente = precioVigente(producto, hoy);
+  const semanal = esOfertaSemanal(producto);
+  const etiqueta = semanal ? etiquetaOferta(producto, hoy) : vigente.oferta;
+  const lidlPlus = semanal ? notaLidlPlus(producto) : null;
   return (
     <>
-      {!esAutomatica(producto.tienda) ? (
+      {!esAutomatica(producto.tienda) && !semanal ? (
         <span class="foto foto--propia" aria-hidden="true">
           <Icono nombre="etiqueta" tamano={26} />
         </span>
@@ -64,7 +70,8 @@ export function InfoProducto({
             .filter(Boolean)
             .join(' · ')}
         </span>
-        {vigente.oferta && <span class="etiqueta-oferta">{vigente.oferta}</span>}
+        {etiqueta && <span class="etiqueta-oferta">{etiqueta}</span>}
+        {lidlPlus && <span class="producto__nota">{lidlPlus}</span>}
         {nota && (
           <span
             class={nota.atencion ? 'producto__nota producto__nota--atencion' : 'producto__nota'}

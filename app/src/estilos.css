@@ -604,6 +604,14 @@ p {
   margin: 0 0 4px;
 }
 
+/* «Oferta de esta semana» y «Tu producto de siempre» dentro de la tarjeta de una tienda. */
+.tienda__parte {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto-2);
+  margin: 12px 0 0;
+}
+
 .tienda__no-compro {
   display: flex;
   align-items: center;

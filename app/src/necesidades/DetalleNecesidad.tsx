@@ -2,13 +2,14 @@ import { useState } from 'preact/hooks';
 import { Icono } from '../componentes/Icono.tsx';
 import { InfoProducto } from '../componentes/Producto.tsx';
 import { Punto } from '../componentes/Tienda.tsx';
-import { textoDia, unidadDeComparacion } from '../formato.ts';
+import { hoyEnEspana, textoDia, unidadDeComparacion } from '../formato.ts';
 import { useRecetas } from '../menu/estado.ts';
 import { EnCasa } from '../despensa/EnCasa.tsx';
 import { aportesDelMenu, necesidadesConMenu, textoConMenu } from '../menu/menu.ts';
 import { recetasCon } from '../menu/recetas.ts';
 import { useTiendas } from '../tiendas/estado.ts';
 import type { IdTienda, InfoTienda } from '../tiendas/modelo.ts';
+import { estadoOferta, quitarOferta } from '../tiendas/ofertas.ts';
 import { notaPrecio, precioAntiguo } from '../tiendas/productos.ts';
 import type { DatosApp, ProductoApp } from '../tipos.ts';
 import { ElegirPorMi, NotaAutomatica } from '../ingredientes/ElegirPorMi.tsx';
@@ -144,11 +145,43 @@ export function DetalleNecesidad({
             !info.automatica && estado.tipo === 'elegido'
               ? propios?.find((p) => p.id === estado.producto.id)
               : undefined;
+          const idOferta = necesidad.ofertas?.[tienda]?.id;
+          const oferta = idOferta ? buscarProducto(tienda, idOferta) : undefined;
+          const plazo = oferta ? estadoOferta(oferta, hoyEnEspana()) : null;
           return (
             <section key={tienda} class="tarjeta tienda">
               <h3 class="tienda__titulo">
                 <Punto color={info.color} /> {nombre}
               </h3>
+              {oferta && plazo !== 'terminada' && (
+                <>
+                  <p class="tienda__parte">Oferta de esta semana</p>
+                  <div class="producto">
+                    <InfoProducto
+                      producto={oferta}
+                      comparable={oferta.formato.unidad === unidadDeComparacion(necesidad.unidad)}
+                    />
+                  </div>
+                  <p class="secundario">
+                    {plazo === 'proxima'
+                      ? 'Aún no ha empezado: la app la usará cuando empiece, si sale más barata.'
+                      : 'Mientras dure, la app la usa si sale más barata. Cuando se acabe, se quita sola.'}
+                  </p>
+                  <div class="acciones acciones--fila">
+                    <a class="boton" href={elegir}>
+                      Cambiar
+                    </a>
+                    <button
+                      type="button"
+                      class="boton"
+                      onClick={() => void cambiar(quitarOferta(necesidad, tienda, ahora()))}
+                    >
+                      Quitar la oferta
+                    </button>
+                  </div>
+                  <p class="tienda__parte">Tu producto de siempre</p>
+                </>
+              )}
               {estado.tipo === 'elegido' && (
                 <>
                   <div class="producto">

@@ -6,12 +6,13 @@ import {
   type Periodo,
 } from '../ajustes.ts';
 import { Opciones } from './Opciones.tsx';
+import { Interruptor } from './Tienda.tsx';
 
 const OPCIONES_PERIODO = PERIODOS.map((p) => ({ valor: p, texto: NOMBRE_PERIODO[p] }));
 const COSTES = ['0', '1', '2', '3', '5'] as const;
 const OPCIONES_COSTE = COSTES.map((c) => ({ valor: c, texto: `${c} €` }));
 
-/** Ajustes → Cómo haces la compra: periodo y coste de ir a una tienda más. */
+/** Ajustes → Cómo haces la compra: periodo, coste de ir a una tienda más y Lidl Plus. */
 export function AjustesCompra() {
   const ajustes = useAjustesCompra();
   if (!ajustes) return null;
@@ -43,6 +44,17 @@ export function AjustesCompra() {
         Es lo que vale para ti el tiempo y el desplazamiento de ir a otra tienda. Con 0 €, cada cosa
         se compra donde sea más barata; cuanto más alto, más se junta la compra en menos tiendas.
       </p>
+      <Interruptor
+        id="lidl-plus"
+        etiqueta="Tengo Lidl Plus"
+        detalle={
+          ajustes.lidlPlus
+            ? 'En las ofertas de Lidl cuenta el precio con Lidl Plus.'
+            : 'En las ofertas de Lidl cuenta el precio sin Lidl Plus; el otro sale como nota.'
+        }
+        encendido={ajustes.lidlPlus}
+        alCambiar={(lidlPlus) => void guardarAjustesCompra({ lidlPlus })}
+      />
     </section>
   );
 }

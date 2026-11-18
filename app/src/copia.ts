@@ -113,6 +113,17 @@ function problemaNecesidad(
       if (!valida) return `el producto elegido en ${tienda} no es válido`;
     }
   }
+  if (n.ofertas !== undefined) {
+    if (!esObjeto(n.ofertas)) return 'las ofertas elegidas no son válidas';
+    for (const [tienda, o] of Object.entries(n.ofertas)) {
+      if (!esAutomatica(tienda) && !tiendas.has(tienda)) {
+        return `la tienda «${tienda}» no existe`;
+      }
+      const valida =
+        esObjeto(o) && typeof o.id === 'string' && o.id.length > 0 && Object.keys(o).length === 1;
+      if (!valida) return `la oferta elegida en ${tienda} no es válida`;
+    }
+  }
   return null;
 }
 

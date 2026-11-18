@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buscar, indicePorId, normalizar, palabras } from '../src/buscador.ts';
+import { buscar, buscarParecidos, indicePorId, normalizar, palabras } from '../src/buscador.ts';
 import type { ProductoApp, Unidad } from '../src/tipos.ts';
 
 let siguiente = 1;
@@ -122,5 +122,34 @@ describe('buscar', () => {
     const indice = indicePorId(productos);
     expect(indice.get(`consum:${lecheConsum.id}`)).toBe(lecheConsum);
     expect(indice.get(`mercadona:${lecheConsum.id}`)).toBeUndefined();
+  });
+});
+
+describe('buscarParecidos (ofertas de la semana)', () => {
+  const filete = producto('mercadona', 'Filete de pechuga', 3.99, 0.5, 'kg');
+  const longaniza = producto('mercadona', 'Longaniza fresca de pollo', 2.79, 0.39, 'kg');
+  const pechugaPollo = producto('mercadona', 'Pechuga entera de pollo', 9, 1, 'kg');
+  const lejia = producto('mercadona', 'Lejía', 0.95, 2, 'l');
+  const ofertas = [filete, longaniza, pechugaPollo, lejia];
+
+  it('encuentra las que tienen alguna palabra, primero las que tienen más', () => {
+    const r = buscarParecidos(ofertas, {
+      consulta: 'Pechuga de pollo',
+      tienda: 'mercadona',
+      unidad: 'kg',
+    });
+    expect(r[0]).toBe(pechugaPollo);
+    expect(r).toContain(filete);
+    expect(r).toContain(longaniza);
+    expect(r).not.toContain(lejia);
+  });
+
+  it('sin palabras o de otra tienda, nada', () => {
+    expect(buscarParecidos(ofertas, { consulta: 'de', tienda: 'mercadona', unidad: 'kg' })).toEqual(
+      [],
+    );
+    expect(buscarParecidos(ofertas, { consulta: 'pechuga', tienda: 'lidl', unidad: 'kg' })).toEqual(
+      [],
+    );
   });
 });

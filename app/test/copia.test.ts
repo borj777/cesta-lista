@@ -252,6 +252,19 @@ describe('leerCopia', () => {
     });
   });
 
+  it('acepta y conserva las ofertas de Lidl elegidas; rechaza las que no son válidas', () => {
+    const conOferta = { ...pollo, ofertas: { lidl: { id: '11137963' } } };
+    expect(leerCopia(copiaTexto([conOferta]))).toMatchObject({
+      ok: true,
+      copia: { necesidades: [conOferta] },
+    });
+    const mal = leerCopia(copiaTexto([{ ...pollo, ofertas: { lidl: { id: '' } } }]));
+    expect(mal).toMatchObject({ ok: false });
+    expect(!mal.ok && mal.error).toContain('la oferta elegida en lidl no es válida');
+    const sinTienda = leerCopia(copiaTexto([{ ...pollo, ofertas: { aldi: { id: '1' } } }]));
+    expect(!sinTienda.ok && sinTienda.error).toContain('la tienda «aldi» no existe');
+  });
+
   it('acepta y conserva las tiendas propias y sus productos', () => {
     const r = leerCopia(copiaTexto([pollo], { productos: [lecheLidl, naranjas] }));
     expect(r).toMatchObject({

@@ -9,6 +9,8 @@ import { recetasCon } from '../menu/recetas.ts';
 import { useTiendas } from '../tiendas/estado.ts';
 import type { IdTienda, InfoTienda } from '../tiendas/modelo.ts';
 import type { DatosApp, ProductoApp } from '../tipos.ts';
+import { hoyEnEspana } from '../formato.ts';
+import { ofertasDe } from '../tiendas/ofertas.ts';
 import { VistaDespensa } from '../despensa/PantallaDespensa.tsx';
 import { DetalleNecesidad } from './DetalleNecesidad.tsx';
 import { ElegirEnTodas } from '../ingredientes/ElegirPorMi.tsx';
@@ -85,6 +87,7 @@ export function PantallaNecesidades({
           necesidad={existente}
           info={info}
           productos={info.automatica ? datos.productos : productosPropios}
+          ofertas={info.automatica ? [] : ofertasDe(datos, info.id, hoyEnEspana())}
           buscarProducto={buscarProducto}
         />
       );
@@ -116,9 +119,9 @@ function TiendasElegidas({ necesidad, tiendas }: { necesidad: Necesidad; tiendas
   const activas = tiendas.filter((t) => t.activa);
   const elegidas = activas.filter((t) => {
     const x = e[t.id];
-    return x && 'id' in x;
+    return (x && 'id' in x) || necesidad.ofertas?.[t.id];
   });
-  const decididas = activas.filter((t) => e[t.id]).length;
+  const decididas = activas.filter((t) => e[t.id] || necesidad.ofertas?.[t.id]).length;
   if (decididas === 0) return <span class="sin-elegir">Sin elegir</span>;
   if (elegidas.length === 0) return <span class="sin-elegir">No lo compras</span>;
   return (

@@ -17,7 +17,11 @@ export type ProductoApp = {
   precio: number;
   precioRef: number;
   precioAnterior?: number;
+  /** Solo las ofertas de Lidl: precio con la app Lidl Plus, si es menor. */
+  precioLidlPlus?: number;
   oferta?: string;
+  /** Solo las ofertas de Lidl: primer día (AAAA-MM-DD), si aún no ha empezado. */
+  ofertaDesde?: string;
   ofertaHasta?: string;
   /** Id de la sección de la tienda (su nombre, en `DatosApp.secciones`). */
   seccion?: string;
@@ -27,8 +31,9 @@ export type EstadoTienda = { estado: 'ok' | 'fallida'; actualizado: string | nul
 
 export type DatosApp = {
   generado: string;
-  tiendas: Partial<Record<Tienda, EstadoTienda>>;
+  /** Estado de cada descarga: Mercadona, Consum y, desde el 18/11/2026, las ofertas de Lidl. */
+  tiendas: Partial<Record<Tienda | 'lidl', EstadoTienda>>;
   /** Nombre completo de cada sección («Carne > Aves y pollo > Pollo»), por tienda y por id. Falta en los precios guardados antes del 18/11/2026. */
-  secciones?: Partial<Record<Tienda, Record<string, string>>>;
+  secciones?: Partial<Record<string, Record<string, string>>>;
   productos: ProductoApp[];
 };

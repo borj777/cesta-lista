@@ -1,6 +1,7 @@
 /** Necesidades: lo que hace falta comprar, con su cantidad y cada cuánto. */
 import type { Despensa } from '../despensa/despensa.ts';
 import type { IdTienda } from '../tiendas/modelo.ts';
+import type { OfertasElegidas } from '../tiendas/ofertas.ts';
 
 export const CATEGORIAS = ['alimentacion', 'limpieza', 'higiene', 'mascota'] as const;
 export type Categoria = (typeof CATEGORIAS)[number];
@@ -66,6 +67,11 @@ export type Necesidad = {
   notas?: string;
   /** Producto elegido en cada tienda (por id, nunca por nombre) o «no lo compro aquí». */
   equivalencias?: Equivalencias;
+  /**
+   * Oferta semanal elegida en una tienda sin catálogo (Lidl), por su id. Se usa mientras dura,
+   * si sale más barata que lo elegido en `equivalencias`; cuando se acaba, se quita sola.
+   */
+  ofertas?: OfertasElegidas;
   /**
    * Solo se compra para las recetas del menú: no tiene cantidad propia (`cantidad` es 0).
    * Se crea al añadir un ingrediente nuevo a una receta.

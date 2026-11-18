@@ -19,14 +19,24 @@ export type AjustesCompra = {
   periodo: Periodo;
   /** Euros que cuenta ir a cada tienda más allá de la primera (tiempo y desplazamiento). */
   costeVisita: number;
+  /** Tiene la app Lidl Plus: en las ofertas de Lidl cuenta el precio con Lidl Plus. */
+  lidlPlus: boolean;
 };
 
-export const AJUSTES_INICIALES: AjustesCompra = { periodo: 'semana', costeVisita: 2 };
+export const AJUSTES_INICIALES: AjustesCompra = {
+  periodo: 'semana',
+  costeVisita: 2,
+  lidlPlus: false,
+};
 
 export const semanasDe = (periodo: Periodo): number => SEMANAS[periodo];
 
 /** Lee los ajustes guardados; si falta alguno o no es válido, usa el valor inicial. */
-export function leerAjustesCompra(guardados: { periodo?: unknown; costeVisita?: unknown }) {
+export function leerAjustesCompra(guardados: {
+  periodo?: unknown;
+  costeVisita?: unknown;
+  lidlPlus?: unknown;
+}): AjustesCompra {
   const periodo = PERIODOS.includes(guardados.periodo as Periodo)
     ? (guardados.periodo as Periodo)
     : AJUSTES_INICIALES.periodo;
@@ -35,7 +45,9 @@ export function leerAjustesCompra(guardados: { periodo?: unknown; costeVisita?: 
     typeof coste === 'number' && Number.isFinite(coste) && coste >= 0 && coste <= 100
       ? coste
       : AJUSTES_INICIALES.costeVisita;
-  return { periodo, costeVisita };
+  const lidlPlus =
+    typeof guardados.lidlPlus === 'boolean' ? guardados.lidlPlus : AJUSTES_INICIALES.lidlPlus;
+  return { periodo, costeVisita, lidlPlus };
 }
 
 let estado: AjustesCompra | null = null;
@@ -48,11 +60,12 @@ function publicar(nuevo: AjustesCompra) {
 
 export async function recargarAjustesCompra(): Promise<void> {
   try {
-    const [periodo, costeVisita] = await Promise.all([
+    const [periodo, costeVisita, lidlPlus] = await Promise.all([
       leerAjuste('periodo'),
       leerAjuste('costeVisita'),
+      leerAjuste('lidlPlus'),
     ]);
-    publicar(leerAjustesCompra({ periodo, costeVisita }));
+    publicar(leerAjustesCompra({ periodo, costeVisita, lidlPlus }));
   } catch {
     publicar(estado ?? AJUSTES_INICIALES);
   }
@@ -64,6 +77,7 @@ export async function guardarAjustesCompra(cambios: Partial<AjustesCompra>): Pro
   await Promise.all([
     guardarAjuste('periodo', nuevos.periodo),
     guardarAjuste('costeVisita', nuevos.costeVisita),
+    guardarAjuste('lidlPlus', nuevos.lidlPlus),
   ]);
 }
 

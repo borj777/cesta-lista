@@ -201,12 +201,20 @@ export async function borrarTiendaPropia(id: string): Promise<void> {
   const lista = necesidades.getAll() as IDBRequest<Necesidad[]>;
   lista.onsuccess = () => {
     for (const n of lista.result) {
-      if (!n.equivalencias || !(id in n.equivalencias)) continue;
+      const enEquivalencias = !!n.equivalencias && id in n.equivalencias;
+      const enOfertas = !!n.ofertas && id in n.ofertas;
+      if (!enEquivalencias && !enOfertas) continue;
+      const nueva: Necesidad = { ...n };
       const resto = Object.fromEntries(
-        Object.entries(n.equivalencias).filter(([tienda]) => tienda !== id),
+        Object.entries(n.equivalencias ?? {}).filter(([tienda]) => tienda !== id),
       );
-      const nueva: Necesidad = { ...n, equivalencias: resto };
-      if (Object.keys(resto).length === 0) delete nueva.equivalencias;
+      if (Object.keys(resto).length > 0) nueva.equivalencias = resto;
+      else delete nueva.equivalencias;
+      const ofertas = Object.fromEntries(
+        Object.entries(n.ofertas ?? {}).filter(([tienda]) => tienda !== id),
+      );
+      if (Object.keys(ofertas).length > 0) nueva.ofertas = ofertas;
+      else delete nueva.ofertas;
       necesidades.put(nueva);
     }
   };

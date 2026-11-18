@@ -15,6 +15,8 @@ import {
   type UnidadNecesidad,
 } from '../necesidades/modelo.ts';
 import type { DatosApp } from '../tipos.ts';
+import { OfertasSemana } from './OfertasSemana.tsx';
+import { ofertasDe } from './ofertas.ts';
 import {
   borrarProducto,
   borrarTienda,
@@ -233,15 +235,19 @@ function ListaTiendas({
       </p>
       {propias.length > 0 && (
         <ul class="filas tarjeta tarjeta--lista">
-          {propias.map((t) =>
-            fila(
+          {propias.map((t) => {
+            const resumen = resumenPropia(
+              productos.filter((p) => p.tienda === t.id),
+              ahora,
+            );
+            const ofertas = datos ? ofertasDe(datos, t.id, hoyEnEspana(ahora)).length : 0;
+            return fila(
               t,
-              resumenPropia(
-                productos.filter((p) => p.tienda === t.id),
-                ahora,
-              ),
-            ),
-          )}
+              ofertas > 0
+                ? `${resumen} · ${ofertas === 1 ? '1 oferta' : `${ofertas} ofertas`} esta semana`
+                : resumen,
+            );
+          })}
         </ul>
       )}
       {propias.length < MAX_TIENDAS_PROPIAS ? (
@@ -278,6 +284,8 @@ function PaginaTienda({
     a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }),
   );
   const antiguos = productos.filter((p) => precioAntiguo(p, ahora)).length;
+  const ofertas =
+    datos && !tienda.automatica ? ofertasDe(datos, tienda.id, hoyEnEspana(ahora)) : [];
   const cambiar = (activa: boolean) => {
     setFallo(null);
     cambiarActiva(tienda.id, activa).catch((e: unknown) => setFallo(falloDe(e)));
@@ -353,6 +361,14 @@ function PaginaTienda({
               Cambiar el nombre o borrar la tienda
             </a>
           </div>
+          {datos && ofertas.length > 0 && (
+            <OfertasSemana
+              ofertas={ofertas}
+              datos={datos}
+              tienda={tienda.id}
+              nombre={tienda.nombre}
+            />
+          )}
         </>
       )}
     </>

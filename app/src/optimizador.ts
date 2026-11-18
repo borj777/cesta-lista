@@ -12,6 +12,7 @@
 import { precioVigente, unidadDeComparacion } from './formato.ts';
 import { SEMANAS, type Necesidad } from './necesidades/modelo.ts';
 import type { IdTienda } from './tiendas/modelo.ts';
+import { ofertaVigente } from './tiendas/ofertas.ts';
 import type { ProductoApp, Unidad } from './tipos.ts';
 
 export type Tiendas = readonly IdTienda[];
@@ -173,16 +174,24 @@ export function analizar(
     const opciones: AnalisisNecesidad['opciones'] = {};
     const problemas: ProblemaTienda[] = [];
     for (const tienda of tiendas) {
+      // Oferta semanal elegida (Lidl): cuenta mientras dura si sale más barata.
+      const oferta = ofertaVigente(necesidad, tienda, buscarProducto, hoy);
+      const deOferta = oferta && opcionDe(tienda, oferta, cantidad, unidad, hoy);
       const e = necesidad.equivalencias?.[tienda];
-      if (!e || 'noCompro' in e) continue;
-      const producto = buscarProducto(tienda, e.id);
-      if (!producto) {
-        problemas.push({ tienda, tipo: 'desaparecido' });
-        continue;
+      let opcion: Opcion | null = null;
+      if (e && !('noCompro' in e)) {
+        const producto = buscarProducto(tienda, e.id);
+        if (!producto) {
+          if (!deOferta) problemas.push({ tienda, tipo: 'desaparecido' });
+        } else {
+          opcion = opcionDe(tienda, producto, cantidad, unidad, hoy);
+          if (!opcion && !deOferta) problemas.push({ tienda, tipo: 'otra-unidad' });
+        }
       }
-      const opcion = opcionDe(tienda, producto, cantidad, unidad, hoy);
+      if (deOferta && (!opcion || masBarata([deOferta, opcion], [tienda]) === deOferta)) {
+        opcion = deOferta;
+      }
       if (opcion) opciones[tienda] = opcion;
-      else problemas.push({ tienda, tipo: 'otra-unidad' });
     }
     return { necesidad, cantidad, unidad, opciones, problemas };
   });

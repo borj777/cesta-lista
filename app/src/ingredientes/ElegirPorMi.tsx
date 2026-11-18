@@ -4,6 +4,7 @@ import { hoyEnEspana } from '../formato.ts';
 import { guardarVarias, useNecesidades } from '../necesidades/estado.ts';
 import { estadoEquivalencia, type Necesidad } from '../necesidades/modelo.ts';
 import type { IdTienda } from '../tiendas/modelo.ts';
+import { quitarOfertasTerminadas } from '../tiendas/ofertas.ts';
 import type { DatosApp, ProductoApp } from '../tipos.ts';
 import { useRecetas } from '../menu/estado.ts';
 import { aportesDelMenu, necesidadesConMenu, type Menu } from '../menu/menu.ts';
@@ -23,7 +24,8 @@ const enumerar = (xs: string[]) =>
 
 /**
  * Pone al día, una vez por cada descarga de precios, lo que eligió la app: si hoy hay otro
- * producto válido más barato, lo cambia. No enseña nada.
+ * producto válido más barato, lo cambia. También quita las ofertas de Lidl que ya han
+ * terminado. No enseña nada.
  */
 export function PonerAlDia({ datos }: { datos: DatosApp | null }) {
   const { necesidades } = useNecesidades();
@@ -32,15 +34,22 @@ export function PonerAlDia({ datos }: { datos: DatosApp | null }) {
   useEffect(() => {
     if (!datos || !necesidades || !recetas || hecho.current === datos.generado) return;
     hecho.current = datos.generado;
-    const gasto = gastosConMenu(necesidades, recetas, menu);
-    const cambiadas = actualizarAutomaticas(
-      necesidades,
+    const hoy = hoyEnEspana();
+    const ahora = new Date().toISOString();
+    const sinTerminadas = new Map(
+      quitarOfertasTerminadas(necesidades, datos, hoy, ahora).map((n) => [n.id, n]),
+    );
+    const limpias = necesidades.map((n) => sinTerminadas.get(n.id) ?? n);
+    const gasto = gastosConMenu(limpias, recetas, menu);
+    const automaticas = actualizarAutomaticas(
+      limpias,
       datos,
-      hoyEnEspana(),
-      new Date().toISOString(),
+      hoy,
+      ahora,
       (n) => gasto.get(n.id) ?? gastoSemanal(n),
     );
-    guardarVarias(cambiadas).catch(() => {
+    const cambiadas = new Map([...sinTerminadas, ...automaticas.map((n) => [n.id, n] as const)]);
+    guardarVarias([...cambiadas.values()]).catch(() => {
       // Si no se puede guardar, se reintenta con la próxima descarga.
       hecho.current = null;
     });

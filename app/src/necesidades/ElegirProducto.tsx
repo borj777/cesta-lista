@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'preact/hooks';
-import { buscar } from '../buscador.ts';
+import { buscar, buscarParecidos } from '../buscador.ts';
 import { Icono } from '../componentes/Icono.tsx';
 import { InfoProducto } from '../componentes/Producto.tsx';
 import { unidadDeComparacion } from '../formato.ts';
 import { useTiendas } from '../tiendas/estado.ts';
 import type { IdTienda, InfoTienda } from '../tiendas/modelo.ts';
+import { elegirOferta } from '../tiendas/ofertas.ts';
 import { notaPrecio } from '../tiendas/productos.ts';
 import type { ProductoApp } from '../tipos.ts';
 import { guardar } from './estado.ts';
@@ -14,17 +15,22 @@ const UNIDAD_TEXTO = { kg: '€/kg', l: '€/l', ud: '€/unidad', lavado: '€/
 
 /**
  * Buscador para elegir qué producto de una tienda corresponde a una necesidad. En las tiendas
- * propias busca entre los precios apuntados a mano y permite añadir uno nuevo.
+ * propias busca entre los precios apuntados a mano y permite añadir uno nuevo. En Lidl salen
+ * además sus ofertas de la semana: una oferta se usa mientras dura, sin quitar el producto
+ * de siempre.
  */
 export function ElegirProducto({
   necesidad,
   info,
   productos,
+  ofertas = [],
   buscarProducto,
 }: {
   necesidad: Necesidad;
   info: InfoTienda;
   productos: ProductoApp[];
+  /** Ofertas semanales de la tienda que valen hoy o más adelante. */
+  ofertas?: ProductoApp[];
   buscarProducto: (tienda: IdTienda, id: string) => ProductoApp | undefined;
 }) {
   const tienda = info.id;
@@ -39,6 +45,7 @@ export function ElegirProducto({
   const volver = `necesidades/${necesidad.id}`;
   const elegidoAhora = necesidad.equivalencias?.[tienda];
   const idElegido = elegidoAhora && 'id' in elegidoAhora ? elegidoAhora.id : null;
+  const idOferta = necesidad.ofertas?.[tienda]?.id ?? null;
 
   // Códigos de barras de lo elegido en otras tiendas, para sugerir el mismo producto.
   const eans = useMemo(() => {
@@ -54,6 +61,11 @@ export function ElegirProducto({
   const resultado = useMemo(
     () => buscar(productos, { consulta, tienda, unidad, eans, todosSiVacia: esPropia }),
     [productos, consulta, tienda, unidad, eans, esPropia],
+  );
+  // Las ofertas son pocas y se llaman distinto: salen las que tienen alguna palabra.
+  const ofertasEncontradas = useMemo(
+    () => buscarParecidos(ofertas, { consulta, tienda, unidad, limite: 8 }),
+    [ofertas, consulta, tienda, unidad],
   );
   // En las tiendas propias hay pocos productos: si la búsqueda no encuentra nada, salen todos.
   const todosPropios = useMemo(
@@ -74,6 +86,24 @@ export function ElegirProducto({
   };
   const elegir = (p: ProductoApp) =>
     void guardarYVolver(elegirProducto(necesidad, tienda, p.id, new Date().toISOString()));
+  const elegirLaOferta = (p: ProductoApp) =>
+    void guardarYVolver(elegirOferta(necesidad, tienda, p.id, new Date().toISOString()));
+
+  const filaOferta = (p: ProductoApp) => (
+    <li key={`oferta-${p.id}`}>
+      <button
+        type="button"
+        class={
+          p.id === idOferta
+            ? 'producto producto--boton producto--elegido'
+            : 'producto producto--boton'
+        }
+        onClick={() => elegirLaOferta(p)}
+      >
+        <InfoProducto producto={p} comparable={p.formato.unidad === unidad} />
+      </button>
+    </li>
+  );
 
   const fila = (p: ProductoApp, comparable: boolean) => {
     const apuntado = esPropia ? propiosPorId.get(p.id) : undefined;
@@ -155,6 +185,17 @@ export function ElegirProducto({
         </p>
       )}
 
+      {ofertasEncontradas.length > 0 && (
+        <>
+          <h2 class="grupo__titulo">Ofertas de esta semana</h2>
+          <p class="secundario">
+            Una oferta se usa mientras dura, si sale más barata. Después vuelve tu producto de
+            siempre de {nombreTienda}.
+          </p>
+          <ul class="filas tarjeta tarjeta--lista">{ofertasEncontradas.map(filaOferta)}</ul>
+          <h2 class="grupo__titulo grupo__titulo--separado">Tu producto de siempre</h2>
+        </>
+      )}
       {resultado.mismoCodigo.length > 0 && (
         <>
           <h2 class="grupo__titulo">Mismo producto que en la otra tienda</h2>
