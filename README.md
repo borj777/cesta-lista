@@ -50,7 +50,8 @@ Todos los días, a las 7:00 de España, GitHub descarga los catálogos completos
 | `data/lidl.json` | Las ofertas de la semana de Lidl (comida, droguería y limpieza), una por línea, con el precio con Lidl Plus (`precioLidlPlus`) y sus fechas (`ofertaDesde` si aún no ha empezado, `ofertaHasta`) |
 | `data/meta.json` | Fecha, número de productos y estado de cada tienda |
 | `data/secciones.json` | Nombre de cada sección de cada tienda («Carne > Aves y pollo > Pollo»), por su id |
-| `data/app.json` | Versión ligera para la app: solo los campos que usa (sin enlaces ni fotos) y el estado de cada tienda. Unos 2,8 MB, que se descargan comprimidos como unos 500 KB |
+| `data/historial/` | Historial de precios de Mercadona y Consum: por cada producto, su precio y su `precioRef` solo los días en que cambian (y `null` el día que deja de estar), desde el 15/11/2026 y durante unos 400 días. Cada tienda va en 10 trozos según la última cifra del id (`mercadona-3.json` tiene los ids que acaban en 3), para que la app descargue solo el que necesita |
+| `data/app.json` | Versión ligera para la app: solo los campos que usa (sin enlaces ni fotos) y el estado de cada tienda. Los productos que han cambiado de precio en los últimos 30 días llevan `cambio` (el día y el precio de antes). Unos 2,8 MB, que se descargan comprimidos como unos 500 KB |
 
 Cada producto tiene su sección (`seccion`), su precio y su `precioRef`: el precio por kg, por litro o por unidad, que es el que sirve para comparar entre tiendas. Si está en oferta, `oferta` dice cuál es y `ofertaHasta`, su último día.
 
@@ -74,6 +75,7 @@ npm run scrape            # todas las tiendas
 npm run scrape -- consum  # solo una tienda (mercadona, consum o lidl)
 npm run estado            # resumen de data/meta.json
 npm run app               # regenera data/app.json sin descargar nada
+npm run recuperar-historial  # rehace data/historial/ con los precios guardados en git
 ```
 
 Para respetar las webs, conviene no lanzarlo más de una vez al día. Las ejecuciones automáticas ya lo tienen en cuenta: si ese día ya hay datos, no descargan nada.

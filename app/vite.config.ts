@@ -9,7 +9,10 @@ const BASE = '/cesta-lista/';
 const DATOS = new URL('../data/', import.meta.url);
 const PUBLICO = new URL('./public/', import.meta.url);
 
-/** En desarrollo, sirve data/app.json e imagenes.json desde la carpeta /data del repositorio. */
+/**
+ * En desarrollo, sirve data/app.json, imagenes.json y los trozos del historial desde la
+ * carpeta /data del repositorio.
+ */
 function datosLocales(): Plugin {
   return {
     name: 'datos-locales',
@@ -17,7 +20,10 @@ function datosLocales(): Plugin {
       server.middlewares.use(`${BASE}data/`, (req, res, next) => {
         const nombre = (req.url ?? '').replace(/^\//, '').split('?')[0] ?? '';
         const archivo = new URL(nombre, DATOS);
-        if (!['app.json', 'imagenes.json'].includes(nombre) || !existsSync(archivo)) return next();
+        const permitido =
+          ['app.json', 'imagenes.json'].includes(nombre) ||
+          /^historial\/[a-z]+-\d\.json$/.test(nombre);
+        if (!permitido || !existsSync(archivo)) return next();
         res.setHeader('Content-Type', 'application/json; charset=utf-8');
         res.end(readFileSync(archivo));
       });

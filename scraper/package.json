@@ -16,7 +16,8 @@
     "format:check": "prettier --check .",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm test",
     "estado": "node src/comprobar-meta.ts",
-    "app": "node src/generar-app.ts"
+    "app": "node src/generar-app.ts",
+    "recuperar-historial": "node src/recuperar-historial.ts"
   },
   "dependencies": {
     "zod": "^4.6.7"

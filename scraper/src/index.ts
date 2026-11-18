@@ -7,7 +7,15 @@ import { descargarConsum } from './adapters/consum.ts';
 import { descargarLidl } from './adapters/lidl.ts';
 import { descargarMercadona } from './adapters/mercadona.ts';
 import { leerSecciones, serializarSecciones, unirSecciones } from './app.ts';
-import { actualizarApp, escribir, leerJson, leerMeta } from './archivos.ts';
+import {
+  actualizarApp,
+  escribir,
+  escribirHistorial,
+  leerHistorial,
+  leerJson,
+  leerMeta,
+} from './archivos.ts';
+import { anotarDia, diaEspana, TIENDAS_HISTORIAL, type TiendaHistorial } from './historial.ts';
 import { crearCliente, type Pedir } from './http.ts';
 import {
   estadoTienda,
@@ -62,6 +70,13 @@ async function procesar(
       'secciones.json',
       serializarSecciones(unirSecciones(secciones, tienda, resultado.secciones)),
     );
+    if ((TIENDAS_HISTORIAL as readonly string[]).includes(tienda)) {
+      const historial = await leerHistorial(tienda as TiendaHistorial);
+      await escribirHistorial(
+        tienda as TiendaHistorial,
+        anotarDia(historial, resultado.productos, diaEspana(ahora)),
+      );
+    }
     registrar(`${tienda}: OK, ${resultado.productos.length} productos guardados`);
   } else if (!veredicto.valido) {
     registrar(`${tienda}: FALLIDA, se conservan los datos anteriores. Motivo: ${veredicto.motivo}`);

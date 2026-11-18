@@ -1,3 +1,4 @@
+import { cambioReciente, diaEspana, type Cambio, type Historial } from './historial.ts';
 import type { Meta } from './meta.ts';
 import { seccionesUsadas } from './normalizar.ts';
 import type { Producto, Tienda } from './tipos.ts';
@@ -23,7 +24,11 @@ export const CAMPOS_APP = [
   'seccion',
 ] as const satisfies readonly (keyof Producto)[];
 
-export type ProductoApp = Pick<Producto, (typeof CAMPOS_APP)[number]>;
+/**
+ * Producto de app.json. `cambio`: el último cambio de precio, si es de los últimos 30 días
+ * (para los avisos de bajadas sin descargar el historial).
+ */
+export type ProductoApp = Pick<Producto, (typeof CAMPOS_APP)[number]> & { cambio?: Cambio };
 
 export type EstadoApp = { estado: 'ok' | 'fallida'; actualizado: string | null };
 
@@ -43,11 +48,12 @@ export type Secciones = Partial<Record<Tienda, Record<string, string>>>;
 /** Orden fijo de las tiendas en el archivo, para que los commits sean estables. */
 const ORDEN: Tienda[] = ['mercadona', 'consum', 'lidl'];
 
-export function aProductoApp(p: Producto): ProductoApp {
-  const app: Partial<Record<keyof Producto, unknown>> = {};
+export function aProductoApp(p: Producto, cambio?: Cambio | null): ProductoApp {
+  const app: Partial<Record<keyof ProductoApp, unknown>> = {};
   for (const campo of CAMPOS_APP) {
     if (p[campo] !== undefined) app[campo] = p[campo];
   }
+  if (cambio) app.cambio = cambio;
   return app as ProductoApp;
 }
 
@@ -55,7 +61,9 @@ export function construirApp(
   meta: Meta,
   porTienda: Partial<Record<Tienda, Producto[]>>,
   nombres: Secciones = {},
+  historiales: Partial<Record<Tienda, Historial>> = {},
 ): DatosApp {
+  const dia = diaEspana(meta.generado);
   const tiendas: DatosApp['tiendas'] = {};
   const secciones: DatosApp['secciones'] = {};
   const productos: ProductoApp[] = [];
@@ -65,7 +73,8 @@ export function construirApp(
     const lista = [...(porTienda[tienda] ?? [])].sort((a, b) =>
       a.id.localeCompare(b.id, 'es', { numeric: true }),
     );
-    productos.push(...lista.map(aProductoApp));
+    const historial = historiales[tienda];
+    productos.push(...lista.map((p) => aProductoApp(p, cambioReciente(historial?.get(p.id), dia))));
     const usadas = seccionesUsadas(lista, nombres[tienda] ?? {});
     if (Object.keys(usadas).length > 0) secciones[tienda] = usadas;
   }

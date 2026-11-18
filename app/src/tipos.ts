@@ -25,6 +25,11 @@ export type ProductoApp = {
   ofertaHasta?: string;
   /** Id de la sección de la tienda (su nombre, en `DatosApp.secciones`). */
   seccion?: string;
+  /**
+   * Último cambio de precio (Mercadona y Consum), si es de los últimos 30 días: el día y el
+   * precio y precioRef de antes. Falta en los precios guardados antes del 18/11/2026.
+   */
+  cambio?: { dia: string; antes: number; antesRef: number };
 };
 
 export type EstadoTienda = { estado: 'ok' | 'fallida'; actualizado: string | null };

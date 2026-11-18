@@ -16,7 +16,7 @@ respuestas/
 cesta-lista-copia*.json
 
 # Archivos temporales del scraper (se escriben y se renombran)
-data/*.tmp
+data/**/*.tmp
 
 # Configuración local de Claude Code (contiene rutas de este Mac)
 .claude/
