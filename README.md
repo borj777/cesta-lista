@@ -13,7 +13,7 @@ Es un proyecto personal y sin ánimo de lucro.
 - **Fase 0 (terminada):** Mercadona y Consum responden desde GitHub Actions.
 - **Fase 1 (terminada):** descarga diaria completa de Mercadona y Consum.
 - **Fase 2 (terminada):** la app para el iPhone: necesidades, buscador, tiendas propias, cálculo de la compra más barata y lista para ir a comprar.
-- **Fase 3 (en marcha):** menú por días, despensa y avisos, y la dieta en automático: la app lee el PDF de la dieta, saca lo que lleva cada plato y elige el producto más barato de cada tienda.
+- **Fase 3 (en marcha):** menú por días, despensa y avisos, la dieta en automático (la app lee el PDF de la dieta, saca lo que lleva cada plato y elige el producto más barato de cada tienda) y las ofertas semanales de Lidl.
 
 ## La app
 
@@ -26,6 +26,7 @@ Se publica sola (workflow «Publicar la app») cada vez que se sube un cambio a 
 1. **Necesidades:** apunta lo que compras, con la cantidad y cada cuánto (por ejemplo, leche semidesnatada, 6 litros a la semana; detergente, 50 lavados al mes).
 2. **Qué compras en cada tienda:** pulsa **Elegir por mí** y la app pone el producto de Mercadona y de Consum que menos cuesta para lo que gastas, y lo cambia sola cuando aparece otro más barato. También puedes elegirlo tú con el buscador (entonces queda fijo) o decir «No lo compro aquí». Se compara por precio por kg, litro, unidad o lavado.
 3. **Tiendas:** Mercadona y Consum tienen precios automáticos. En Lidl y en las tiendas que añadas (hasta 8, por ejemplo la frutería) apuntas tú los precios mirando el ticket; la app avisa si un precio tiene más de 30 días. Cualquier tienda se puede apagar si no vas nunca.
+   **Ofertas de Lidl:** cada mañana se descargan sus ofertas de la semana (las de Valencia). Las ves en **Tiendas → Lidl**, con su fecha de fin. La app elige sola, para cada necesidad, la oferta que menos cuesta y la usa mientras dura si sale más barata que en las otras tiendas; luego vuelve tu producto de siempre. La Lista enseña las ofertas que entran en la compra; si una no te vale, pulsa **No me vale** y no te la vuelve a proponer. También puedes elegir una oferta a mano en el buscador de Lidl de cada necesidad. Si tienes la app Lidl Plus, enciende **Ajustes → Tengo Lidl Plus** para que cuente ese precio.
 4. **Lista:** dice a qué tiendas ir, cuánto pagarás y cuánto ahorras frente a comprarlo todo en una sola tienda. En **Ajustes** eliges para cuánto tiempo compras (1 semana, 2 semanas o 1 mes) y cuánto te compensa ir a una tienda más.
 5. **Menú y dieta:** en **Menú → Leer el PDF de la dieta**, elige el PDF de tu nutricionista (se lee en el iPhone y no se guarda). Sale **«Tu compra para esta dieta»**: lo que comprarías cada semana con el producto de cada tienda. Quita lo que sobre, di qué es lo que la app no reconozca (lo recordará otros meses) y pulsa **Usar esta compra**: se guardan el menú de lunes a domingo, las recetas y las necesidades. Las cantidades son orientativas cuando la dieta no las indica; se cambian en **Mis recetas**.
 6. **Empezar la compra:** en la tienda, toca cada cosa al cogerla de la estantería y pasará al carro. La pantalla no se apaga mientras tanto. Al terminar, la app apunta qué has comprado: lo que dura más que una compra (el detergente del mes en una compra semanal) no vuelve a salir hasta que se vaya a acabar, y mientras tanto aparece en «Puede que aún te quede».
@@ -40,12 +41,13 @@ En **Ajustes → Diagnóstico** están la versión de la app, la fecha de los pr
 
 ## Precios diarios
 
-Todos los días, a las 7:00 de España, GitHub descarga los catálogos completos de Mercadona (precios de Valencia, código postal 46001) y de Consum y los guarda en la carpeta [`data/`](data/):
+Todos los días, a las 7:00 de España, GitHub descarga los catálogos completos de Mercadona (precios de Valencia, código postal 46001) y de Consum, y las ofertas de la semana de Lidl (una sola página de su web, con los precios de Valencia), y los guarda en la carpeta [`data/`](data/):
 
 | Archivo | Contenido |
 |---|---|
 | `data/mercadona.json` | Todos los productos de Mercadona, uno por línea |
 | `data/consum.json` | Todos los productos de Consum, uno por línea |
+| `data/lidl.json` | Las ofertas de la semana de Lidl (comida, droguería y limpieza), una por línea, con el precio con Lidl Plus (`precioLidlPlus`) y sus fechas (`ofertaDesde` si aún no ha empezado, `ofertaHasta`) |
 | `data/meta.json` | Fecha, número de productos y estado de cada tienda |
 | `data/secciones.json` | Nombre de cada sección de cada tienda («Carne > Aves y pollo > Pollo»), por su id |
 | `data/app.json` | Versión ligera para la app: solo los campos que usa (sin enlaces ni fotos) y el estado de cada tienda. Unos 2,8 MB, que se descargan comprimidos como unos 500 KB |
@@ -60,7 +62,7 @@ La fecha de los precios está en `meta.json` (una por tienda), no en cada produc
 
 1. Abre la pestaña **Actions** del repositorio.
 2. En la lista de la izquierda, elige **Precios diarios**.
-3. Pulsa **Run workflow** y otra vez **Run workflow** en el desplegable.
+3. Pulsa **Run workflow**. En el desplegable puedes escribir qué tiendas descargar (por ejemplo `lidl`); si lo dejas vacío, se descargan todas. Pulsa otra vez **Run workflow**.
 4. Tarda unos 8 minutos. Al terminar verás un círculo verde (todo bien) o una cruz roja (algo ha fallado).
 
 **Desde el Mac** (hace falta Node 26):
@@ -69,7 +71,7 @@ La fecha de los precios está en `meta.json` (una por tienda), no en cada produc
 cd scraper
 npm ci
 npm run scrape            # todas las tiendas
-npm run scrape -- consum  # solo una tienda
+npm run scrape -- consum  # solo una tienda (mercadona, consum o lidl)
 npm run estado            # resumen de data/meta.json
 npm run app               # regenera data/app.json sin descargar nada
 ```
@@ -107,6 +109,8 @@ Para no estropear los datos buenos, una tienda se marca como fallida y **no se s
 - más del 20 % de los precios varía más de un 50 % de un día para otro;
 - Mercadona deja de asignar el almacén de Valencia (`vlc1`) al código postal 46001.
 
+Las ofertas de Lidl cambian enteras cada semana, así que no se comparan con el día anterior: solo se rechazan si no llega ninguna o si más del 5 % no se puede leer.
+
 ### Otros datos de `meta.json`
 
 - `avisosPrecioRef`: productos cuyo precio por kg, litro o unidad, calculado aquí, no coincide con el que publica la tienda (con un margen del 2 %). Se guardan igualmente; `ejemplosAvisos` enseña algunos para revisarlos.
@@ -142,10 +146,10 @@ npm run build    # versión para publicar, en app/dist
 | `scraper/fixtures/` | Respuestas reales de las tiendas para los tests |
 | `app/` | La app (Vite, Preact y TypeScript) |
 | `app/src/necesidades/` | Necesidades, buscador y elección de productos |
-| `app/src/ingredientes/` | Catálogo de ingredientes y elección automática del producto («Elegir por mí») |
+| `app/src/ingredientes/` | Catálogo de ingredientes y elección automática del producto («Elegir por mí») y de las ofertas de Lidl |
 | `app/src/menu/` | Menú por días, recetas y lector del PDF de la dieta (`dieta/`: lectura, recetario y compra automática) |
 | `app/src/despensa/` | Lo que queda en casa y avisos |
-| `app/src/tiendas/` | Tiendas propias, sus productos y tiendas apagadas |
+| `app/src/tiendas/` | Tiendas propias, sus productos, tiendas apagadas y ofertas de Lidl |
 | `app/src/optimizador.ts` | Cálculo de la combinación de tiendas más barata |
 | `app/src/lista/` | Lista de compra, compra en la tienda y pantalla encendida |
 | `app/sw/sw.js` | Service worker (funcionamiento sin conexión) |

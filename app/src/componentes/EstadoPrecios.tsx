@@ -2,12 +2,17 @@ import {
   avisosPrecios,
   fechaCorta,
   fechaHora,
+  HORAS_ANTIGUEDAD,
   miles,
   resumenTiendas,
   type Aviso,
 } from '../estado.ts';
+import { hoyEnEspana } from '../formato.ts';
+import { useTiendas } from '../tiendas/estado.ts';
+import { ofertasDe } from '../tiendas/ofertas.ts';
 import type { DatosApp } from '../tipos.ts';
 import { Icono } from './Icono.tsx';
+import { Punto } from './Tienda.tsx';
 
 /** Avisos de precios fallidos o antiguos. Se muestran arriba en todas las pantallas. */
 export function AvisosPrecios({ avisos }: { avisos: Aviso[] }) {
@@ -63,6 +68,36 @@ export function DetallePrecios({ datos, ahora }: { datos: DatosApp; ahora: Date 
           </li>
         );
       })}
+      <OfertasLidl datos={datos} ahora={ahora} />
     </ul>
+  );
+}
+
+/** Línea de las ofertas de Lidl: fecha de la última descarga y cuántas valen hoy o más adelante. */
+function OfertasLidl({ datos, ahora }: { datos: DatosApp; ahora: Date }) {
+  const { lista } = useTiendas();
+  const lidl = lista?.find((t) => t.id === 'lidl');
+  const estado = datos.tiendas.lidl;
+  if (!lidl || !estado) return null;
+  const n = ofertasDe(datos, 'lidl', hoyEnEspana(ahora)).length;
+  const antigua =
+    !estado.actualizado ||
+    (ahora.getTime() - Date.parse(estado.actualizado)) / 3_600_000 > HORAS_ANTIGUEDAD;
+  const correcto = estado.estado === 'ok' && !antigua;
+  return (
+    <li class="fila">
+      <Punto color={lidl.color} />
+      <div class="fila__texto">
+        <span>Ofertas de {lidl.nombre}</span>
+        <span class={correcto ? 'secundario' : 'secundario texto--atencion'}>
+          {estado.actualizado
+            ? `${estado.estado === 'fallida' ? 'Falló la última descarga · ' : ''}Del ${fechaHora(estado.actualizado)} · ${n === 1 ? '1 oferta' : `${miles(n)} ofertas`}`
+            : 'Sin ofertas todavía'}
+        </span>
+      </div>
+      <span class={correcto ? 'texto--bien' : 'texto--atencion'}>
+        <Icono nombre={correcto ? 'hecho' : 'alerta'} />
+      </span>
+    </li>
   );
 }
