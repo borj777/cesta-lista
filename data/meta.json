@@ -1,14 +1,14 @@
 {
-  "generado": "2026-11-17T06:55:57.167Z",
+  "generado": "2026-11-18T06:54:48.280Z",
   "tiendas": {
     "mercadona": {
       "estado": "ok",
-      "actualizado": "2026-11-17T06:55:57.167Z",
-      "productos": 4421,
-      "comprobado": "2026-11-17T06:55:57.167Z",
-      "duracionSegundos": 291,
+      "actualizado": "2026-11-18T06:54:48.280Z",
+      "productos": 4391,
+      "comprobado": "2026-11-18T06:54:48.280Z",
+      "duracionSegundos": 264,
       "peticiones": 154,
-      "sinVerificar": 215,
+      "sinVerificar": 207,
       "descartados": 0,
       "avisosPrecioRef": 12,
       "ejemplosAvisos": [
@@ -101,12 +101,12 @@
     },
     "consum": {
       "estado": "ok",
-      "actualizado": "2026-11-17T06:55:57.167Z",
-      "productos": 9301,
-      "comprobado": "2026-11-17T06:55:57.167Z",
-      "duracionSegundos": 172,
-      "peticiones": 94,
-      "sinVerificar": 412,
+      "actualizado": "2026-11-18T06:54:48.280Z",
+      "productos": 9464,
+      "comprobado": "2026-11-18T06:54:48.280Z",
+      "duracionSegundos": 186,
+      "peticiones": 96,
+      "sinVerificar": 418,
       "descartados": 0,
       "avisosPrecioRef": 9,
       "ejemplosAvisos": [
