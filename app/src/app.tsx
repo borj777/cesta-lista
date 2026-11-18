@@ -101,7 +101,7 @@ export function App() {
         {datos && <AvisosPrecios avisos={avisosPrecios(datos, ahora)} />}
         {pestana === 'lista' && <PantallaLista datos={datos} ahora={ahora} />}
         {pestana === 'necesidades' && <PantallaNecesidades sub={sub} datos={datos} />}
-        {pestana === 'menu' && <PantallaMenu sub={sub} />}
+        {pestana === 'menu' && <PantallaMenu sub={sub} datos={datos} />}
         {pestana === 'tiendas' && <PantallaTiendas sub={sub} datos={datos} ahora={ahora} />}
         {pestana === 'ajustes' && (
           <PantallaAjustes datos={datos} ahora={ahora} guardados={guardados} error={error} />

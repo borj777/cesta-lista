@@ -1183,3 +1183,59 @@ body:has(input:focus:not([type='radio'])) .pestanas {
   margin: 0 0 8px;
   font-size: 13px;
 }
+
+/* «Tu compra para esta dieta»: cada cosa con su producto en cada tienda. */
+.cosas-dieta {
+  padding: 0;
+}
+
+.cosa-dieta {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--borde);
+  display: grid;
+  gap: 4px;
+}
+
+.tarjeta--lista li.cosa-dieta:last-child {
+  border-bottom: none;
+}
+
+.cosa-dieta__cabecera {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cosa-dieta__platos {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.cosa-dieta__producto {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.cosa-dieta__tienda {
+  font-weight: 600;
+}
+
+.cosa-dieta__quitar {
+  justify-self: start;
+  margin-top: 4px;
+}
+
+.desconocidos {
+  display: grid;
+  gap: 10px;
+}
+
+.enlace {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--marca);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}

@@ -5,7 +5,12 @@
  */
 import { palabras } from '../buscador.ts';
 import { unidadDeComparacion } from '../formato.ts';
-import { elegidoPorLaApp, elegirAutomatico, type Necesidad } from '../necesidades/modelo.ts';
+import {
+  elegidoPorLaApp,
+  elegirAutomatico,
+  SEMANAS,
+  type Necesidad,
+} from '../necesidades/modelo.ts';
 import { TIENDAS_AUTOMATICAS } from '../tiendas/modelo.ts';
 import type { DatosApp } from '../tipos.ts';
 import { INGREDIENTES, type Ingrediente } from './catalogo.ts';
@@ -77,6 +82,8 @@ export function elegirPorMi(
   datos: Datos,
   hoy: string,
   ahora: string,
+  /** Lo que se gasta a la semana en kg, l o ud. (con el menú); si falta, el de la necesidad. */
+  semanal: number = gastoSemanal(n),
 ): ResultadoEleccion | null {
   const ingrediente = ingredienteDe(n);
   if (!ingrediente || !unidadCompatible(ingrediente, n)) return null;
@@ -84,7 +91,7 @@ export function elegirPorMi(
   const elegidas: string[] = [];
   const sinProducto: string[] = [];
   for (const tienda of tiendasPorElegir(n)) {
-    const producto = elegirProducto(ingrediente, datos, tienda, hoy);
+    const producto = elegirProducto(ingrediente, datos, tienda, hoy, semanal);
     if (!producto) {
       sinProducto.push(tienda);
       continue;
@@ -108,6 +115,8 @@ export function actualizarAutomaticas(
   datos: Datos,
   hoy: string,
   ahora: string,
+  /** Lo que se gasta a la semana de cada necesidad (con el menú), en kg, l o ud. */
+  semanalDe: (n: Necesidad) => number = gastoSemanal,
 ): Necesidad[] {
   const cambiadas: Necesidad[] = [];
   for (const n of necesidades) {
@@ -117,7 +126,7 @@ export function actualizarAutomaticas(
     if (!ingrediente || !unidadCompatible(ingrediente, n)) continue;
     let nueva = n;
     for (const tienda of automaticas) {
-      const producto = elegirProducto(ingrediente, datos, tienda, hoy);
+      const producto = elegirProducto(ingrediente, datos, tienda, hoy, semanalDe(n));
       const actual = n.equivalencias?.[tienda];
       if (producto && actual && 'id' in actual && actual.id !== producto.id) {
         nueva = elegirAutomatico(nueva, tienda, producto.id, ahora);
@@ -126,6 +135,15 @@ export function actualizarAutomaticas(
     if (nueva !== n) cambiadas.push(nueva);
   }
   return cambiadas;
+}
+
+/** Lo que se gasta a la semana de una necesidad, en kg, l o ud. (g y ml pasan a kg y l). */
+export function gastoSemanal(n: Pick<Necesidad, 'cantidad' | 'unidad' | 'frecuencia'>): number {
+  const base = unidadDeComparacion(n.unidad);
+  const factor = n.unidad === 'g' || n.unidad === 'ml' ? 0.001 : 1;
+  return base === 'kg' || base === 'l' || base === 'ud'
+    ? (n.cantidad * factor) / SEMANAS[n.frecuencia]
+    : 0;
 }
 
 /** «por kg», «por litro» o «por unidad», para explicar cómo elige la app. */

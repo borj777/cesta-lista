@@ -913,7 +913,7 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['garbanzo cocido'],
     en: LEGUMBRES,
     excluir: ['pasta', 'harina', 'hummus'],
-    nombres: ['garbanzos', 'hummus'],
+    nombres: ['garbanzos'],
     racion: 0.2,
   },
   {
@@ -956,6 +956,23 @@ export const INGREDIENTES: Ingrediente[] = [
       'sin gluten',
     ],
     nombres: ['avena'],
+    racion: 0.04,
+  },
+  {
+    id: 'cereales',
+    nombre: 'Cereales de desayuno',
+    unidad: 'kg',
+    buscar: [
+      'corn flakes',
+      'copos maiz',
+      'cereales integrales',
+      'copos trigo',
+      'muesli',
+      'cereales',
+    ],
+    en: CEREALES,
+    excluir: ['chocolate', 'choco', 'miel', 'barrita', 'relleno', 'avena', 'infantil', 'galleta'],
+    nombres: ['cereales'],
     racion: 0.04,
   },
   {
@@ -1150,6 +1167,7 @@ export const INGREDIENTES: Ingrediente[] = [
     unidad: 'kg',
     buscar: ['hummus'],
     en: ['Hummus y otros', 'Ensaladas preparadas y guacamole', 'Platos preparados'],
+    nombres: ['humus'],
     racion: 0.05,
   },
   // Frutos secos y semillas

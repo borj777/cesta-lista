@@ -3,6 +3,7 @@ import { useEffect, useState } from 'preact/hooks';
 import {
   borrarReceta as borrarRecetaBD,
   guardarAjuste,
+  guardarDieta,
   guardarRecetaYNecesidades,
   leerAjuste,
   listarRecetas,
@@ -61,6 +62,20 @@ export async function borrarReceta(id: string): Promise<void> {
     await guardarMenu(quitarRecetaDelMenu(estado.menu, id));
   }
   await recargarRecetas();
+}
+
+/** Guarda lo que sale de la dieta (necesidades, recetas y menú) y lo recarga todo. */
+export async function usarDieta(cambios: {
+  necesidades: Necesidad[];
+  recetas: Receta[];
+  menu: Menu;
+}): Promise<void> {
+  await guardarDieta({
+    necesidades: cambios.necesidades,
+    recetas: cambios.recetas,
+    ajustes: { [AJUSTE_MENU]: cambios.menu },
+  });
+  await Promise.all([recargarRecetas(), recargarNecesidades()]);
 }
 
 /** Guarda el menú al momento (cada plato añadido o quitado y cada cambio de personas). */

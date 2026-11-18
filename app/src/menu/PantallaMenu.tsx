@@ -13,9 +13,9 @@ import {
   type Necesidad,
   type UnidadNecesidad,
 } from '../necesidades/modelo.ts';
-import { platoDeRevision } from './dieta/estado.ts';
 import { PantallaDieta } from './dieta/PantallaDieta.tsx';
-import { sugerirIngredientes, type IngredienteSugerido } from './dieta/revision.ts';
+import type { DatosApp } from '../tipos.ts';
+import type { IngredienteSugerido } from './dieta/revision.ts';
 import { asignarPlato, borrarReceta, guardarMenu, guardarReceta, useRecetas } from './estado.ts';
 import {
   COMIDAS,
@@ -55,7 +55,7 @@ const conProducto = (n: Necesidad) =>
  * Rutas: #menu, #menu/receta/nueva, #menu/receta/<id>, #menu/dieta (leer el PDF) y
  * #menu/dieta/receta/<plato> (crear la receta de un plato de la dieta).
  */
-export function PantallaMenu({ sub }: { sub: string | null }) {
+export function PantallaMenu({ sub, datos }: { sub: string | null; datos: DatosApp | null }) {
   const { recetas, menu, error } = useRecetas();
   const { necesidades } = useNecesidades();
 
@@ -72,34 +72,8 @@ export function PantallaMenu({ sub }: { sub: string | null }) {
   }
   if (!recetas || !necesidades) return <h1>Menú</h1>;
 
-  const [seccion, id, plato] = sub?.split('/') ?? [];
-  if (seccion === 'dieta' && id === 'receta') {
-    const delPdf = platoDeRevision(plato ?? '');
-    if (!delPdf) {
-      return (
-        <>
-          <a class="volver" href="#menu/dieta">
-            ‹ Leer la dieta
-          </a>
-          <h1>Nueva receta</h1>
-          <p class="secundario">
-            Este plato ya no está en pantalla (la app se ha cerrado). Vuelve a leer el PDF.
-          </p>
-        </>
-      );
-    }
-    return (
-      <FormReceta
-        key={`dieta-${delPdf.id}`}
-        necesidades={necesidades}
-        propuesta={{
-          texto: delPdf.texto,
-          sugeridos: sugerirIngredientes(delPdf.texto, necesidades),
-        }}
-      />
-    );
-  }
-  if (seccion === 'dieta') return <PantallaDieta />;
+  const [seccion, id] = sub?.split('/') ?? [];
+  if (seccion === 'dieta') return <PantallaDieta datos={datos} />;
   if (seccion === 'recetas') return <ListaRecetas recetas={recetas} necesidades={necesidades} />;
   if (seccion === 'receta' && id === 'nueva') {
     return <FormReceta key="nueva" necesidades={necesidades} />;

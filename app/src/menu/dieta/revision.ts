@@ -145,14 +145,11 @@ export function menuDeLaDieta(
   personas: number,
   libres: readonly (Momento & { texto: string })[] = [],
 ): MenuDieta {
-  type Colocado = { dia: number; fila: number; posicion: number; plato: PlatoDia };
-  const colocados: Colocado[] = [];
   const pendientes: PlatoRevision[] = [];
-  for (const g of grupos) {
-    let siguiente = 0; // primer día libre para las opciones de esta comida
-    g.platos.forEach((p, i) => {
-      const v = vecesDe(p, elegidas);
-      if (v <= 0) return;
+  const menu = colocarEnDias(
+    grupos,
+    elegidas,
+    (p) => {
       const d = decisionDe(p.texto, recetas, sinCompra);
       // Un plato que sale en varias comidas («1 fruta») cuenta una vez: se decide una vez.
       if (
@@ -161,10 +158,36 @@ export function menuDeLaDieta(
       ) {
         pendientes.push(p);
       }
+      return d.tipo === 'receta' ? d.receta.id : undefined;
+    },
+    personas,
+    libres,
+  );
+  return { menu, pendientes };
+}
+
+/**
+ * Coloca los platos en los días: los de la tabla en su día y su comida; las opciones de una
+ * comida, por días seguidos; las líneas sueltas, por toda la semana. `recetaDe` dice la receta
+ * de cada plato (sin receta, sale con su nombre y no compra nada).
+ */
+export function colocarEnDias(
+  grupos: readonly GrupoRevision[],
+  elegidas: Readonly<Record<string, number>>,
+  recetaDe: (p: PlatoRevision) => string | undefined,
+  personas: number,
+  libres: readonly (Momento & { texto: string })[] = [],
+): Menu {
+  type Colocado = { dia: number; fila: number; posicion: number; plato: PlatoDia };
+  const colocados: Colocado[] = [];
+  for (const g of grupos) {
+    let siguiente = 0; // primer día libre para las opciones de esta comida
+    g.platos.forEach((p, i) => {
+      const v = vecesDe(p, elegidas);
+      if (v <= 0) return;
+      const receta = recetaDe(p);
       const plato = (comida: string): PlatoDia =>
-        d.tipo === 'receta'
-          ? { comida, nombre: p.texto, receta: d.receta.id }
-          : { comida, nombre: p.texto };
+        receta ? { comida, nombre: p.texto, receta } : { comida, nombre: p.texto };
       if (p.fijo && p.momentos) {
         for (const m of p.momentos) {
           colocados.push({
@@ -198,7 +221,7 @@ export function menuDeLaDieta(
   colocados.sort((a, b) => a.dia - b.dia || a.fila - b.fila || a.posicion - b.posicion);
   const menu = menuVacio(personas);
   for (const c of colocados) menu.dias[c.dia]?.push(c.plato);
-  return { menu, pendientes };
+  return menu;
 }
 
 /** Recetas cuyo nombre se parece al del plato, las más parecidas primero. */
@@ -283,17 +306,27 @@ function necesidadDe(nombre: string, necesidades: readonly Necesidad[]): Necesid
   return mejor?.n;
 }
 
+/** Un trozo del texto de un plato: «Arroz» con 70 g, «Verduras», «Fruta» con 1 ud. */
+export type TrozoPlato = {
+  nombre: string;
+  cantidad?: number;
+  unidad?: UnidadNecesidad;
+  /** Va detrás de una «o»: es una alternativa al anterior («cereales o avena»). */
+  o?: true;
+};
+
 /**
- * Ingredientes que parece llevar un plato, con la cantidad si la indica: «Arroz (70g) con
- * verduras y gambas» → arroz (70 g), verduras, gambas. Es solo una ayuda: el usuario los revisa.
+ * Trocea el texto de un plato en lo que parece llevar, con la cantidad si la indica:
+ * «Arroz (70g) con verduras y gambas» → arroz (70 g), verduras, gambas. Funciones puras.
  */
-export function sugerirIngredientes(
-  texto: string,
-  necesidades: readonly Necesidad[],
-): IngredienteSugerido[] {
-  const sugeridos: IngredienteSugerido[] = [];
+export function trozosDelPlato(texto: string): TrozoPlato[] {
+  const trozos: TrozoPlato[] = [];
   const vistos = new Set<string>();
-  for (const trozo of preparar(texto).split(SEPARADORES)) {
+  // Con el separador entre paréntesis, split lo devuelve también: así se sabe qué va tras una «o».
+  const partes = preparar(texto).split(new RegExp(`(${SEPARADORES.source})`, 'i'));
+  for (let p = 0; p < partes.length; p += 2) {
+    const trozo = partes[p] ?? '';
+    const tras = p > 0 && /^\s+[ou]\s+$/i.test(partes[p - 1] ?? '');
     let resto = trozo.replace(/[.:;]+$/, '').trim();
     let cantidad: number | undefined;
     let unidad: UnidadNecesidad | undefined;
@@ -327,22 +360,38 @@ export function sugerirIngredientes(
     const k = clavePlato(resto);
     if (k.length < 2 || vistos.has(k) || SOLO_PLATO.test(resto)) continue;
     vistos.add(k);
+    const t: TrozoPlato = { nombre: resto.charAt(0).toUpperCase() + resto.slice(1) };
+    if (cantidad !== undefined && cantidad > 0 && unidad) {
+      t.cantidad = cantidad;
+      t.unidad = unidad;
+    }
+    if (tras) t.o = true;
+    trozos.push(t);
+  }
+  return trozos;
+}
 
-    const nombre = resto.charAt(0).toUpperCase() + resto.slice(1);
+/**
+ * Ingredientes que parece llevar un plato, con la cantidad si la indica: «Arroz (70g) con
+ * verduras y gambas» → arroz (70 g), verduras, gambas. Es solo una ayuda: el usuario los revisa.
+ */
+export function sugerirIngredientes(
+  texto: string,
+  necesidades: readonly Necesidad[],
+): IngredienteSugerido[] {
+  return trozosDelPlato(texto).map(({ nombre, cantidad, unidad }) => {
     const necesidad = necesidadDe(nombre, necesidades);
     const sugerido: IngredienteSugerido = { nombre };
     if (necesidad) sugerido.necesidad = necesidad;
     // Solo se propone la cantidad si encaja con la unidad de la necesidad (g con kg...).
     if (
       cantidad !== undefined &&
-      cantidad > 0 &&
       unidad &&
       (!necesidad || unidadesCompatibles(necesidad.unidad).includes(unidad))
     ) {
       sugerido.cantidad = cantidad;
       sugerido.unidad = unidad;
     }
-    sugeridos.push(sugerido);
-  }
-  return sugeridos;
+    return sugerido;
+  });
 }

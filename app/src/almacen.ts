@@ -141,6 +141,26 @@ export async function guardarRecetaYNecesidades(r: Receta, nuevas: Necesidad[]):
   void pedirAlmacenamientoPersistente();
 }
 
+/**
+ * Guarda lo que sale de la dieta en una sola operación: necesidades, recetas y ajustes (el
+ * menú). Si algo falla, no se guarda nada.
+ */
+export async function guardarDieta(cambios: {
+  necesidades: Necesidad[];
+  recetas: Receta[];
+  ajustes: Record<string, unknown>;
+}): Promise<void> {
+  const bd = await abrir();
+  const tx = bd.transaction(['necesidades', 'recetas', 'ajustes'], 'readwrite');
+  for (const n of cambios.necesidades) tx.objectStore('necesidades').put(n);
+  for (const r of cambios.recetas) tx.objectStore('recetas').put(r);
+  for (const [clave, valor] of Object.entries(cambios.ajustes)) {
+    tx.objectStore('ajustes').put(valor, clave);
+  }
+  await terminada(tx);
+  void pedirAlmacenamientoPersistente();
+}
+
 export async function borrarReceta(id: string): Promise<void> {
   const bd = await abrir();
   const tx = bd.transaction('recetas', 'readwrite');

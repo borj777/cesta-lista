@@ -1,17 +1,14 @@
 /**
- * La dieta que se está revisando, en memoria: se conserva al ir a crear una receta y volver,
- * pero no se guarda (el PDF y su contenido no salen de la pantalla). Lo decidido de cada plato
- * sí se guarda al momento, en las recetas, así que al leer el PDF otra vez se recupera.
+ * La dieta que se está revisando, en memoria: se conserva al ir a otra pantalla y volver, pero
+ * no se guarda (el PDF y su contenido no salen de la pantalla hasta que se usa).
  */
 import type { Lectura } from './leer.ts';
-import { gruposDeRevision, type GrupoRevision, type PlatoRevision } from './revision.ts';
 
 export type Revision = {
   lectura: Lectura;
-  grupos: GrupoRevision[];
-  /** Veces elegidas de los platos que no son fijos, por id. */
-  veces: Record<string, number>;
   personas: number | null;
+  /** Cosas quitadas de la compra (por su clave). */
+  quitadas: string[];
 };
 
 let revision: Revision | null = null;
@@ -19,18 +16,14 @@ let revision: Revision | null = null;
 export const revisionActual = () => revision;
 
 export function empezarRevision(lectura: Lectura): Revision {
-  revision = { lectura, grupos: gruposDeRevision(lectura), veces: {}, personas: null };
+  revision = { lectura, personas: null, quitadas: [] };
   return revision;
 }
 
-export function cambiarRevision(cambios: Partial<Pick<Revision, 'veces' | 'personas'>>): void {
+export function cambiarRevision(cambios: Partial<Pick<Revision, 'personas' | 'quitadas'>>): void {
   if (revision) revision = { ...revision, ...cambios };
 }
 
 export function terminarRevision(): void {
   revision = null;
-}
-
-export function platoDeRevision(id: string): PlatoRevision | undefined {
-  return revision?.grupos.flatMap((g) => g.platos).find((p) => p.id === id);
 }

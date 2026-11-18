@@ -1,9 +1,22 @@
-import { useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useState } from 'preact/hooks';
+import { leerAjuste, guardarAjuste } from '../../almacen.ts';
+import { useCatalogo } from '../../catalogo.ts';
 import { Contador } from '../../componentes/Contador.tsx';
 import { Icono } from '../../componentes/Icono.tsx';
-import { asignarPlato, guardarMenu, useRecetas } from '../estado.ts';
-import { MAX_PERSONAS, menuSinPlatos, platosConReceta } from '../menu.ts';
-import type { Receta } from '../recetas.ts';
+import { hoyEnEspana, textoFormato, textoPrecio } from '../../formato.ts';
+import { INGREDIENTES } from '../../ingredientes/catalogo.ts';
+import { useNecesidades } from '../../necesidades/estado.ts';
+import type { DatosApp } from '../../tipos.ts';
+import { usarDieta, useRecetas } from '../estado.ts';
+import { MAX_PERSONAS, menuSinPlatos } from '../menu.ts';
+import {
+  AJUSTE_APRENDIDOS,
+  cambiosDeLaDieta,
+  nombreCorto,
+  planDeLaDieta,
+  productoDe,
+  type Cosa,
+} from './automatica.ts';
 import {
   cambiarRevision,
   empezarRevision,
@@ -11,17 +24,8 @@ import {
   terminarRevision,
   type Revision,
 } from './estado.ts';
-import { leerDieta, resumirDieta, type Dieta } from './leer.ts';
+import { clavePlato, leerDieta } from './leer.ts';
 import { ErrorPdf, leerPdf } from './pdf.ts';
-import {
-  decisionDe,
-  menuDeLaDieta,
-  recetasParecidas,
-  vecesDe,
-  type Decision,
-  type GrupoRevision,
-  type PlatoRevision,
-} from './revision.ts';
 
 type Estado =
   | { tipo: 'inicio' }
@@ -35,25 +39,41 @@ const ir = (ruta: string) => {
 const falloDe = (error: unknown) =>
   `No se ha podido guardar (${error instanceof Error ? error.message : String(error)}).`;
 
-/** «Lunes, comida», «Martes, cena» → «lunes comida, martes cena». */
-const cuandoTexto = (cuando: string[]) =>
-  cuando.map((c) => c.toLowerCase().replace(',', '')).join(', ');
+const TIENDAS = [
+  { id: 'mercadona', nombre: 'Mercadona' },
+  { id: 'consum', nombre: 'Consum' },
+];
 
-const vecesTexto = (veces: number) => (veces === 1 ? '1 vez' : `${veces} veces`);
-const platosTexto = (n: number) => (n === 1 ? '1 plato' : `${n} platos`);
+const numero = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 1 });
 
-/** «a», «a y b», «a, b y c». */
-const enumerar = (cosas: string[]) =>
-  cosas.length <= 1 ? (cosas[0] ?? '') : `${cosas.slice(0, -1).join(', ')} y ${cosas.at(-1) ?? ''}`;
+/** «450 g», «1,2 kg», «600 ml», «5 unidades» a la semana. */
+function textoSemanal(c: Cosa): string {
+  if (c.unidad === 'ud') {
+    const n = Math.round(c.semanal * 10) / 10;
+    return n === 1 ? '1 unidad' : `${numero.format(n)} unidades`;
+  }
+  const pequena = c.semanal < 1;
+  const valor = pequena ? Math.round(c.semanal * 1000) : c.semanal;
+  const unidad = c.unidad === 'kg' ? (pequena ? 'g' : 'kg') : pequena ? 'ml' : 'l';
+  return `${numero.format(valor)} ${unidad}`;
+}
 
-const porNombre = (a: Receta, b: Receta) =>
-  a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' });
+/** «Paella», «Paella · Lentejas» o «Paella, Lentejas y 3 platos más». */
+function textoPlatos(platos: string[]): string {
+  if (platos.length <= 2) return platos.join(' · ');
+  const resto = platos.length - 2;
+  return `${platos.slice(0, 2).join(' · ')} y ${resto === 1 ? 'otro plato' : `${resto} platos más`}`;
+}
+
+const ordenados = [...INGREDIENTES].sort((a, b) =>
+  nombreCorto(a).localeCompare(nombreCorto(b), 'es', { sensitivity: 'base' }),
+);
 
 /**
- * #menu/dieta: lee el PDF de la dieta, ayuda a decir qué receta es cada plato y sustituye el
- * menú de la semana. El PDF no se guarda.
+ * #menu/dieta: lee el PDF de la dieta y enseña lo que se compraría cada semana, con el producto
+ * de cada tienda. Al usarla, guarda el menú, las recetas y las necesidades. El PDF no se guarda.
  */
-export function PantallaDieta() {
+export function PantallaDieta({ datos }: { datos: DatosApp | null }) {
   const [estado, setEstado] = useState<Estado>(() => {
     const actual = revisionActual();
     return actual ? { tipo: 'leido', revision: actual } : { tipo: 'inicio' };
@@ -82,12 +102,12 @@ export function PantallaDieta() {
       <a class="volver" href="#menu">
         ‹ Menú
       </a>
-      <h1>Leer la dieta</h1>
+      <h1>{estado.tipo === 'leido' ? 'Tu compra para esta dieta' : 'Leer la dieta'}</h1>
       {estado.tipo !== 'leido' && (
         <p class="secundario">
           Elige el PDF de la dieta que te manda tu nutricionista. Se lee dentro de este iPhone: no
-          se envía a ningún sitio ni se guarda. Después dirás qué receta es cada plato y la app
-          preparará tu menú de la semana.
+          se envía a ningún sitio ni se guarda. La app sacará lo que lleva cada plato y elegirá el
+          producto más barato de cada tienda; tú solo corriges lo que no te cuadre.
         </p>
       )}
       {estado.tipo === 'leyendo' && (
@@ -102,7 +122,7 @@ export function PantallaDieta() {
           <span>{estado.mensaje}</span>
         </p>
       )}
-      {estado.tipo === 'leido' && <Resultado revision={estado.revision} />}
+      {estado.tipo === 'leido' && <Resultado revision={estado.revision} datos={datos} />}
       {estado.tipo !== 'leyendo' && (
         <label
           class={
@@ -128,7 +148,7 @@ export function PantallaDieta() {
   );
 }
 
-function Resultado({ revision }: { revision: Revision }) {
+function Resultado({ revision, datos }: { revision: Revision; datos: DatosApp | null }) {
   const { lectura } = revision;
   if (lectura.tipo === 'sin-texto') {
     return (
@@ -141,81 +161,88 @@ function Resultado({ revision }: { revision: Revision }) {
       </p>
     );
   }
-  if (lectura.tipo === 'lineas') {
-    return (
-      <>
-        <p class="aviso aviso--atencion">
-          <Icono nombre="alerta" tamano={20} />
-          <span>
-            No he encontrado la tabla de la semana (los días en columnas), así que te enseño las
-            líneas con viñeta del PDF. Pon cuántas veces a la semana tomas cada plato; lo que no sea
-            un plato, déjalo en 0.
-          </span>
-        </p>
-        {revision.grupos.length > 0 ? (
-          <RevisarPlatos revision={revision} />
-        ) : (
-          <p class="secundario">No hay ninguna.</p>
-        )}
-      </>
-    );
+  if (lectura.tipo === 'lineas' && lectura.lineas.length === 0) {
+    return <p class="secundario">No he encontrado ningún plato en este PDF.</p>;
   }
-  const resumen = resumirDieta(lectura.dieta);
-  return (
-    <>
-      <p class="aviso aviso--bien" role="status">
-        <Icono nombre="hecho" tamano={20} />
-        <span>
-          He leído la semana: {resumen.platos.length}{' '}
-          {resumen.platos.length === 1 ? 'plato distinto' : 'platos distintos'}
-          {resumen.opciones.length > 0 &&
-            ` y opciones para ${enumerar(resumen.opciones.map((o) => o.comida.toLowerCase()))}`}
-          . Toca cada plato para decir qué receta es.
-        </span>
-      </p>
-      <RevisarPlatos revision={revision} />
-      {resumen.libres.length > 0 && (
-        <p class="secundario">
-          {resumen.libres.length === 1 ? 'Comida libre' : 'Comidas libres'} (no se compra nada para{' '}
-          {resumen.libres.length === 1 ? 'ella' : 'ellas'}):{' '}
-          {enumerar(resumen.libres.map((l) => l.toLowerCase().replace(',', '')))}.
-        </p>
-      )}
-      <SemanaDiaADia dieta={lectura.dieta} />
-    </>
-  );
+  if (!datos) return <p class="secundario">Cargando precios…</p>;
+  return <TuCompra revision={revision} datos={datos} />;
 }
 
-/** Cada plato con su receta, las veces de las opciones, las personas y «Usar este menú». */
-function RevisarPlatos({ revision }: { revision: Revision }) {
+/** Lo que se compra cada semana con la dieta: cada cosa con su producto en cada tienda. */
+function TuCompra({ revision, datos }: { revision: Revision; datos: DatosApp }) {
   const { recetas, menu, sinCompra } = useRecetas();
-  const [veces, setVeces] = useState(revision.veces);
+  const { necesidades } = useNecesidades();
+  const { buscarProducto } = useCatalogo(datos);
   const [personas, setPersonas] = useState(revision.personas ?? menu.personas);
-  const [abierto, setAbierto] = useState<string | null>(null);
+  const [quitadas, setQuitadas] = useState(revision.quitadas);
+  const [aprendidos, setAprendidos] = useState<Record<string, string> | null>(null);
   const [fallo, setFallo] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
-  if (!recetas) return null;
 
-  const libres =
-    revision.lectura.tipo === 'tabla' ? resumirDieta(revision.lectura.dieta).libresEn : [];
-  const resultado = menuDeLaDieta(revision.grupos, veces, recetas, sinCompra, personas, libres);
-  const conReceta = platosConReceta(resultado.menu);
-  const hayMenu = !menuSinPlatos(menu);
-  const cambiarVeces = (id: string, v: number) => {
-    const nuevas = { ...veces, [id]: v };
-    setVeces(nuevas);
-    cambiarRevision({ veces: nuevas });
-  };
+  useEffect(() => {
+    leerAjuste<Record<string, string>>(AJUSTE_APRENDIDOS)
+      .then((a) => setAprendidos(a && typeof a === 'object' ? a : {}))
+      .catch(() => setAprendidos({}));
+  }, []);
+
+  const quitadasSet = useMemo(() => new Set(quitadas), [quitadas]);
+  const plan = useMemo(
+    () =>
+      recetas && necesidades && aprendidos
+        ? planDeLaDieta(revision.lectura, {
+            recetas,
+            necesidades,
+            sinCompra,
+            aprendidos,
+            personas,
+            quitadas: quitadasSet,
+          })
+        : null,
+    [revision.lectura, recetas, necesidades, sinCompra, aprendidos, personas, quitadasSet],
+  );
+  // Las quitadas no salen en el plan: para poder volver a ponerlas, su nombre sale del plan sin quitar.
+  const todas = useMemo(
+    () =>
+      recetas && necesidades && aprendidos && quitadas.length > 0
+        ? planDeLaDieta(revision.lectura, { recetas, necesidades, sinCompra, aprendidos, personas })
+            .cosas
+        : [],
+    [revision.lectura, recetas, necesidades, sinCompra, aprendidos, personas, quitadas.length],
+  );
+  if (!plan || !buscarProducto || !necesidades || !aprendidos) {
+    return <p class="secundario">Preparando tu compra…</p>;
+  }
+
+  const platos = [...plan.platos.values()].filter((p) => p.veces > 0);
+  const desconocidos = [
+    ...new Map(
+      platos.flatMap((p) =>
+        p.desconocidos.map((d) => [clavePlato(d), { texto: d, plato: p.texto }]),
+      ),
+    ).values(),
+  ];
+  const sinNada = platos.filter((p) => p.nada || (!p.receta && p.ingredientes.length === 0));
+  const hoy = hoyEnEspana();
+
   const cambiarPersonas = (p: number) => {
     setPersonas(p);
     cambiarRevision({ personas: p });
   };
+  const cambiarQuitadas = (q: string[]) => {
+    setQuitadas(q);
+    cambiarRevision({ quitadas: q });
+  };
+  const aprender = (trozo: string, ingrediente: string) => {
+    const nuevos = { ...aprendidos, [clavePlato(trozo)]: ingrediente };
+    setAprendidos(nuevos);
+    guardarAjuste(AJUSTE_APRENDIDOS, nuevos).catch((e: unknown) => setFallo(falloDe(e)));
+  };
 
   const usar = async () => {
-    const sustituye = hayMenu ? ' Sustituye al que tienes ahora.' : '';
+    const sustituye = menuSinPlatos(menu) ? '' : ' Sustituye a tu menú de ahora.';
     if (
       !confirm(
-        `¿Usar este menú?\n\nTendrá ${platosTexto(conReceta)} con ingredientes que comprar, de lunes a domingo.${sustituye} Tus recetas se conservan.`,
+        `¿Usar esta compra?\n\nSe guardará tu menú de lunes a domingo con los platos de la dieta y ${plan.cosas.length === 1 ? '1 cosa' : `${plan.cosas.length} cosas`} en tus necesidades, con el producto elegido por la app.${sustituye} Tus recetas de otros meses se conservan.`,
       )
     ) {
       return;
@@ -223,7 +250,16 @@ function RevisarPlatos({ revision }: { revision: Revision }) {
     setGuardando(true);
     setFallo(null);
     try {
-      await guardarMenu(resultado.menu);
+      const cambios = cambiosDeLaDieta(plan, {
+        necesidades,
+        personas,
+        quitadas: quitadasSet,
+        datos,
+        hoy,
+        ahora: new Date().toISOString(),
+        nuevoId: () => crypto.randomUUID(),
+      });
+      await usarDieta(cambios);
       terminarRevision();
       ir('menu');
     } catch (e) {
@@ -234,46 +270,109 @@ function RevisarPlatos({ revision }: { revision: Revision }) {
 
   return (
     <>
-      {revision.grupos.map((g) => (
-        <GrupoPlatos
-          key={g.titulo}
-          grupo={g}
-          veces={veces}
-          recetas={recetas}
-          sinCompra={sinCompra}
-          abierto={abierto}
-          alAbrir={setAbierto}
-          alCambiarVeces={cambiarVeces}
-        />
-      ))}
-
+      <p class="aviso aviso--bien" role="status">
+        <Icono nombre="hecho" tamano={20} />
+        <span>
+          He leído {platos.length === 1 ? '1 plato' : `${platos.length} platos`}. Esto es lo que
+          comprarías cada semana; el producto de cada tienda es el más barato que vale.
+        </span>
+      </p>
       <section class="tarjeta">
         <Contador
-          etiqueta="Personas que comen cada plato"
+          etiqueta="Personas que comen"
           valor={personas}
           max={MAX_PERSONAS}
           alCambiar={cambiarPersonas}
         />
       </section>
 
-      {resultado.pendientes.length > 0 ? (
-        <p class="aviso aviso--atencion">
-          <Icono nombre="alerta" tamano={20} />
-          <span>
-            Te falta decir la receta de{' '}
-            {resultado.pendientes.length === 1
-              ? '1 plato'
-              : `${resultado.pendientes.length} platos`}{' '}
-            (o que no se compra nada para {resultado.pendientes.length === 1 ? 'él' : 'ellos'}).
-          </span>
-        </p>
-      ) : (
+      {desconocidos.length > 0 && (
+        <section class="tarjeta desconocidos">
+          <h2 class="tienda__titulo">¿Qué es esto?</h2>
+          <p class="secundario">No sé qué es. Dímelo una vez y lo recordaré para otros meses.</p>
+          {desconocidos.map((d) => (
+            <label key={d.texto} class="campo">
+              <span class="campo__etiqueta">
+                «{d.texto}» <span class="secundario">({d.plato})</span>
+              </span>
+              <select
+                class="campo__entrada"
+                value="?"
+                onChange={(e) => {
+                  const v = e.currentTarget.value;
+                  aprender(d.texto, v === '-' ? '' : v);
+                }}
+              >
+                <option value="?" disabled>
+                  Elige qué es…
+                </option>
+                <option value="-">No se compra nada</option>
+                {ordenados.map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {nombreCorto(i)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+        </section>
+      )}
+
+      <h2 class="grupo__titulo grupo__titulo--separado">Lo que compras a la semana</h2>
+      <ul class="filas tarjeta tarjeta--lista cosas-dieta">
+        {plan.cosas.map((c) => (
+          <li key={c.clave} class="cosa-dieta">
+            <div class="cosa-dieta__cabecera">
+              <strong>{c.nombre}</strong>
+              <span class="fila__importe">{textoSemanal(c)}</span>
+            </div>
+            <span class="secundario cosa-dieta__platos">{textoPlatos(c.platos)}</span>
+            {TIENDAS.map((t) => {
+              const p = productoDe(c, t.id, datos, buscarProducto, hoy);
+              return (
+                <span key={t.id} class="cosa-dieta__producto">
+                  <span class="cosa-dieta__tienda">{t.nombre}:</span>{' '}
+                  {p
+                    ? `${p.nombre} · ${textoFormato(p.formato)} · ${textoPrecio(p.precio)}`
+                    : 'no lo he encontrado'}
+                </span>
+              );
+            })}
+            <button
+              type="button"
+              class="boton boton--pequeno cosa-dieta__quitar"
+              onClick={() => cambiarQuitadas([...quitadas, c.clave])}
+            >
+              Quitar
+            </button>
+          </li>
+        ))}
+      </ul>
+      {quitadas.length > 0 && (
         <p class="secundario">
-          Tu menú, de lunes a domingo, tendrá {platosTexto(conReceta)} con ingredientes que comprar,
-          para {personas === 1 ? '1 persona' : `${personas} personas`}.
-          {hayMenu && ' Sustituirá al que tienes ahora; tus recetas se conservan.'}
+          Quitado:{' '}
+          {quitadas.map((q, i) => (
+            <span key={q}>
+              {i > 0 && ', '}
+              {todas.find((c) => c.clave === q)?.nombre ?? q}{' '}
+              <button
+                type="button"
+                class="enlace"
+                onClick={() => cambiarQuitadas(quitadas.filter((x) => x !== q))}
+              >
+                (volver a ponerlo)
+              </button>
+            </span>
+          ))}
         </p>
       )}
+      {sinNada.length > 0 && (
+        <p class="secundario">Sin compra: {sinNada.map((p) => p.texto).join(' · ')}.</p>
+      )}
+      <p class="secundario">
+        Las cantidades son orientativas (las de la dieta cuando las indica). Después podrás
+        cambiarlas en Mis recetas, y los productos, en cada necesidad.
+      </p>
       {fallo && (
         <p class="aviso aviso--error" role="alert">
           <Icono nombre="alerta" tamano={20} />
@@ -284,255 +383,12 @@ function RevisarPlatos({ revision }: { revision: Revision }) {
         <button
           type="button"
           class="boton boton--principal boton--ancho"
-          disabled={guardando || resultado.pendientes.length > 0 || menuSinPlatos(resultado.menu)}
+          disabled={guardando || plan.cosas.length === 0}
           onClick={() => void usar()}
         >
-          {guardando ? 'Guardando…' : 'Usar este menú'}
+          {guardando ? 'Guardando…' : 'Usar esta compra'}
         </button>
       </div>
     </>
-  );
-}
-
-function GrupoPlatos({
-  grupo,
-  veces,
-  recetas,
-  sinCompra,
-  abierto,
-  alAbrir,
-  alCambiarVeces,
-}: {
-  grupo: GrupoRevision;
-  veces: Record<string, number>;
-  recetas: Receta[];
-  sinCompra: string[];
-  abierto: string | null;
-  alAbrir: (id: string | null) => void;
-  alCambiarVeces: (id: string, v: number) => void;
-}) {
-  const suma = grupo.platos.reduce((s, p) => s + vecesDe(p, veces), 0);
-  return (
-    <section class="grupo">
-      <h2 class="grupo__titulo">{grupo.titulo}</h2>
-      {grupo.dias !== undefined && (
-        <p class="secundario">
-          ¿Cuántos días tomas cada opción? Ahora suman {suma} de {grupo.dias}.
-        </p>
-      )}
-      <ul class="filas tarjeta tarjeta--lista">
-        {grupo.platos.map((p) => (
-          <PlatoDieta
-            key={p.id}
-            plato={p}
-            maxVeces={grupo.maxVeces}
-            veces={vecesDe(p, veces)}
-            decision={decisionDe(p.texto, recetas, sinCompra)}
-            recetas={recetas}
-            abierto={abierto === p.id}
-            alAbrir={(si) => alAbrir(si ? p.id : null)}
-            alCambiarVeces={(v) => alCambiarVeces(p.id, v)}
-          />
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-function EstadoPlato({ decision }: { decision: Decision }) {
-  if (decision.tipo === 'receta') {
-    return <span class="texto--bien">Receta: {decision.receta.nombre}</span>;
-  }
-  if (decision.tipo === 'sin-compra') return <span class="secundario">No se compra nada</span>;
-  return <span class="texto--atencion">Falta decir qué receta es</span>;
-}
-
-function PlatoDieta({
-  plato,
-  maxVeces,
-  veces,
-  decision,
-  recetas,
-  abierto,
-  alAbrir,
-  alCambiarVeces,
-}: {
-  plato: PlatoRevision;
-  maxVeces: number;
-  veces: number;
-  decision: Decision;
-  recetas: Receta[];
-  abierto: boolean;
-  alAbrir: (si: boolean) => void;
-  alCambiarVeces: (v: number) => void;
-}) {
-  return (
-    <li class="plato-dieta">
-      <button
-        type="button"
-        class="fila fila--compra plato-dieta__fila"
-        aria-expanded={abierto}
-        onClick={() => alAbrir(!abierto)}
-      >
-        <span class="fila__texto">
-          <span>{plato.texto}</span>
-          {plato.cuando && (
-            <span class="secundario">
-              {vecesTexto(plato.veces)}: {cuandoTexto(plato.cuando)}
-            </span>
-          )}
-          {(veces > 0 || plato.fijo) && <EstadoPlato decision={decision} />}
-        </span>
-        <span class="fila__flecha" aria-hidden="true">
-          {abierto ? '⌄' : '›'}
-        </span>
-      </button>
-      {!plato.fijo && (
-        <div class="plato-dieta__veces">
-          <Contador
-            etiqueta="Veces a la semana"
-            min={0}
-            valor={veces}
-            max={maxVeces}
-            alCambiar={alCambiarVeces}
-          />
-        </div>
-      )}
-      {abierto && (
-        <ElegirReceta
-          plato={plato}
-          decision={decision}
-          recetas={recetas}
-          alTerminar={() => alAbrir(false)}
-        />
-      )}
-    </li>
-  );
-}
-
-/** Qué receta es un plato: una parecida, cualquier otra, una nueva o ninguna. */
-function ElegirReceta({
-  plato,
-  decision,
-  recetas,
-  alTerminar,
-}: {
-  plato: PlatoRevision;
-  decision: Decision;
-  recetas: Receta[];
-  alTerminar: () => void;
-}) {
-  const [todas, setTodas] = useState(false);
-  const [fallo, setFallo] = useState<string | null>(null);
-  const actual = decision.tipo === 'receta' ? decision.receta.id : null;
-  const parecidas = useMemo(
-    () => recetasParecidas(plato.texto, recetas).filter((r) => r.id !== actual),
-    [plato.texto, recetas, actual],
-  );
-  const resto = recetas.filter((r) => r.id !== actual && !parecidas.includes(r)).sort(porNombre);
-
-  const elegir = async (destino: { receta: string } | 'sin-compra') => {
-    setFallo(null);
-    try {
-      await asignarPlato(plato.texto, destino);
-      alTerminar();
-    } catch (e) {
-      setFallo(falloDe(e));
-    }
-  };
-
-  const fila = (r: Receta) => (
-    <li key={r.id}>
-      <button type="button" class="fila fila--compra" onClick={() => void elegir({ receta: r.id })}>
-        <span class="fila__texto">
-          <span>{r.nombre}</span>
-        </span>
-      </button>
-    </li>
-  );
-
-  return (
-    <div class="elegir-receta">
-      {decision.tipo === 'receta' && (
-        <p class="secundario">
-          Ahora es tu receta «{decision.receta.nombre}».{' '}
-          <a href={`#menu/receta/${decision.receta.id}`}>Ver la receta</a>
-        </p>
-      )}
-      {parecidas.length > 0 && (
-        <>
-          <h3 class="tienda__titulo">¿Es una de estas recetas?</h3>
-          <ul class="filas elegir-receta__lista">{parecidas.map(fila)}</ul>
-        </>
-      )}
-      {resto.length > 0 &&
-        (todas ? (
-          <>
-            <h3 class="tienda__titulo">
-              {parecidas.length > 0 ? 'Otras recetas' : '¿Es una de tus recetas?'}
-            </h3>
-            <ul class="filas elegir-receta__lista">{resto.map(fila)}</ul>
-          </>
-        ) : (
-          <button type="button" class="boton boton--ancho" onClick={() => setTodas(true)}>
-            {parecidas.length > 0 ? 'Ver las demás recetas' : 'Elegir una de tus recetas'} (
-            {resto.length})
-          </button>
-        ))}
-      {fallo && (
-        <p class="aviso aviso--error" role="alert">
-          <Icono nombre="alerta" tamano={20} />
-          <span>{fallo}</span>
-        </p>
-      )}
-      <div class="acciones">
-        <a
-          class={
-            parecidas.length === 0 && decision.tipo !== 'receta'
-              ? 'boton boton--principal boton--ancho'
-              : 'boton boton--ancho'
-          }
-          href={`#menu/dieta/receta/${plato.id}`}
-        >
-          Crear una receta nueva
-        </a>
-        {decision.tipo !== 'sin-compra' && (
-          <button
-            type="button"
-            class="boton boton--ancho"
-            onClick={() => void elegir('sin-compra')}
-          >
-            No se compra nada para este plato
-          </button>
-        )}
-        <button type="button" class="boton boton--ancho" onClick={alTerminar}>
-          Cerrar
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function SemanaDiaADia({ dieta }: { dieta: Dieta }) {
-  const porDia = dieta.filas.filter((f) => !f.opciones);
-  if (porDia.length === 0) return null;
-  return (
-    <details class="tarjeta dieta-dias">
-      <summary>Ver la semana día a día</summary>
-      {dieta.dias.map((dia, d) => (
-        <div key={dia} class="dieta-dias__dia">
-          <h3>{dia}</h3>
-          {porDia.map((f) => {
-            const platos = f.porDia[d] ?? [];
-            return (
-              <p key={f.comida}>
-                <strong>{f.comida}:</strong>{' '}
-                {platos.length > 0 ? platos.map((p) => p.texto).join(' · ') : '—'}
-              </p>
-            );
-          })}
-        </div>
-      ))}
-    </details>
   );
 }

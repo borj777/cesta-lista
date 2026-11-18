@@ -160,7 +160,7 @@ export function DetalleNecesidad({
                       nota={apuntado ? notaPrecio(apuntado, hoy) : undefined}
                     />
                   </div>
-                  {elegidoPorLaApp(necesidad, tienda) && <NotaAutomatica necesidad={necesidad} />}
+                  {elegidoPorLaApp(necesidad, tienda) && <NotaAutomatica />}
                   {apuntado && precioAntiguo(apuntado, hoy) && (
                     <a
                       class="boton boton--ancho"

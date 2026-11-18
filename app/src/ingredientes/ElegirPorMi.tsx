@@ -5,11 +5,14 @@ import { guardarVarias, useNecesidades } from '../necesidades/estado.ts';
 import { estadoEquivalencia, type Necesidad } from '../necesidades/modelo.ts';
 import type { IdTienda } from '../tiendas/modelo.ts';
 import type { DatosApp, ProductoApp } from '../tipos.ts';
+import { useRecetas } from '../menu/estado.ts';
+import { aportesDelMenu, necesidadesConMenu, type Menu } from '../menu/menu.ts';
+import type { Receta } from '../menu/recetas.ts';
 import {
   actualizarAutomaticas,
   elegirPorMi,
+  gastoSemanal,
   ingredienteDe,
-  textoPorUnidad,
   tiendasPorElegir,
   unidadCompatible,
 } from './automatico.ts';
@@ -24,22 +27,35 @@ const enumerar = (xs: string[]) =>
  */
 export function PonerAlDia({ datos }: { datos: DatosApp | null }) {
   const { necesidades } = useNecesidades();
+  const { recetas, menu } = useRecetas();
   const hecho = useRef<string | null>(null);
   useEffect(() => {
-    if (!datos || !necesidades || hecho.current === datos.generado) return;
+    if (!datos || !necesidades || !recetas || hecho.current === datos.generado) return;
     hecho.current = datos.generado;
+    const gasto = gastosConMenu(necesidades, recetas, menu);
     const cambiadas = actualizarAutomaticas(
       necesidades,
       datos,
       hoyEnEspana(),
       new Date().toISOString(),
+      (n) => gasto.get(n.id) ?? gastoSemanal(n),
     );
     guardarVarias(cambiadas).catch(() => {
       // Si no se puede guardar, se reintenta con la próxima descarga.
       hecho.current = null;
     });
-  }, [datos, necesidades]);
+  }, [datos, necesidades, recetas, menu]);
   return null;
+}
+
+/** Lo que se gasta a la semana de cada necesidad contando el menú, en kg, l o ud. */
+export function gastosConMenu(
+  necesidades: readonly Necesidad[],
+  recetas: readonly Receta[],
+  menu: Menu,
+): Map<string, number> {
+  const conMenu = necesidadesConMenu(necesidades, aportesDelMenu(menu, recetas, necesidades));
+  return new Map(conMenu.map((n) => [n.id, gastoSemanal(n)]));
 }
 
 /** Tiendas con catálogo en las que la app puede elegir y aún no hay un producto que valga. */
@@ -65,13 +81,15 @@ export function ElegirPorMi({
   alCambiar: (n: Necesidad) => Promise<void>;
 }) {
   const [aviso, setAviso] = useState<string | null>(null);
+  const { recetas, menu } = useRecetas();
   const ingrediente = ingredienteDe(necesidad);
   if (!ingrediente || !unidadCompatible(ingrediente, necesidad)) return null;
   const pendientes = tiendasSinProducto(necesidad, buscarProducto);
   if (pendientes.length === 0 && !aviso) return null;
 
   const elegir = async () => {
-    const r = elegirPorMi(necesidad, datos, hoyEnEspana(), new Date().toISOString());
+    const semanal = gastosConMenu([necesidad], recetas ?? [], menu).get(necesidad.id);
+    const r = elegirPorMi(necesidad, datos, hoyEnEspana(), new Date().toISOString(), semanal);
     if (!r) return;
     await alCambiar(r.necesidad);
     setAviso(
@@ -86,9 +104,9 @@ export function ElegirPorMi({
       {pendientes.length > 0 && (
         <>
           <p>
-            La app puede elegir sola el producto más barato {textoPorUnidad(ingrediente)} de «
-            {ingrediente.nombre}» en {enumerar(pendientes.map((t) => NOMBRES[t] ?? t))}, y cambiarlo
-            cuando haya otro más barato.
+            La app puede elegir sola el producto de «{ingrediente.nombre}» en{' '}
+            {enumerar(pendientes.map((t) => NOMBRES[t] ?? t))}: el que menos cuesta para lo que
+            gastas en 4 semanas. Lo cambiará cuando haya otro más barato.
           </p>
           <button
             type="button"
@@ -110,12 +128,11 @@ export function ElegirPorMi({
 }
 
 /** Nota bajo un producto elegido por la app. */
-export function NotaAutomatica({ necesidad }: { necesidad: Necesidad }) {
-  const ingrediente = ingredienteDe(necesidad);
+export function NotaAutomatica() {
   return (
     <p class="secundario nota-automatica">
-      Elegido por la app: el más barato {ingrediente ? textoPorUnidad(ingrediente) : ''} de hoy. Si
-      aparece otro más barato, lo cambia sola. Si lo cambias tú, se queda fijo.
+      Elegido por la app: el que menos cuesta hoy para lo que gastas en 4 semanas. Si aparece otro
+      más barato, lo cambia sola. Si lo cambias tú, se queda fijo.
     </p>
   );
 }
@@ -132,6 +149,7 @@ export function ElegirEnTodas({
 }) {
   const [fallo, setFallo] = useState<string | null>(null);
   const [eligiendo, setEligiendo] = useState(false);
+  const { recetas, menu } = useRecetas();
   const posibles = necesidades.filter((n) => {
     const i = ingredienteDe(n);
     return i && unidadCompatible(i, n) && tiendasSinProducto(n, buscarProducto).length > 0;
@@ -143,8 +161,9 @@ export function ElegirEnTodas({
     setFallo(null);
     const hoy = hoyEnEspana();
     const ahora = new Date().toISOString();
+    const gasto = gastosConMenu(necesidades, recetas ?? [], menu);
     const cambiadas = posibles
-      .map((n) => elegirPorMi(n, datos, hoy, ahora)?.necesidad)
+      .map((n) => elegirPorMi(n, datos, hoy, ahora, gasto.get(n.id))?.necesidad)
       .filter((n): n is Necesidad => n !== undefined);
     try {
       await guardarVarias(cambiadas);
