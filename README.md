@@ -13,7 +13,7 @@ Es un proyecto personal y sin ánimo de lucro.
 - **Fase 0 (terminada):** Mercadona y Consum responden desde GitHub Actions.
 - **Fase 1 (terminada):** descarga diaria completa de Mercadona y Consum.
 - **Fase 2 (terminada):** la app para el iPhone: necesidades, buscador, tiendas propias, cálculo de la compra más barata y lista para ir a comprar.
-- **Fase 3 (en marcha):** menú por días, despensa y avisos, la dieta en automático (la app lee el PDF de la dieta, saca lo que lleva cada plato y elige el producto más barato de cada tienda) y las ofertas semanales de Lidl.
+- **Fase 3 (en marcha):** menú por días, despensa y avisos, la dieta en automático (la app lee el PDF de la dieta, saca lo que lleva cada plato y elige el producto más barato de cada tienda) las ofertas semanales de Lidl y el historial de precios con avisos de bajadas.
 
 ## La app
 
@@ -113,6 +113,8 @@ Para no estropear los datos buenos, una tienda se marca como fallida y **no se s
 - Mercadona deja de asignar el almacén de Valencia (`vlc1`) al código postal 46001.
 
 Las ofertas de Lidl cambian enteras cada semana, así que no se comparan con el día anterior: solo se rechazan si no llega ninguna o si más del 5 % no se puede leer.
+
+El historial de precios solo se anota con las descargas válidas: si una tienda falla, ese día no se añade nada y su historial sigue con el último precio bueno.
 
 ### Otros datos de `meta.json`
 
