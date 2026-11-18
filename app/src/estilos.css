@@ -567,6 +567,17 @@ p {
   color: var(--atencion);
 }
 
+.etiqueta-bajada {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--marca-suave);
+  color: var(--bien);
+}
+
 /* Buscador */
 .buscador {
   position: relative;

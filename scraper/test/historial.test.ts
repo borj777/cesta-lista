@@ -53,6 +53,28 @@ describe('historial de precios', () => {
     ]);
   });
 
+  it('vuelve a empezar si cambia la medida (p. ej. de €/l a €/lavado), no si encoge el envase', () => {
+    const h = dias(
+      ['2026-11-15', [producto('1', 3.5, 2.33), producto('2', 1.8, 1.2), producto('3', 2, 4)]],
+      // Detergente de 1,5 l y 50 lavados: el precio no cambia, el precioRef pasa a €/lavado.
+      // Carne en bandeja: otra bandeja, unos gramos más. Envase de 500 g que pasa a 400 g.
+      ['2026-11-17', [producto('1', 3.5, 0.07), producto('2', 1.9, 1.2), producto('3', 2, 5)]],
+      ['2026-11-18', [producto('1', 3.2, 0.064), producto('2', 1.9, 1.2), producto('3', 2, 5)]],
+    );
+    expect(h.get('1')).toEqual([
+      ['2026-11-17', 3.5, 0.07],
+      ['2026-11-18', 3.2, 0.064],
+    ]);
+    expect(h.get('2')).toEqual([
+      ['2026-11-15', 1.8, 1.2],
+      ['2026-11-17', 1.9, 1.2],
+    ]);
+    expect(h.get('3')).toEqual([
+      ['2026-11-15', 2, 4],
+      ['2026-11-17', 2, 5],
+    ]);
+  });
+
   it('si se descarga dos veces el mismo día, vale la última', () => {
     const h = dias(
       ['2026-11-15', [producto('1', 2)]],

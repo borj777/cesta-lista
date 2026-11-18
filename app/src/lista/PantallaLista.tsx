@@ -5,7 +5,8 @@ import { ComoInstalar } from '../componentes/Banderas.tsx';
 import { FechaPrecios } from '../componentes/EstadoPrecios.tsx';
 import { Icono } from '../componentes/Icono.tsx';
 import { NombreTienda } from '../componentes/Tienda.tsx';
-import { hoyEnEspana, textoDia, textoFormato, textoPrecio } from '../formato.ts';
+import { hoyEnEspana, textoDia, textoFormato, textoPrecio, textoPrecioRef } from '../formato.ts';
+import { bajadasDePrecio, type Bajada } from '../historial/bajadas.ts';
 import { guardar as guardarNecesidad, useNecesidades } from '../necesidades/estado.ts';
 import { esOfertaSemanal, etiquetaOferta, quitarOferta } from '../tiendas/ofertas.ts';
 import { useTiendas } from '../tiendas/estado.ts';
@@ -21,7 +22,7 @@ import {
   seAcaba,
   tocaComprar,
 } from './compra.ts';
-import { guardarAdelantadas, guardarCompra, useCompra } from './estado.ts';
+import { guardarAdelantadas, guardarCompra, marcarBajadasVistas, useCompra } from './estado.ts';
 import { ModoCompra } from './ModoCompra.tsx';
 import { AvisosDespensa } from '../despensa/PantallaDespensa.tsx';
 import { useConMenu } from '../despensa/estado.ts';
@@ -50,7 +51,7 @@ export function PantallaLista({ datos, ahora }: { datos: DatosApp | null; ahora:
   const { productos: propios, lista: tiendas } = useTiendas();
   const ajustes = useAjustesCompra();
   const { buscarProducto } = useCatalogo(datos);
-  const { listo, compra, adelantadas, pantallaEncendida } = useCompra();
+  const { listo, compra, adelantadas, pantallaEncendida, bajadasVistas } = useCompra();
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [fallo, setFallo] = useState<string | null>(null);
   const hoy = hoyEnEspana(ahora);
@@ -94,6 +95,20 @@ export function PantallaLista({ datos, ahora }: { datos: DatosApp | null; ahora:
       }));
   }, [plan, propios, tiendas, ahora]);
 
+  // Productos elegidos que han bajado de precio (por kg, litro…) desde hace poco.
+  const bajadas = useMemo(
+    () =>
+      conMenu && buscarProducto && ajustes && tiendas
+        ? bajadasDePrecio(conMenu, buscarProducto, {
+            hoy,
+            minimo: ajustes.avisoBajada,
+            activas: tiendas.filter((t) => t.activa).map((t) => t.id),
+            vistas: bajadasVistas,
+          })
+        : [],
+    [conMenu, buscarProducto, ajustes, tiendas, hoy, bajadasVistas],
+  );
+
   if (!listo) return <h1>Lista de compra</h1>;
   if (compra && necesidades) {
     return (
@@ -101,9 +116,16 @@ export function PantallaLista({ datos, ahora }: { datos: DatosApp | null; ahora:
         compra={compra}
         necesidades={necesidades}
         pantallaEncendida={pantallaEncendida}
-        alTerminar={(texto) => {
+        alTerminar={(texto, terminada) => {
           setMensaje(texto);
           window.scrollTo(0, 0);
+          // Al terminar la compra, los avisos de bajadas ya han servido.
+          if (terminada) {
+            void marcarBajadasVistas(
+              bajadas.map((b) => b.clave),
+              hoy,
+            ).catch(() => {});
+          }
         }}
       />
     );
@@ -196,6 +218,7 @@ export function PantallaLista({ datos, ahora }: { datos: DatosApp | null; ahora:
               alFallar={setFallo}
             />
           )}
+          <BajadasDePrecio bajadas={bajadas} tiendas={tiendas} hoy={hoy} alFallar={setFallo} />
           {plan.mejor && <ComprasPorTienda mejor={plan.mejor} tiendas={tiendas} />}
           {reparto && (
             <PuedeQueTeQuede
@@ -276,6 +299,73 @@ function PuedeQueTeQuede({
         {anadidas.map((n) => fila(n, true))}
         {quedan.map((n) => fila(n, false))}
       </ul>
+    </section>
+  );
+}
+
+/**
+ * «Han bajado de precio»: productos elegidos cuyo precio por kg (o litro, unidad…) ha bajado
+ * hace poco. Se quitan con «Entendido» o al terminar la compra.
+ */
+function BajadasDePrecio({
+  bajadas,
+  tiendas,
+  hoy,
+  alFallar,
+}: {
+  bajadas: Bajada[];
+  tiendas: InfoTienda[];
+  hoy: string;
+  alFallar: (texto: string | null) => void;
+}) {
+  if (bajadas.length === 0) return null;
+  const entendido = (claves: string[]) => {
+    alFallar(null);
+    marcarBajadasVistas(claves, hoy).catch((e: unknown) =>
+      alFallar(`No se ha podido guardar (${e instanceof Error ? e.message : String(e)}).`),
+    );
+  };
+  return (
+    <section class="grupo">
+      <h2 class="grupo__titulo grupo__titulo--separado">Han bajado de precio</h2>
+      <ul class="filas tarjeta tarjeta--lista">
+        {bajadas.map((b) => {
+          const info = tiendas.find((t) => t.id === b.tienda);
+          const unidad = b.producto.formato.unidad;
+          return (
+            <li key={b.clave} class="fila">
+              <div class="fila__texto">
+                <a href={`#necesidades/${b.necesidad.id}`} class="enlace-fila">
+                  {b.necesidad.nombre}
+                </a>
+                <span class="secundario">
+                  {info ? <NombreTienda tienda={info} /> : b.tienda} ·{' '}
+                  {[b.producto.marca, b.producto.nombre, textoFormato(b.producto.formato)]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </span>
+                <span class="secundario">
+                  {textoPrecioRef(b.ahoraRef, unidad)} (antes, {textoPrecioRef(b.antesRef, unidad)})
+                </span>
+                <span class="etiqueta-bajada">
+                  Bajó un {b.porcentaje} % el {textoDia(b.dia)}
+                </span>
+              </div>
+              <button
+                type="button"
+                class="boton boton--pequeno"
+                onClick={() => entendido([b.clave])}
+              >
+                Entendido
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      <p class="secundario">
+        Se quitan solos al terminar la compra. El mínimo para avisar se cambia en{' '}
+        <a href="#ajustes">Ajustes</a>.
+      </p>
     </section>
   );
 }

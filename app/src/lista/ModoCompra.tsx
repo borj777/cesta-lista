@@ -59,7 +59,8 @@ export function ModoCompra({
   compra: CompraEnCurso;
   necesidades: Necesidad[];
   pantallaEncendida: boolean;
-  alTerminar: (mensaje: string) => void;
+  /** `terminada` es false si se ha cancelado. */
+  alTerminar: (mensaje: string, terminada: boolean) => void;
 }) {
   const [fallo, setFallo] = useState<string | null>(null);
   const [terminando, setTerminando] = useState(false);
@@ -88,6 +89,7 @@ export function ModoCompra({
         n === 0
           ? 'Compra terminada. No se ha apuntado nada como comprado.'
           : `Compra terminada. ${n === 1 ? 'Apuntada 1 cosa' : `Apuntadas ${n} cosas`} como comprada${n === 1 ? '' : 's'} hoy.`,
+        true,
       );
     } catch (e) {
       setFallo(falloDe(e));
@@ -105,7 +107,7 @@ export function ModoCompra({
     }
     try {
       await guardarCompra(null);
-      alTerminar('Compra cancelada.');
+      alTerminar('Compra cancelada.', false);
     } catch (e) {
       setFallo(falloDe(e));
     }

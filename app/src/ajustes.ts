@@ -1,9 +1,11 @@
 /**
- * Ajustes de la compra: cada cuánto se hace y cuánto «cuesta» ir a una tienda más.
+ * Ajustes de la compra: cada cuánto se hace, cuánto «cuesta» ir a una tienda más, Lidl Plus y
+ * desde qué bajada de precio se avisa.
  * Se guardan en el almacén `ajustes` de IndexedDB y van en la copia de seguridad.
  */
 import { useEffect, useState } from 'preact/hooks';
 import { guardarAjuste, leerAjuste } from './almacen.ts';
+import { MINIMOS_BAJADA, MINIMO_BAJADA_INICIAL } from './historial/bajadas.ts';
 import { SEMANAS } from './necesidades/modelo.ts';
 
 export const PERIODOS = ['semana', 'quincena', 'mes'] as const;
@@ -21,12 +23,15 @@ export type AjustesCompra = {
   costeVisita: number;
   /** Tiene la app Lidl Plus: en las ofertas de Lidl cuenta el precio con Lidl Plus. */
   lidlPlus: boolean;
+  /** Avisar de lo que baja de precio al menos este % (0 = no avisar). */
+  avisoBajada: number;
 };
 
 export const AJUSTES_INICIALES: AjustesCompra = {
   periodo: 'semana',
   costeVisita: 2,
   lidlPlus: false,
+  avisoBajada: MINIMO_BAJADA_INICIAL,
 };
 
 export const semanasDe = (periodo: Periodo): number => SEMANAS[periodo];
@@ -36,6 +41,7 @@ export function leerAjustesCompra(guardados: {
   periodo?: unknown;
   costeVisita?: unknown;
   lidlPlus?: unknown;
+  avisoBajada?: unknown;
 }): AjustesCompra {
   const periodo = PERIODOS.includes(guardados.periodo as Periodo)
     ? (guardados.periodo as Periodo)
@@ -47,7 +53,10 @@ export function leerAjustesCompra(guardados: {
       : AJUSTES_INICIALES.costeVisita;
   const lidlPlus =
     typeof guardados.lidlPlus === 'boolean' ? guardados.lidlPlus : AJUSTES_INICIALES.lidlPlus;
-  return { periodo, costeVisita, lidlPlus };
+  const avisoBajada = (MINIMOS_BAJADA as readonly unknown[]).includes(guardados.avisoBajada)
+    ? (guardados.avisoBajada as number)
+    : AJUSTES_INICIALES.avisoBajada;
+  return { periodo, costeVisita, lidlPlus, avisoBajada };
 }
 
 let estado: AjustesCompra | null = null;
@@ -60,12 +69,13 @@ function publicar(nuevo: AjustesCompra) {
 
 export async function recargarAjustesCompra(): Promise<void> {
   try {
-    const [periodo, costeVisita, lidlPlus] = await Promise.all([
+    const [periodo, costeVisita, lidlPlus, avisoBajada] = await Promise.all([
       leerAjuste('periodo'),
       leerAjuste('costeVisita'),
       leerAjuste('lidlPlus'),
+      leerAjuste('avisoBajada'),
     ]);
-    publicar(leerAjustesCompra({ periodo, costeVisita, lidlPlus }));
+    publicar(leerAjustesCompra({ periodo, costeVisita, lidlPlus, avisoBajada }));
   } catch {
     publicar(estado ?? AJUSTES_INICIALES);
   }
@@ -78,6 +88,7 @@ export async function guardarAjustesCompra(cambios: Partial<AjustesCompra>): Pro
     guardarAjuste('periodo', nuevos.periodo),
     guardarAjuste('costeVisita', nuevos.costeVisita),
     guardarAjuste('lidlPlus', nuevos.lidlPlus),
+    guardarAjuste('avisoBajada', nuevos.avisoBajada),
   ]);
 }
 

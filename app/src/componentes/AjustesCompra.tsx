@@ -5,14 +5,22 @@ import {
   useAjustesCompra,
   type Periodo,
 } from '../ajustes.ts';
+import { MINIMOS_BAJADA } from '../historial/bajadas.ts';
 import { Opciones } from './Opciones.tsx';
 import { Interruptor } from './Tienda.tsx';
 
 const OPCIONES_PERIODO = PERIODOS.map((p) => ({ valor: p, texto: NOMBRE_PERIODO[p] }));
 const COSTES = ['0', '1', '2', '3', '5'] as const;
 const OPCIONES_COSTE = COSTES.map((c) => ({ valor: c, texto: `${c} €` }));
+const OPCIONES_BAJADA = MINIMOS_BAJADA.map((m) => ({
+  valor: String(m),
+  texto: m === 0 ? 'No' : `${m} % o más`,
+}));
 
-/** Ajustes → Cómo haces la compra: periodo, coste de ir a una tienda más y Lidl Plus. */
+/**
+ * Ajustes → Cómo haces la compra: periodo, coste de ir a una tienda más, Lidl Plus y desde qué
+ * bajada de precio se avisa.
+ */
 export function AjustesCompra() {
   const ajustes = useAjustesCompra();
   if (!ajustes) return null;
@@ -55,6 +63,19 @@ export function AjustesCompra() {
         encendido={ajustes.lidlPlus}
         alCambiar={(lidlPlus) => void guardarAjustesCompra({ lidlPlus })}
       />
+      <Opciones
+        nombre="aviso-bajada"
+        etiqueta="Avisar cuando baja de precio lo que compras"
+        opciones={OPCIONES_BAJADA}
+        valor={String(ajustes.avisoBajada)}
+        alCambiar={(valor: string) => void guardarAjustesCompra({ avisoBajada: Number(valor) })}
+        columnas={2}
+      />
+      <p class="secundario">
+        {ajustes.avisoBajada === 0
+          ? 'No sale ningún aviso de bajadas en la Lista.'
+          : 'Sale en la Lista cuando baja el precio por kg (o por litro, unidad…) de un producto que has elegido en Mercadona o Consum.'}
+      </p>
     </section>
   );
 }

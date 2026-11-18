@@ -49,11 +49,38 @@ export function sumarDias(dia: string, dias: number): string {
 const iguales = (a: Punto | undefined, b: Punto): boolean =>
   a !== undefined && a[1] === b[1] && (a[1] === null || a[2] === b[2]);
 
-/** Añade un punto el día indicado si cambia algo; si ya hay uno de ese día, lo sustituye. */
+/**
+ * Si la cantidad del envase (precio ÷ precioRef) se multiplica o se divide por esto o más, no
+ * es un cambio de precio sino de medida: el precioRef pasa a ir en otra unidad o se calcula de
+ * otra forma (p. ej. el 17/11/2026 los detergentes pasaron de €/l a €/lavado y el café en
+ * cápsulas, de €/ud. a €/kg). La carne en bandeja (unos gramos más o menos) y los envases que
+ * encogen un poco quedan muy por debajo.
+ */
+export const CAMBIO_DE_MEDIDA = 1.5;
+
+/** Cantidad del envase en la unidad del precioRef, o null si no se puede saber. */
+const cantidadDe = (p: Punto | undefined) =>
+  p && p[1] !== null && p[1] > 0 && p[2] > 0 ? p[1] / p[2] : null;
+
+/** ¿Ha cambiado la medida entre el último precio apuntado y el nuevo? */
+function cambiaLaMedida(puntos: readonly Punto[], nuevo: Punto): boolean {
+  const antes = cantidadDe(puntos.findLast((p) => p[1] !== null));
+  const ahora = cantidadDe(nuevo);
+  return (
+    antes !== null && ahora !== null && Math.max(antes / ahora, ahora / antes) >= CAMBIO_DE_MEDIDA
+  );
+}
+
+/**
+ * Añade un punto el día indicado si cambia algo; si ya hay uno de ese día, lo sustituye. Si
+ * cambia la medida, el historial vuelve a empezar ese día: los precios de antes no se pueden
+ * comparar con los nuevos.
+ */
 function anotar(puntos: Punto[], nuevo: Punto): Punto[] {
   const ultimo = puntos.at(-1);
   if (ultimo && ultimo[0] > nuevo[0]) return puntos; // nunca se reescribe el pasado
   const previos = ultimo?.[0] === nuevo[0] ? puntos.slice(0, -1) : puntos;
+  if (cambiaLaMedida(previos, nuevo)) return [nuevo];
   return iguales(previos.at(-1), nuevo) ? previos : [...previos, nuevo];
 }
 
