@@ -1,6 +1,6 @@
 /**
- * «Elegir por mí»: qué ingrediente del catálogo es cada necesidad y qué producto elige la app
- * en Mercadona y Consum. Lo elegido por la app (`auto`) se pone al día con los precios de cada
+ * «Elegir por mí»: qué ingrediente del catálogo es cada necesidad, qué producto elige la app
+ * en Mercadona y Consum y qué oferta de la semana en Lidl. Lo elegido por la app (`auto`) se pone al día con los precios de cada
  * día; lo elegido a mano no se toca nunca. Funciones puras.
  */
 import { palabras } from '../buscador.ts';
@@ -12,7 +12,14 @@ import {
   type Necesidad,
 } from '../necesidades/modelo.ts';
 import { TIENDAS_AUTOMATICAS } from '../tiendas/modelo.ts';
-import type { DatosApp } from '../tipos.ts';
+import {
+  elegirOferta,
+  esOfertaSemanal,
+  estadoOferta,
+  noVale,
+  quitarOferta,
+} from '../tiendas/ofertas.ts';
+import type { DatosApp, ProductoApp } from '../tipos.ts';
 import { INGREDIENTES, type Ingrediente } from './catalogo.ts';
 import { elegirProducto } from './elegir.ts';
 
@@ -149,3 +156,65 @@ export function gastoSemanal(n: Pick<Necesidad, 'cantidad' | 'unidad' | 'frecuen
 /** «por kg», «por litro» o «por unidad», para explicar cómo elige la app. */
 export const textoPorUnidad = (i: Ingrediente) =>
   i.unidad === 'kg' ? 'por kg' : i.unidad === 'l' ? 'por litro' : 'por unidad';
+
+/**
+ * La oferta de la semana que elige la app para una necesidad en una tienda sin catálogo
+ * (Lidl): la que menos cuesta para lo que se gasta entre las ofertas de hoy que son su
+ * ingrediente, sin las que el usuario ha dicho que no le valen.
+ */
+export function ofertaAutomatica(
+  n: Necesidad,
+  datos: Datos,
+  tienda: string,
+  hoy: string,
+  semanal: number = gastoSemanal(n),
+): ProductoApp | undefined {
+  const ingrediente = ingredienteDe(n);
+  if (!ingrediente || !unidadCompatible(ingrediente, n)) return undefined;
+  const ofertas = datos.productos.filter(
+    (p) =>
+      p.tienda === tienda &&
+      esOfertaSemanal(p) &&
+      estadoOferta(p, hoy) === 'vigente' &&
+      !noVale(n, tienda, p.id),
+  );
+  if (ofertas.length === 0) return undefined;
+  return elegirProducto(
+    ingrediente,
+    { productos: ofertas, secciones: datos.secciones },
+    tienda,
+    hoy,
+    semanal,
+  );
+}
+
+/**
+ * Pone al día las ofertas elegidas por la app: en cada tienda con ofertas, la mejor de hoy
+ * para cada necesidad, o ninguna si ya no hay. Las elegidas a mano no se tocan. Devuelve solo
+ * las necesidades que cambian.
+ */
+export function actualizarOfertas(
+  necesidades: readonly Necesidad[],
+  datos: Datos,
+  hoy: string,
+  ahora: string,
+  semanalDe: (n: Necesidad) => number = gastoSemanal,
+): Necesidad[] {
+  const tiendas = [
+    ...new Set(datos.productos.filter((p) => esOfertaSemanal(p)).map((p) => p.tienda)),
+  ];
+  const cambiadas: Necesidad[] = [];
+  for (const n of necesidades) {
+    let nueva = n;
+    for (const tienda of tiendas) {
+      const actual = nueva.ofertas?.[tienda];
+      if (actual && !actual.auto) continue;
+      const mejor = ofertaAutomatica(nueva, datos, tienda, hoy, semanalDe(n));
+      if (mejor && mejor.id !== actual?.id)
+        nueva = elegirOferta(nueva, tienda, mejor.id, ahora, true);
+      else if (!mejor && actual) nueva = quitarOferta(nueva, tienda, ahora);
+    }
+    if (nueva !== n) cambiadas.push(nueva);
+  }
+  return cambiadas;
+}

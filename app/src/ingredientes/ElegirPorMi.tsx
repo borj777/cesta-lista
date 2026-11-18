@@ -11,6 +11,7 @@ import { aportesDelMenu, necesidadesConMenu, type Menu } from '../menu/menu.ts';
 import type { Receta } from '../menu/recetas.ts';
 import {
   actualizarAutomaticas,
+  actualizarOfertas,
   elegirPorMi,
   gastoSemanal,
   ingredienteDe,
@@ -23,36 +24,45 @@ const enumerar = (xs: string[]) =>
   xs.length <= 1 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} y ${xs.at(-1) ?? ''}`;
 
 /**
- * Pone al día, una vez por cada descarga de precios, lo que eligió la app: si hoy hay otro
- * producto válido más barato, lo cambia. También quita las ofertas de Lidl que ya han
- * terminado. No enseña nada.
+ * Pone al día lo que eligió la app. No enseña nada.
+ * - Una vez por cada descarga de precios: si hoy hay otro producto válido más barato, lo cambia.
+ * - Siempre que cambian las necesidades o los precios: quita las ofertas de Lidl terminadas y
+ *   elige la mejor oferta de la semana para cada necesidad (así una necesidad nueva la tiene al
+ *   momento). Todo se guarda de una vez para no pisar un cambio con otro.
  */
 export function PonerAlDia({ datos }: { datos: DatosApp | null }) {
   const { necesidades } = useNecesidades();
   const { recetas, menu } = useRecetas();
   const hecho = useRef<string | null>(null);
+  const guardando = useRef(false);
   useEffect(() => {
-    if (!datos || !necesidades || !recetas || hecho.current === datos.generado) return;
-    hecho.current = datos.generado;
+    if (!datos || !necesidades || !recetas || guardando.current) return;
     const hoy = hoyEnEspana();
     const ahora = new Date().toISOString();
-    const sinTerminadas = new Map(
-      quitarOfertasTerminadas(necesidades, datos, hoy, ahora).map((n) => [n.id, n]),
-    );
-    const limpias = necesidades.map((n) => sinTerminadas.get(n.id) ?? n);
-    const gasto = gastosConMenu(limpias, recetas, menu);
-    const automaticas = actualizarAutomaticas(
-      limpias,
-      datos,
-      hoy,
-      ahora,
-      (n) => gasto.get(n.id) ?? gastoSemanal(n),
-    );
-    const cambiadas = new Map([...sinTerminadas, ...automaticas.map((n) => [n.id, n] as const)]);
-    guardarVarias([...cambiadas.values()]).catch(() => {
-      // Si no se puede guardar, se reintenta con la próxima descarga.
-      hecho.current = null;
-    });
+    const cambios = new Map<string, Necesidad>();
+    const aplicar = (lista: Necesidad[]) => {
+      for (const n of lista) cambios.set(n.id, n);
+    };
+    const actuales = () => necesidades.map((n) => cambios.get(n.id) ?? n);
+
+    aplicar(quitarOfertasTerminadas(necesidades, datos, hoy, ahora));
+    const gasto = gastosConMenu(actuales(), recetas, menu);
+    const semanalDe = (n: Necesidad) => gasto.get(n.id) ?? gastoSemanal(n);
+    const nuevaDescarga = hecho.current !== datos.generado;
+    if (nuevaDescarga) aplicar(actualizarAutomaticas(actuales(), datos, hoy, ahora, semanalDe));
+    aplicar(actualizarOfertas(actuales(), datos, hoy, ahora, semanalDe));
+    hecho.current = datos.generado;
+    if (cambios.size === 0) return;
+
+    guardando.current = true;
+    guardarVarias([...cambios.values()])
+      .catch(() => {
+        // Si no se puede guardar, se reintenta con la próxima descarga.
+        if (nuevaDescarga) hecho.current = null;
+      })
+      .finally(() => {
+        guardando.current = false;
+      });
   }, [datos, necesidades, recetas, menu]);
   return null;
 }

@@ -72,6 +72,8 @@ export type Necesidad = {
    * si sale más barata que lo elegido en `equivalencias`; cuando se acaba, se quita sola.
    */
   ofertas?: OfertasElegidas;
+  /** Ofertas («lidl:id») que no valen para esta necesidad: la app no las vuelve a proponer. */
+  ofertasNoValen?: string[];
   /**
    * Solo se compra para las recetas del menú: no tiene cantidad propia (`cantidad` es 0).
    * Se crea al añadir un ingrediente nuevo a una receta.

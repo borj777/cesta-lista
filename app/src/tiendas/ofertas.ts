@@ -9,8 +9,11 @@ import type { Necesidad } from '../necesidades/modelo.ts';
 import type { DatosApp, ProductoApp } from '../tipos.ts';
 import { esAutomatica, type IdTienda } from './modelo.ts';
 
-/** Oferta elegida para una necesidad en una tienda (por id, como las equivalencias). */
-export type OfertaElegida = { id: string };
+/**
+ * Oferta elegida para una necesidad en una tienda (por id, como las equivalencias). `auto`: la
+ * eligió la app con el catálogo de ingredientes y la cambia sola cada día.
+ */
+export type OfertaElegida = { id: string; auto?: true };
 export type OfertasElegidas = Partial<Record<IdTienda, OfertaElegida>>;
 
 /**
@@ -95,24 +98,66 @@ export function ofertaVigente(
   return p && esOfertaSemanal(p) && estadoOferta(p, hoy) === 'vigente' ? p : undefined;
 }
 
-/** Elige una oferta para una necesidad en una tienda (sustituye a la que hubiera). */
-export function elegirOferta(n: Necesidad, tienda: IdTienda, id: string, ahora: string): Necesidad {
-  return { ...n, ofertas: { ...n.ofertas, [tienda]: { id } }, actualizada: ahora };
+/** Clave de una oferta en `ofertasNoValen`: «lidl:11137963». */
+export const claveOferta = (tienda: IdTienda, id: string) => `${tienda}:${id}`;
+
+/** ¿Ha dicho el usuario que esta oferta no le vale para esta necesidad? */
+export const noVale = (n: Necesidad, tienda: IdTienda, id: string): boolean =>
+  n.ofertasNoValen?.includes(claveOferta(tienda, id)) ?? false;
+
+function conNoValen(n: Necesidad, lista: string[]): Necesidad {
+  const resultado: Necesidad = { ...n, ofertasNoValen: lista };
+  if (lista.length === 0) delete resultado.ofertasNoValen;
+  return resultado;
 }
 
-/** Quita la oferta elegida en una tienda. */
-export function quitarOferta(n: Necesidad, tienda: IdTienda, ahora: string): Necesidad {
+/**
+ * Elige una oferta para una necesidad en una tienda (sustituye a la que hubiera). Elegida a
+ * mano queda fija y, si antes se dijo que no valía, vuelve a valer.
+ */
+export function elegirOferta(
+  n: Necesidad,
+  tienda: IdTienda,
+  id: string,
+  ahora: string,
+  auto = false,
+): Necesidad {
+  const ofertas = { ...n.ofertas, [tienda]: auto ? { id, auto: true as const } : { id } };
+  const nueva: Necesidad = { ...n, ofertas, actualizada: ahora };
+  if (auto) return nueva;
+  const clave = claveOferta(tienda, id);
+  return conNoValen(
+    nueva,
+    (n.ofertasNoValen ?? []).filter((c) => c !== clave),
+  );
+}
+
+/**
+ * Quita la oferta elegida en una tienda. Con `recordar`, la app no vuelve a proponerla para
+ * esta necesidad («No me vale»).
+ */
+export function quitarOferta(
+  n: Necesidad,
+  tienda: IdTienda,
+  ahora: string,
+  recordar = false,
+): Necesidad {
   const ofertas = Object.fromEntries(
     Object.entries(n.ofertas ?? {}).filter(([t]) => t !== tienda),
   ) as OfertasElegidas;
-  const resultado: Necesidad = { ...n, ofertas, actualizada: ahora };
+  let resultado: Necesidad = { ...n, ofertas, actualizada: ahora };
   if (Object.keys(ofertas).length === 0) delete resultado.ofertas;
+  const id = n.ofertas?.[tienda]?.id;
+  if (recordar && id && !noVale(n, tienda, id)) {
+    resultado = conNoValen(resultado, [...(n.ofertasNoValen ?? []), claveOferta(tienda, id)]);
+  }
   return resultado;
 }
 
 /**
  * Quita de cada necesidad las ofertas que ya han terminado o que ya no están en los precios
- * descargados. Devuelve solo las necesidades que cambian.
+ * descargados, y olvida los «No me vale» de ofertas que ya no existen. Devuelve solo las
+ * necesidades que cambian.
  */
 export function quitarOfertasTerminadas(
   necesidades: readonly Necesidad[],
@@ -130,6 +175,13 @@ export function quitarOfertasTerminadas(
     let nueva = n;
     for (const [tienda, o] of Object.entries(n.ofertas ?? {})) {
       if (o && !vivas.has(`${tienda}:${o.id}`)) nueva = quitarOferta(nueva, tienda, ahora);
+    }
+    const noValen = nueva.ofertasNoValen ?? [];
+    if (noValen.some((c) => !vivas.has(c))) {
+      nueva = conNoValen(
+        nueva,
+        noValen.filter((c) => vivas.has(c)),
+      );
     }
     if (nueva !== n) cambiadas.push(nueva);
   }

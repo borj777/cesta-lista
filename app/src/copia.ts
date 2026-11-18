@@ -119,10 +119,21 @@ function problemaNecesidad(
       if (!esAutomatica(tienda) && !tiendas.has(tienda)) {
         return `la tienda «${tienda}» no existe`;
       }
+      const claves = esObjeto(o) ? Object.keys(o).sort().join(',') : '';
       const valida =
-        esObjeto(o) && typeof o.id === 'string' && o.id.length > 0 && Object.keys(o).length === 1;
+        esObjeto(o) &&
+        typeof o.id === 'string' &&
+        o.id.length > 0 &&
+        (claves === 'id' || (claves === 'auto,id' && o.auto === true));
       if (!valida) return `la oferta elegida en ${tienda} no es válida`;
     }
+  }
+  if (
+    n.ofertasNoValen !== undefined &&
+    (!Array.isArray(n.ofertasNoValen) ||
+      !n.ofertasNoValen.every((c) => typeof c === 'string' && c.includes(':')))
+  ) {
+    return 'las ofertas que no valen no son válidas';
   }
   return null;
 }

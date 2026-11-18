@@ -162,7 +162,10 @@ export function DetalleNecesidad({
                       comparable={oferta.formato.unidad === unidadDeComparacion(necesidad.unidad)}
                     />
                   </div>
-                  <p class="secundario">
+                  <p class="secundario nota-automatica">
+                    {necesidad.ofertas?.[tienda]?.auto
+                      ? 'Elegida por la app: la oferta de esta semana que menos cuesta para lo que gastas. '
+                      : ''}
                     {plazo === 'proxima'
                       ? 'Aún no ha empezado: la app la usará cuando empiece, si sale más barata.'
                       : 'Mientras dure, la app la usa si sale más barata. Cuando se acabe, se quita sola.'}
@@ -174,9 +177,9 @@ export function DetalleNecesidad({
                     <button
                       type="button"
                       class="boton"
-                      onClick={() => void cambiar(quitarOferta(necesidad, tienda, ahora()))}
+                      onClick={() => void cambiar(quitarOferta(necesidad, tienda, ahora(), true))}
                     >
-                      Quitar la oferta
+                      No me vale
                     </button>
                   </div>
                   <p class="tienda__parte">Tu producto de siempre</p>

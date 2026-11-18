@@ -1,6 +1,7 @@
 /**
- * Catálogo de ingredientes básicos: qué es cada uno, en qué secciones de Mercadona y Consum se
- * busca y con qué palabras. Con él la app elige sola el producto más barato de cada tienda.
+ * Catálogo de ingredientes básicos: qué es cada uno, en qué secciones de Mercadona y Consum
+ * (y de las ofertas de Lidl, con los nombres de sección vistos hasta ahora) se busca y con qué
+ * palabras. Con él la app elige sola el producto más barato de cada tienda.
  *
  * - `buscar`: frases alternativas; el nombre del producto debe tener todas las palabras de una.
  * - `en`: trozos de la ruta de sección («Carne > Aves y pollo»); vale si la ruta contiene uno.
@@ -26,39 +27,63 @@ export type Ingrediente = {
 };
 
 // Secciones que se repiten. Las de Consum empiezan por «Frescos >», «Despensa >»...
-const POLLO = ['Carne > Aves y pollo', 'Carnicería > Aves', 'Carnicería corte > Aves'];
-const CERDO = ['Carne > Cerdo', 'Carnicería > Cerdo', 'Carnicería corte > Cerdo'];
-const VACUNO = ['Carne > Vacuno', 'Carnicería > Vacuno', 'Carnicería corte > Vacuno'];
+const POLLO = [
+  'Carne > Aves y pollo',
+  'Carnicería > Aves',
+  'Carnicería corte > Aves',
+  'Carne y aves > Aves de corral',
+];
+const CERDO = [
+  'Carne > Cerdo',
+  'Carnicería > Cerdo',
+  'Carnicería corte > Cerdo',
+  'Carne y aves > Carne de cerdo',
+];
+const VACUNO = [
+  'Carne > Vacuno',
+  'Carnicería > Vacuno',
+  'Carnicería corte > Vacuno',
+  'Carne y aves > Carne de vacuno',
+];
 const PICADA = [
   'Hamburguesas y picadas > Picadas',
   'Carnicería > Picadas y hamburguesas',
   'Carnicería corte > Picadas y hamburguesas',
+  'Carne y aves',
 ];
 const PESCADO = [
   'Marisco y pescado > Pescado fresco',
   'Congelados > Pescado > Pescado',
   'Pescadería > Pescado',
   'Pescados y mariscos > Pescado congelado',
+  'Pescado y marisco',
 ];
 const MARISCO = [
   'Marisco y pescado > Marisco',
   'Congelados > Marisco',
   'Pescadería > Marisco',
   'Pescados y mariscos > Marisco congelado',
+  'Pescado y marisco',
 ];
 const CEFALOPODOS = [
   'Pescado fresco > Sepia, pulpo y calamar',
   'Congelados > Marisco',
   'Pescadería > Calamar y sepia',
   'Pescados y mariscos > Sepia, pulpo y calamares',
+  'Pescado y marisco',
 ];
-const FRUTA = ['Fruta y verdura > Fruta', 'Frescos > Frutas'];
-const VERDURA = ['Fruta y verdura > Verdura', 'Frescos > Verduras'];
+const FRUTA = ['Fruta y verdura > Fruta', 'Frescos > Frutas', 'Frutas y hortalizas > Fruta'];
+const VERDURA = [
+  'Fruta y verdura > Verdura',
+  'Frescos > Verduras',
+  'Frutas y hortalizas > Verduras',
+];
 const VERDURA_CONGELADA = ['Congelados > Fruta y verdura > Verdura', 'Frutas y Verduras'];
 const ENSALADA = [
   'Lechuga y ensalada preparada',
   'Verduras > Lechuga y endibias',
   'Verduras > Ensaladas y brotes',
+  'Frutas y hortalizas > Verduras',
 ];
 const ARROZ = ['Arroz, legumbres y pasta > Arroz', 'Arroz, pastas, legumbres > Arroz'];
 const PASTA = ['Pasta y fideos', 'Arroz, pastas, legumbres > Pastas'];
@@ -66,14 +91,24 @@ const LEGUMBRES = ['Arroz, legumbres y pasta > Legumbres', 'Arroz, pastas, legum
 const HUEVOS = [
   'Huevos, leche y mantequilla > Huevos',
   'Lácteos y huevos > Huevos > Huevos frescos',
+  'productos lácteos y huevos',
 ];
-const LECHE = ['Leche y bebidas vegetales > Leche', 'Lácteos y huevos > Leche'];
+const LECHE = [
+  'Leche y bebidas vegetales > Leche',
+  'Lácteos y huevos > Leche',
+  'productos lácteos y huevos',
+];
 const YOGUR = [
   'Postres y yogures > Yogures',
   'Postres y yogures > Bífidus',
   'Lácteos y huevos > Yogures',
+  'productos lácteos y huevos > Yogur',
 ];
-const QUESO = ['Charcutería y quesos > Queso', 'Frescos > Quesos'];
+const QUESO = [
+  'Charcutería y quesos > Queso',
+  'Frescos > Quesos',
+  'productos lácteos y huevos > Queso',
+];
 const CONSERVA_PESCADO = [
   'Atún y otras conservas de pescado',
   'Berberechos y mejillones',
@@ -88,9 +123,15 @@ const FRUTOS_SECOS = [
   'Frutos secos y fruta desecada',
   'Aperitivos y frutos secos > Frutos secos',
   'Aperitivos y frutos secos > Fruta desecada',
+  'Dulces y aperitivos > Fruta seca y frutos secos',
+  'Dulces y aperitivos > Galletas y pasteles',
 ];
-const PAN = ['Panadería y pastelería > Pan', 'Panes y tostadas', 'Horno > Pan'];
-const EMBUTIDO = ['Charcutería y quesos', 'Frescos > Charcutería'];
+const PAN = ['Panadería y pastelería > Pan', 'Panes y tostadas', 'Horno > Pan', 'Panadería > Pan'];
+const EMBUTIDO = [
+  'Charcutería y quesos',
+  'Frescos > Charcutería',
+  'Carne y aves > Embutidos y fiambres',
+];
 const CEREALES = ['Cereales y galletas > Cereales', 'Desayuno, dulces y café > Cereales'];
 const TOMATE_CONSERVA = [
   'Conservas, caldos y cremas > Tomate',
@@ -119,7 +160,8 @@ export const INGREDIENTES: Ingrediente[] = [
     id: 'pechuga-pollo',
     nombre: 'Pechuga de pollo',
     unidad: 'kg',
-    buscar: ['pechuga pollo', 'filete pollo'],
+    // En Lidl, la sección ya dice que es pollo: «Filete de pechuga».
+    buscar: ['pechuga pollo', 'filete pollo', 'filete pechuga'],
     en: POLLO,
     excluir: [...NO_PREPARADO, 'pavo'],
     nombres: ['pechuga', 'pollo a la plancha'],
@@ -227,7 +269,7 @@ export const INGREDIENTES: Ingrediente[] = [
     unidad: 'kg',
     buscar: ['salmon'],
     en: PESCADO,
-    excluir: [...NO_PREPARADO, 'ahumado', 'trucha', 'salmonete', 'marinera'],
+    excluir: [...NO_PREPARADO, 'ahumado', 'trucha', 'salmonete', 'marinera', 'pate'],
     nombres: ['salmón'],
     racion: 0.15,
   },
@@ -430,7 +472,8 @@ export const INGREDIENTES: Ingrediente[] = [
     nombre: 'Mantequilla',
     unidad: 'kg',
     buscar: ['mantequilla'],
-    en: ['Mantequilla y margarina > Mantequilla'],
+    excluir: ['light'],
+    en: ['Mantequilla y margarina > Mantequilla', 'productos lácteos y huevos > Mantequilla'],
     racion: 0.01,
   },
   {
@@ -762,7 +805,7 @@ export const INGREDIENTES: Ingrediente[] = [
     nombre: 'Champiñones',
     unidad: 'kg',
     buscar: ['champiñon', 'champinon'],
-    en: ['Setas y champiñones', 'Champiñones y setas'],
+    en: ['Setas y champiñones', 'Champiñones y setas', 'Frutas y hortalizas > Verduras'],
     nombres: ['champiñones', 'setas'],
     racion: 0.1,
   },

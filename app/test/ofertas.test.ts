@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { leerAjustesCompra } from '../src/ajustes.ts';
+import { actualizarOfertas, ofertaAutomatica } from '../src/ingredientes/automatico.ts';
 import { crearNecesidad, type Necesidad } from '../src/necesidades/modelo.ts';
 import { planificar } from '../src/optimizador.ts';
 import {
@@ -248,5 +249,75 @@ describe('ajuste «Tengo Lidl Plus»', () => {
     expect(leerAjustesCompra({}).lidlPlus).toBe(false);
     expect(leerAjustesCompra({ lidlPlus: true }).lidlPlus).toBe(true);
     expect(leerAjustesCompra({ lidlPlus: 'sí' }).lidlPlus).toBe(false);
+  });
+});
+
+describe('ofertas elegidas por la app', () => {
+  // Ofertas inventadas con secciones como las de Lidl.
+  const filete: ProductoApp = { ...pechuga, id: 'f1', seccion: 'aves' };
+  const fileteGrande: ProductoApp = {
+    ...pechuga,
+    id: 'f2',
+    formato: { cantidad: 2, unidad: 'kg' },
+    precio: 13,
+    precioRef: 6.5,
+    seccion: 'aves',
+  };
+  const empanada: ProductoApp = {
+    ...pechuga,
+    id: 'e1',
+    nombre: 'Empanada de pollo',
+    seccion: 'aves',
+  };
+  const conSecciones: DatosApp = {
+    generado: AHORA,
+    tiendas: {},
+    secciones: { lidl: { aves: 'Carne y aves > Aves de corral' } },
+    productos: [filete, fileteGrande, empanada, { ...filete, id: 'f3', ofertaDesde: '2026-11-23' }],
+  };
+  const pollo = () => necesidad({ nombre: 'Pechuga de pollo' });
+
+  it('elige la oferta de su ingrediente que menos cuesta para lo que se gasta', () => {
+    // 1 kg a la semana: en 4 semanas, 8 bandejas de 0,5 kg (31,92 €) o 2 de 2 kg (26 €).
+    expect(ofertaAutomatica(pollo(), conSecciones, 'lidl', HOY)?.id).toBe('f2');
+    // Con 150 g a la semana, la bandeja pequeña.
+    expect(ofertaAutomatica(pollo(), conSecciones, 'lidl', HOY, 0.15)?.id).toBe('f1');
+    // Lo preparado no vale, ni lo que aún no ha empezado, ni otra necesidad.
+    expect(
+      ofertaAutomatica(necesidad({ nombre: 'Detergente' }), conSecciones, 'lidl', HOY),
+    ).toBeUndefined();
+  });
+
+  it('la pone al día cada día y no toca la elegida a mano', () => {
+    const [auto] = actualizarOfertas([pollo()], conSecciones, HOY, AHORA, () => 0.15);
+    expect(auto?.ofertas).toEqual({ lidl: { id: 'f1', auto: true } });
+    // Sin cambios, nada que guardar.
+    expect(actualizarOfertas([auto as Necesidad], conSecciones, HOY, AHORA, () => 0.15)).toEqual(
+      [],
+    );
+    // Si ya no hay ninguna que valga, la quita.
+    const sinOfertas = { ...conSecciones, productos: [empanada] };
+    expect(
+      actualizarOfertas([auto as Necesidad], sinOfertas, HOY, AHORA)[0]?.ofertas,
+    ).toBeUndefined();
+    // La elegida a mano se queda.
+    const aMano = elegirOferta(pollo(), 'lidl', 'e1', AHORA);
+    expect(actualizarOfertas([aMano], conSecciones, HOY, AHORA)).toEqual([]);
+  });
+
+  it('«No me vale» la quita y no la vuelve a proponer; elegirla a mano la recupera', () => {
+    const [auto] = actualizarOfertas([pollo()], conSecciones, HOY, AHORA, () => 0.15);
+    const rechazada = quitarOferta(auto as Necesidad, 'lidl', AHORA, true);
+    expect(rechazada.ofertas).toBeUndefined();
+    expect(rechazada.ofertasNoValen).toEqual(['lidl:f1']);
+    const [otra] = actualizarOfertas([rechazada], conSecciones, HOY, AHORA, () => 0.15);
+    expect(otra?.ofertas?.lidl?.id).toBe('f2');
+    expect(elegirOferta(rechazada, 'lidl', 'f1', AHORA).ofertasNoValen).toBeUndefined();
+  });
+
+  it('olvida los «No me vale» de ofertas que ya no se descargan', () => {
+    const n = necesidad({ ofertasNoValen: ['lidl:f1', 'lidl:viejo'] });
+    const [limpia] = quitarOfertasTerminadas([n], conSecciones, HOY, AHORA);
+    expect(limpia?.ofertasNoValen).toEqual(['lidl:f1']);
   });
 });

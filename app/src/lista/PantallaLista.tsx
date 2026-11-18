@@ -6,7 +6,8 @@ import { FechaPrecios } from '../componentes/EstadoPrecios.tsx';
 import { Icono } from '../componentes/Icono.tsx';
 import { NombreTienda } from '../componentes/Tienda.tsx';
 import { hoyEnEspana, textoDia, textoFormato, textoPrecio } from '../formato.ts';
-import { useNecesidades } from '../necesidades/estado.ts';
+import { guardar as guardarNecesidad, useNecesidades } from '../necesidades/estado.ts';
+import { esOfertaSemanal, etiquetaOferta, quitarOferta } from '../tiendas/ofertas.ts';
 import { useTiendas } from '../tiendas/estado.ts';
 import type { InfoTienda } from '../tiendas/modelo.ts';
 import { precioAntiguo } from '../tiendas/productos.ts';
@@ -186,6 +187,15 @@ export function PantallaLista({ datos, ahora }: { datos: DatosApp | null; ahora:
             </section>
           )}
           <Avisos plan={plan} antiguos={antiguos} tiendas={tiendas} />
+          {plan.mejor && necesidades && (
+            <OfertasEnTuCompra
+              mejor={plan.mejor}
+              tiendas={tiendas}
+              necesidades={necesidades}
+              hoy={hoy}
+              alFallar={setFallo}
+            />
+          )}
           {plan.mejor && <ComprasPorTienda mejor={plan.mejor} tiendas={tiendas} />}
           {reparto && (
             <PuedeQueTeQuede
@@ -407,6 +417,62 @@ function FilaCompra({ compra }: { compra: Compra }) {
         <span class="fila__importe">{euros(opcion.coste)}</span>
       </a>
     </li>
+  );
+}
+
+/**
+ * Ofertas de la semana (Lidl) que entran en la compra elegida: de un vistazo, con su fecha y
+ * «No me vale» para que la app no la vuelva a proponer para esa necesidad.
+ */
+function OfertasEnTuCompra({
+  mejor,
+  tiendas,
+  necesidades,
+  hoy,
+  alFallar,
+}: {
+  mejor: Resultado;
+  tiendas: InfoTienda[];
+  necesidades: Necesidad[];
+  hoy: string;
+  alFallar: (texto: string | null) => void;
+}) {
+  const conOferta = mejor.compras.filter((c) => esOfertaSemanal(c.opcion.producto));
+  if (conOferta.length === 0) return null;
+  const tiendasConOferta = [...new Set(conOferta.map((c) => c.opcion.tienda))];
+  const noMeVale = (c: Compra) => {
+    // La necesidad guardada, no la de la lista (que lleva sumado el menú).
+    const original = necesidades.find((n) => n.id === c.analisis.necesidad.id);
+    if (!original) return;
+    alFallar(null);
+    guardarNecesidad(quitarOferta(original, c.opcion.tienda, new Date().toISOString(), true)).catch(
+      (e: unknown) =>
+        alFallar(`No se ha podido guardar (${e instanceof Error ? e.message : String(e)}).`),
+    );
+  };
+  return (
+    <section class="grupo">
+      <h2 class="grupo__titulo grupo__titulo--separado">
+        Ofertas de {nombresTiendas(tiendasConOferta, tiendas)} en tu compra
+      </h2>
+      <ul class="filas tarjeta tarjeta--lista">
+        {conOferta.map((c) => (
+          <li key={c.analisis.necesidad.id} class="fila">
+            <div class="fila__texto">
+              <span>{c.opcion.producto.nombre}</span>
+              <span class="secundario">
+                Para {c.analisis.necesidad.nombre.toLowerCase()} · {c.opcion.envases} ×{' '}
+                {euros(c.opcion.precio)}
+              </span>
+              <span class="etiqueta-oferta">{etiquetaOferta(c.opcion.producto, hoy)}</span>
+            </div>
+            <button type="button" class="boton boton--pequeno" onClick={() => noMeVale(c)}>
+              No me vale
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
