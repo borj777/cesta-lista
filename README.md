@@ -24,7 +24,7 @@ Se publica sola (workflow «Publicar la app») cada vez que se sube un cambio a 
 ### Cómo se usa
 
 1. **Necesidades:** apunta lo que compras, con la cantidad y cada cuánto (por ejemplo, leche semidesnatada, 6 litros a la semana; detergente, 50 lavados al mes).
-2. **Qué compras en cada tienda:** pulsa **Elegir por mí** y la app pone el producto de Mercadona y de Consum que menos cuesta para lo que gastas, y lo cambia sola cuando aparece otro más barato. También puedes elegirlo tú con el buscador (entonces queda fijo) o decir «No lo compro aquí». Se compara por precio por kg, litro, unidad o lavado.
+2. **Qué compras en cada tienda:** pulsa **Elegir por mí** y la app pone el producto de Mercadona y de Consum que menos cuesta para lo que gastas, y lo cambia sola cuando aparece otro más barato. También puedes elegirlo tú con el buscador (entonces queda fijo) o decir «No lo compro aquí». Se compara por precio por kg, litro, unidad o lavado. Debajo de cada producto de Mercadona y de Consum sale **cómo ha cambiado su precio** desde el 15/11/2026: una gráfica (tócala para ver el precio de cada día), si ha subido o bajado y si es el más bajo, y **Ver los cambios** con cada cambio.
 3. **Tiendas:** Mercadona y Consum tienen precios automáticos. En Lidl y en las tiendas que añadas (hasta 8, por ejemplo la frutería) apuntas tú los precios mirando el ticket; la app avisa si un precio tiene más de 30 días. Cualquier tienda se puede apagar si no vas nunca.
    **Ofertas de Lidl:** cada mañana se descargan sus ofertas de la semana (las de Valencia). Las ves en **Tiendas → Lidl**, con su fecha de fin. La app elige sola, para cada necesidad, la oferta que menos cuesta y la usa mientras dura si sale más barata que en las otras tiendas; luego vuelve tu producto de siempre. La Lista enseña las ofertas que entran en la compra; si una no te vale, pulsa **No me vale** y no te la vuelve a proponer. También puedes elegir una oferta a mano en el buscador de Lidl de cada necesidad. Si tienes la app Lidl Plus, enciende **Ajustes → Tengo Lidl Plus** para que cuente ese precio.
 4. **Lista:** dice a qué tiendas ir, cuánto pagarás y cuánto ahorras frente a comprarlo todo en una sola tienda. En **Ajustes** eliges para cuánto tiempo compras (1 semana, 2 semanas o 1 mes) y cuánto te compensa ir a una tienda más.
@@ -154,5 +154,6 @@ npm run build    # versión para publicar, en app/dist
 | `app/src/tiendas/` | Tiendas propias, sus productos, tiendas apagadas y ofertas de Lidl |
 | `app/src/optimizador.ts` | Cálculo de la combinación de tiendas más barata |
 | `app/src/lista/` | Lista de compra, compra en la tienda y pantalla encendida |
+| `app/src/historial/` | Historial del precio de cada producto: descarga del trozo, resumen y gráfica |
 | `app/sw/sw.js` | Service worker (funcionamiento sin conexión) |
 | `.github/workflows/` | `scrape.yml` (precios diarios), `deploy.yml` (publicar la app), `ci.yml` (tests de las propuestas de cambio) y `fase0.yml` (prueba de acceso) |

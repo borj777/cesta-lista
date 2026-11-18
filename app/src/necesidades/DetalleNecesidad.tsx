@@ -13,6 +13,7 @@ import { estadoOferta, quitarOferta } from '../tiendas/ofertas.ts';
 import { notaPrecio, precioAntiguo } from '../tiendas/productos.ts';
 import type { DatosApp, ProductoApp } from '../tipos.ts';
 import { ElegirPorMi, NotaAutomatica } from '../ingredientes/ElegirPorMi.tsx';
+import { HistorialPrecio } from '../historial/HistorialPrecio.tsx';
 import { guardar } from './estado.ts';
 import {
   elegidoPorLaApp,
@@ -197,6 +198,9 @@ export function DetalleNecesidad({
                     />
                   </div>
                   {elegidoPorLaApp(necesidad, tienda) && <NotaAutomatica />}
+                  {info.automatica && (
+                    <HistorialPrecio producto={estado.producto} color={info.color} />
+                  )}
                   {apuntado && precioAntiguo(apuntado, hoy) && (
                     <a
                       class="boton boton--ancho"

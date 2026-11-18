@@ -3,8 +3,8 @@
  * vite.config.ts lo copia a dist/sw.js y rellena VERSION y ARCHIVOS.
  *
  * - La app (HTML, JS, CSS, iconos) se guarda al instalarse y se sirve desde la caché.
- * - data/app.json e imagenes.json se piden primero a la red y, si no hay conexión,
- *   se usa la última copia guardada.
+ * - data/app.json, imagenes.json y los trozos del historial de precios se piden primero a la
+ *   red y, si no hay conexión, se usa la última copia guardada.
  * - Las fotos de las tiendas se guardan al verlas (las 400 más recientes).
  * - El lector de PDF (pdf.js, unos 540 KB) se guarda la primera vez que se usa y se conserva
  *   entre versiones: así no se descarga con cada versión nueva de la app.
@@ -164,7 +164,11 @@ self.addEventListener('fetch', (evento) => {
   }
   if (url.origin !== self.location.origin) return;
 
-  if (url.pathname.endsWith('/data/app.json') || url.pathname.endsWith('/data/imagenes.json')) {
+  if (
+    url.pathname.endsWith('/data/app.json') ||
+    url.pathname.endsWith('/data/imagenes.json') ||
+    url.pathname.includes('/data/historial/')
+  ) {
     evento.respondWith(primeroRed(evento));
   } else if (LECTOR.some((archivo) => url.pathname.endsWith(`/${archivo}`))) {
     evento.respondWith(lector(evento));
