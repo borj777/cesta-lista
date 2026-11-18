@@ -1,9 +1,10 @@
 /**
- * Descarga los precios de Mercadona y Consum y los guarda en /data.
+ * Descarga los precios de Mercadona y Consum y las ofertas de Lidl y los guarda en /data.
  * Uso: npm run scrape            (todas las tiendas)
  *      npm run scrape -- consum  (solo una)
  */
 import { descargarConsum } from './adapters/consum.ts';
+import { descargarLidl } from './adapters/lidl.ts';
 import { descargarMercadona } from './adapters/mercadona.ts';
 import { leerSecciones, serializarSecciones, unirSecciones } from './app.ts';
 import { actualizarApp, escribir, leerJson, leerMeta } from './archivos.ts';
@@ -27,8 +28,11 @@ type Descargar = (
 const ADAPTADORES = {
   mercadona: descargarMercadona,
   consum: descargarConsum,
+  lidl: descargarLidl,
 } satisfies Record<string, Descargar>;
 type TiendaScraper = keyof typeof ADAPTADORES;
+/** Tiendas cuyos productos cambian enteros cada semana: no se comparan con el día anterior. */
+const SEMANALES: ReadonlySet<TiendaScraper> = new Set(['lidl']);
 
 const registrar = (mensaje: string) => console.log(`[${new Date().toISOString()}] ${mensaje}`);
 
@@ -46,7 +50,7 @@ async function procesar(
   let veredicto: Veredicto;
   try {
     resultado = await ADAPTADORES[tienda](cliente.pedir, ahora, registrar);
-    veredicto = evaluar(resultado, anteriores);
+    veredicto = evaluar(resultado, anteriores, { semanal: SEMANALES.has(tienda) });
   } catch (error) {
     veredicto = { valido: false, motivo: error instanceof Error ? error.message : String(error) };
   }
@@ -77,7 +81,9 @@ async function main(): Promise<void> {
   const argumentos = process.argv.slice(2);
   const desconocidas = argumentos.filter((t) => !(t in ADAPTADORES));
   if (desconocidas.length > 0) {
-    console.error(`Tienda desconocida: ${desconocidas.join(', ')}. Usa: mercadona, consum`);
+    console.error(
+      `Tienda desconocida: ${desconocidas.join(', ')}. Usa: ${Object.keys(ADAPTADORES).join(', ')}`,
+    );
     process.exit(2);
   }
   const tiendas = (

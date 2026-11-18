@@ -1,4 +1,4 @@
-# Descarga diaria de los precios de Mercadona y Consum y commit de /data si hay cambios.
+# Descarga diaria de los precios de Mercadona y Consum y de las ofertas de Lidl, y commit de /data si hay cambios.
 # Se ejecuta sola a las 7:00 de España y también a mano:
 # pestaña Actions → «Precios diarios» → botón «Run workflow».
 name: Precios diarios
@@ -14,6 +14,11 @@ on:
     - cron: '30 9 * * *'
       timezone: 'Europe/Madrid'
   workflow_dispatch:
+    inputs:
+      tiendas:
+        description: 'Tiendas que descargar, separadas por espacios (p. ej. «lidl»). Vacío: todas.'
+        required: false
+        default: ''
 
 # Necesita escribir para poder hacer commit de /data.
 permissions:
@@ -74,7 +79,10 @@ jobs:
       - name: Descargar los precios
         if: steps.decidir.outputs.toca == 'si'
         working-directory: scraper
-        run: npm run scrape
+        env:
+          TIENDAS: ${{ inputs.tiendas }}
+        # Sin comillas a propósito: cada palabra es una tienda (el scraper rechaza las desconocidas).
+        run: npm run scrape -- $TIENDAS
 
       - name: Guardar los cambios en el repositorio
         if: steps.decidir.outputs.toca == 'si'

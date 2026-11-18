@@ -2,7 +2,7 @@
   "name": "cesta-lista-scraper",
   "version": "1.0.0",
   "private": true,
-  "description": "Descarga diaria de precios de Mercadona y Consum para Cesta Lista",
+  "description": "Descarga diaria de precios de Mercadona y Consum y de las ofertas de Lidl para Cesta Lista",
   "type": "module",
   "engines": {
     "node": ">=26"

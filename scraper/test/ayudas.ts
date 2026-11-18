@@ -8,6 +8,11 @@ export function fixture(nombre: string): unknown {
   return JSON.parse(readFileSync(new URL(`../fixtures/${nombre}`, import.meta.url), 'utf8'));
 }
 
+/** Lee una página real guardada en scraper/fixtures, como texto. */
+export function fixtureTexto(nombre: string): string {
+  return readFileSync(new URL(`../fixtures/${nombre}`, import.meta.url), 'utf8');
+}
+
 /** Respuesta falsa para los tests. */
 export function respuesta(datos: unknown, cabeceras: Record<string, string> = {}): Respuesta {
   return { estado: 200, cabeceras: new Headers(cabeceras), datos };

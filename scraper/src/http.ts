@@ -5,7 +5,12 @@ export const USER_AGENT =
   'CestaLista/1.0 (uso personal; una pasada al día; +https://github.com/borj777/cesta-lista)';
 
 export type Respuesta = { estado: number; cabeceras: Headers; datos: unknown };
-export type OpcionesPeticion = { metodo?: 'GET' | 'PUT'; cuerpo?: unknown };
+export type OpcionesPeticion = {
+  metodo?: 'GET' | 'PUT';
+  cuerpo?: unknown;
+  /** 'texto' devuelve la respuesta tal cual (páginas HTML, como las ofertas de Lidl). */
+  como?: 'json' | 'texto';
+};
 export type Pedir = (url: string, opciones?: OpcionesPeticion) => Promise<Respuesta>;
 
 /** La tienda ha respondido con un error o no ha respondido. */
@@ -53,7 +58,7 @@ export function crearCliente(opciones: OpcionesCliente = {}): Cliente {
   } = opciones;
   let peticiones = 0;
 
-  const pedir: Pedir = async (url, { metodo = 'GET', cuerpo } = {}) => {
+  const pedir: Pedir = async (url, { metodo = 'GET', cuerpo, como = 'json' } = {}) => {
     for (let intento = 0; ; intento++) {
       if (peticiones > 0) await esperar(pausaMinMs + azar() * (pausaMaxMs - pausaMinMs));
       peticiones++;
@@ -64,7 +69,7 @@ export function crearCliente(opciones: OpcionesCliente = {}): Cliente {
           method: metodo,
           headers: {
             'User-Agent': USER_AGENT,
-            Accept: 'application/json',
+            Accept: como === 'texto' ? 'text/html' : 'application/json',
             'Accept-Language': 'es-ES,es;q=0.9',
             ...(cuerpo === undefined ? {} : { 'Content-Type': 'application/json' }),
           },
@@ -96,6 +101,8 @@ export function crearCliente(opciones: OpcionesCliente = {}): Cliente {
       }
 
       const texto = await respuesta.text();
+      if (como === 'texto')
+        return { estado: respuesta.status, cabeceras: respuesta.headers, datos: texto };
       let datos: unknown;
       try {
         datos = texto ? JSON.parse(texto) : null;

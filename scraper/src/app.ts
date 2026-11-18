@@ -16,7 +16,9 @@ export const CAMPOS_APP = [
   'precio',
   'precioRef',
   'precioAnterior',
+  'precioLidlPlus',
   'oferta',
+  'ofertaDesde',
   'ofertaHasta',
   'seccion',
 ] as const satisfies readonly (keyof Producto)[];

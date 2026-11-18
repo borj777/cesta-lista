@@ -38,6 +38,15 @@ describe('cliente HTTP', () => {
     expect(cabeceras['Accept']).toBe('application/json');
   });
 
+  it('puede pedir una página HTML y devolverla como texto', async () => {
+    const html = new Response('<html>hola</html>', { headers: { 'Content-Type': 'text/html' } });
+    const { cliente, peticiones } = preparar([html]);
+    const r = await cliente.pedir('https://ejemplo.test/a', { como: 'texto' });
+    expect(r.datos).toBe('<html>hola</html>');
+    const cabeceras = peticiones[0]?.init?.headers as Record<string, string>;
+    expect(cabeceras['Accept']).toBe('text/html');
+  });
+
   it('hace una pausa de 1 a 2 s entre peticiones, pero no antes de la primera', async () => {
     const { cliente, esperas } = preparar([json(1), json(2), json(3)]);
     await cliente.pedir('https://ejemplo.test/1');

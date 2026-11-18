@@ -21,7 +21,11 @@ export const ProductoSchema = z.object({
   precio: z.number().positive(),
   precioRef: z.number().positive(),
   precioAnterior: z.number().positive().optional(),
+  /** Precio con la app Lidl Plus, si es menor que el normal (solo Lidl). */
+  precioLidlPlus: z.number().positive().optional(),
   oferta: z.string().min(1).optional(),
+  /** Primer día de la oferta (AAAA-MM-DD, hora de España), si empieza más tarde (solo Lidl). */
+  ofertaDesde: z.iso.date().optional(),
   /** Último día de la oferta (AAAA-MM-DD, hora de España), si la tienda lo indica. */
   ofertaHasta: z.iso.date().optional(),
   url: z.string().min(1).optional(),

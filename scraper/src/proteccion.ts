@@ -21,8 +21,14 @@ const pct = (n: number) => `${Math.round(n * 100)} %`;
 /**
  * Decide si los datos nuevos de una tienda pueden sustituir a los anteriores.
  * Si no, la tienda se marca como fallida y se conservan los datos buenos.
+ * Con `semanal` (ofertas de Lidl, que cambian enteras cada semana) no se compara con el
+ * último día bueno: solo se rechazan 0 productos o un cambio de formato.
  */
-export function evaluar(nuevo: ResultadoAdaptador, anteriores: Producto[] | null): Veredicto {
+export function evaluar(
+  nuevo: ResultadoAdaptador,
+  anteriores: Producto[] | null,
+  { semanal = false }: { semanal?: boolean } = {},
+): Veredicto {
   const n = nuevo.productos.length;
   if (n === 0) return { valido: false, motivo: 'La tienda ha devuelto 0 productos' };
 
@@ -40,7 +46,7 @@ export function evaluar(nuevo: ResultadoAdaptador, anteriores: Producto[] | null
     };
   }
 
-  if (!anteriores || anteriores.length === 0) return { valido: true };
+  if (semanal || !anteriores || anteriores.length === 0) return { valido: true };
 
   if (n < anteriores.length * (1 - LIMITES.caidaProductos)) {
     return {

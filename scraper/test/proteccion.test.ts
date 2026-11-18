@@ -82,6 +82,18 @@ describe('evaluar: protección contra datos malos', () => {
     expect(evaluar(resultado(catalogo(71)), catalogo(100))).toEqual({ valido: true });
   });
 
+  it('ofertas semanales: no compara con el último día bueno', () => {
+    const otraSemana = catalogo(20).map((p) => ({ ...p, id: `nueva-${p.id}`, precio: 5 }));
+    expect(evaluar(resultado(otraSemana), catalogo(70), { semanal: true })).toEqual({
+      valido: true,
+    });
+    expect(evaluar(resultado([]), catalogo(70), { semanal: true })).toMatchObject({
+      valido: false,
+    });
+    const ilegibles = resultado(catalogo(60), { recibidos: 70, descartados: 10 });
+    expect(evaluar(ilegibles, catalogo(70), { semanal: true })).toMatchObject({ valido: false });
+  });
+
   it('rechaza una descarga incompleta según el total que indica la tienda', () => {
     // 8.800 de 9.378 es el 94 %: incompleta. 9.000 es el 96 %: aceptable.
     const incompleta = resultado(catalogo(8800), { esperados: 9378 });
