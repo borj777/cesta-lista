@@ -10,7 +10,6 @@ import {
 } from '../almacen.ts';
 import { recargarNecesidades } from '../necesidades/estado.ts';
 import type { Necesidad } from '../necesidades/modelo.ts';
-import { clavePlato } from './dieta/leer.ts';
 import { AJUSTE_SIN_COMPRA } from './dieta/revision.ts';
 import { leerMenu, menuVacio, quitarRecetaDelMenu, vecesPorReceta, type Menu } from './menu.ts';
 import type { Receta } from './recetas.ts';
@@ -82,35 +81,6 @@ export async function usarDieta(cambios: {
 export async function guardarMenu(menu: Menu): Promise<void> {
   publicar({ ...estado, menu });
   await guardarAjuste(AJUSTE_MENU, menu);
-}
-
-/**
- * Decide qué es un plato de la dieta: una receta (se guarda el texto del PDF en ella para
- * reconocerlo otros meses y se quita de las demás), «no se compra nada» o nada todavía (null).
- */
-export async function asignarPlato(
-  texto: string,
-  destino: { receta: string } | 'sin-compra' | null,
-): Promise<void> {
-  const k = clavePlato(texto);
-  const recetas = estado.recetas ?? (await listarRecetas());
-  const receta = destino && destino !== 'sin-compra' ? destino.receta : null;
-  for (const r of recetas) {
-    const tiene = r.alias?.some((a) => clavePlato(a) === k) ?? false;
-    const debe = r.id === receta;
-    if (tiene === debe) continue;
-    const alias = (r.alias ?? []).filter((a) => clavePlato(a) !== k);
-    if (debe) alias.push(texto);
-    const cambiada: Receta = { ...r, alias };
-    if (alias.length === 0) delete cambiada.alias;
-    await guardarRecetaYNecesidades(cambiada, []);
-  }
-  const sinCompra = estado.sinCompra.filter((s) => clavePlato(s) !== k);
-  if (destino === 'sin-compra') sinCompra.push(texto);
-  if (sinCompra.length !== estado.sinCompra.length || destino === 'sin-compra') {
-    await guardarAjuste(AJUSTE_SIN_COMPRA, sinCompra);
-  }
-  await recargarRecetas();
 }
 
 export function useRecetas(): Estado {

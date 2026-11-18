@@ -15,8 +15,7 @@ import {
 } from '../necesidades/modelo.ts';
 import { PantallaDieta } from './dieta/PantallaDieta.tsx';
 import type { DatosApp } from '../tipos.ts';
-import type { IngredienteSugerido } from './dieta/revision.ts';
-import { asignarPlato, borrarReceta, guardarMenu, guardarReceta, useRecetas } from './estado.ts';
+import { borrarReceta, guardarMenu, guardarReceta, useRecetas } from './estado.ts';
 import {
   COMIDAS,
   comidasDelDia,
@@ -377,32 +376,17 @@ type IngredienteBorrador = {
   unidad: UnidadNecesidad;
 };
 
-/** Receta que se crea desde un plato de la dieta: su texto y los ingredientes que parece llevar. */
-type Propuesta = { texto: string; sugeridos: IngredienteSugerido[] };
-
-function FormReceta({
-  existente,
-  necesidades,
-  propuesta,
-}: {
-  existente?: Receta;
-  necesidades: Necesidad[];
-  propuesta?: Propuesta;
-}) {
+function FormReceta({ existente, necesidades }: { existente?: Receta; necesidades: Necesidad[] }) {
   const porId = useMemo(() => new Map(necesidades.map((n) => [n.id, n])), [necesidades]);
-  const [nombre, setNombre] = useState(existente?.nombre ?? propuesta?.texto.slice(0, 80) ?? '');
-  const [racionesTexto, setRacionesTexto] = useState(
-    String(existente?.raciones ?? (propuesta ? 1 : 2)),
-  );
-  // Sugerencias del plato ya añadidas (por su posición).
-  const [usadas, setUsadas] = useState<number[]>([]);
-  const volver = propuesta ? '#menu/dieta' : '#menu/recetas';
+  const [nombre, setNombre] = useState(existente?.nombre ?? '');
+  const [racionesTexto, setRacionesTexto] = useState(String(existente?.raciones ?? 2));
+  const volver = '#menu/recetas';
   const [ingredientes, setIngredientes] = useState<IngredienteBorrador[]>(
     (existente?.ingredientes ?? [])
       .filter((i) => porId.has(i.necesidad))
       .map((i) => ({ ...i, clave: i.necesidad })),
   );
-  const [editando, setEditando] = useState<string | null>(existente || propuesta ? null : 'nuevo');
+  const [editando, setEditando] = useState<string | null>(existente ? null : 'nuevo');
   const [errores, setErrores] = useState<ErroresReceta>({});
   const [fallo, setFallo] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
@@ -437,15 +421,10 @@ function FormReceta({
       actualizada: ahora,
     };
     if (existente?.notas) receta.notas = existente.notas;
-    const alias = [...(existente?.alias ?? []), ...(propuesta ? [propuesta.texto] : [])];
-    if (alias.length > 0) receta.alias = alias;
+    if (existente?.alias && existente.alias.length > 0) receta.alias = existente.alias;
     try {
       await guardarReceta(receta, nuevas);
-      if (propuesta) {
-        // El plato pasa a ser de esta receta (y deja de ser de otra o de «no se compra»).
-        await asignarPlato(propuesta.texto, { receta: receta.id });
-        ir('menu/dieta');
-      } else ir('menu/recetas');
+      ir('menu/recetas');
     } catch (e) {
       setFallo(falloDe(e));
       setGuardando(false);
@@ -469,7 +448,6 @@ function FormReceta({
   };
 
   const guardarIngrediente = (i: IngredienteBorrador) => {
-    if (editando?.startsWith('sug-')) setUsadas((u) => [...u, Number(editando.slice(4))]);
     setIngredientes((todos) =>
       todos.some((x) => x.clave === i.clave)
         ? todos.map((x) => (x.clave === i.clave ? i : x))
@@ -482,15 +460,9 @@ function FormReceta({
   return (
     <form onSubmit={alGuardar} noValidate>
       <a class="volver" href={volver}>
-        {propuesta ? '‹ Leer la dieta' : '‹ Mis recetas'}
+        ‹ Mis recetas
       </a>
       <h1>{existente ? 'Editar receta' : 'Nueva receta'}</h1>
-      {propuesta && (
-        <p class="secundario">
-          Del plato de tu dieta «{propuesta.texto}». Puedes acortar el nombre: la app lo seguirá
-          reconociendo en los PDF de otros meses.
-        </p>
-      )}
       {existente?.alias && existente.alias.length > 0 && (
         <p class="secundario">
           En el PDF de la dieta: {existente.alias.map((a) => `«${a}»`).join(', ')}.
@@ -537,11 +509,7 @@ function FormReceta({
       </div>
 
       <h2 class="grupo__titulo grupo__titulo--separado">Ingredientes</h2>
-      <p class="secundario">
-        {propuesta
-          ? 'Escribe la cantidad de cada ingrediente para una ración, tal como lo compras (arroz en crudo, por ejemplo).'
-          : 'Escribe las cantidades para todas las raciones, tal como lo compras.'}
-      </p>
+      <p class="secundario">Escribe las cantidades para todas las raciones, tal como lo compras.</p>
       {ingredientes.length > 0 && (
         <ul class="filas tarjeta tarjeta--lista">
           {ingredientes.map((i) =>
@@ -573,23 +541,10 @@ function FormReceta({
       )}
       {errores.ingredientes && <p class="campo__error">{errores.ingredientes}</p>}
 
-      {propuesta && editando === null && (
-        <Sugeridos
-          sugeridos={propuesta.sugeridos}
-          usadas={usadas}
-          alElegir={(i) => setEditando(`sug-${i}`)}
-        />
-      )}
-
       {editando !== null ? (
         <EditorIngrediente
           key={editando}
           inicial={ingredientes.find((i) => i.clave === editando)}
-          sugerido={
-            editando.startsWith('sug-')
-              ? propuesta?.sugeridos[Number(editando.slice(4))]
-              : undefined
-          }
           necesidades={necesidades}
           enUso={ingredientes.filter((i) => i.clave !== editando)}
           nombreDe={nombreDe}
@@ -649,46 +604,8 @@ function FormReceta({
 const unidadParaReceta = (base: UnidadNecesidad): UnidadNecesidad =>
   base === 'kg' ? 'g' : base === 'l' ? 'ml' : base;
 
-/** Ingredientes que parece llevar el plato de la dieta, para añadirlos con un toque. */
-function Sugeridos({
-  sugeridos,
-  usadas,
-  alElegir,
-}: {
-  sugeridos: IngredienteSugerido[];
-  usadas: number[];
-  alElegir: (i: number) => void;
-}) {
-  const quedan = sugeridos.map((s, i) => ({ s, i })).filter(({ i }) => !usadas.includes(i));
-  if (quedan.length === 0) return null;
-  return (
-    <section class="grupo">
-      <h3 class="tienda__titulo">Ingredientes que parece llevar</h3>
-      <p class="secundario">Toca los que lleve para añadirlos. Los demás no se guardan.</p>
-      <ul class="filas tarjeta tarjeta--lista sugerencias">
-        {quedan.map(({ s, i }) => (
-          <li key={i}>
-            <button type="button" class="fila fila--compra" onClick={() => alElegir(i)}>
-              <span class="fila__texto">
-                <span>{s.necesidad?.nombre ?? s.nombre}</span>
-                <span class="secundario">
-                  {s.necesidad ? 'De tus necesidades' : 'Nueva o de tus necesidades'}
-                </span>
-              </span>
-              {s.cantidad !== undefined && s.unidad && (
-                <span class="fila__importe">{textoCantidad(s.cantidad, s.unidad)}</span>
-              )}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
 function EditorIngrediente({
   inicial,
-  sugerido,
   necesidades,
   enUso,
   nombreDe,
@@ -697,8 +614,6 @@ function EditorIngrediente({
   alCancelar,
 }: {
   inicial?: IngredienteBorrador;
-  /** Ingrediente sugerido por el plato de la dieta: se rellena con él. */
-  sugerido?: IngredienteSugerido;
   necesidades: Necesidad[];
   enUso: IngredienteBorrador[];
   nombreDe: (i: IngredienteBorrador) => string;
@@ -706,28 +621,18 @@ function EditorIngrediente({
   alQuitar?: () => void;
   alCancelar: () => void;
 }) {
-  const [texto, setTexto] = useState(sugerido && !sugerido.necesidad ? sugerido.nombre : '');
+  const [texto, setTexto] = useState('');
   const [elegida, setElegida] = useState<{ necesidad?: Necesidad; nueva?: string } | null>(
     inicial
       ? inicial.necesidad
         ? { necesidad: necesidades.find((n) => n.id === inicial.necesidad) }
         : { nueva: inicial.nueva }
-      : sugerido?.necesidad
-        ? { necesidad: sugerido.necesidad }
-        : null,
+      : null,
   );
   const [cantidadTexto, setCantidadTexto] = useState(
-    inicial
-      ? escribirCantidad(inicial.cantidad)
-      : sugerido?.cantidad !== undefined
-        ? escribirCantidad(sugerido.cantidad)
-        : '',
+    inicial ? escribirCantidad(inicial.cantidad) : '',
   );
-  const [unidad, setUnidad] = useState<UnidadNecesidad>(
-    inicial?.unidad ??
-      sugerido?.unidad ??
-      (sugerido?.necesidad ? unidadParaReceta(sugerido.necesidad.unidad) : 'g'),
-  );
+  const [unidad, setUnidad] = useState<UnidadNecesidad>(inicial?.unidad ?? 'g');
   const [error, setError] = useState<string | null>(null);
 
   const usadas = new Set(enUso.map((i) => normalizar(nombreDe(i)).trim()));

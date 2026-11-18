@@ -13,7 +13,7 @@ Es un proyecto personal y sin ánimo de lucro.
 - **Fase 0 (terminada):** Mercadona y Consum responden desde GitHub Actions.
 - **Fase 1 (terminada):** descarga diaria completa de Mercadona y Consum.
 - **Fase 2 (terminada):** la app para el iPhone: necesidades, buscador, tiendas propias, cálculo de la compra más barata y lista para ir a comprar.
-- **Siguiente:** convertir la dieta en necesidades.
+- **Fase 3 (en marcha):** menú por días, despensa y avisos, y la dieta en automático: la app lee el PDF de la dieta, saca lo que lleva cada plato y elige el producto más barato de cada tienda.
 
 ## La app
 
@@ -24,10 +24,11 @@ Se publica sola (workflow «Publicar la app») cada vez que se sube un cambio a 
 ### Cómo se usa
 
 1. **Necesidades:** apunta lo que compras, con la cantidad y cada cuánto (por ejemplo, leche semidesnatada, 6 litros a la semana; detergente, 50 lavados al mes).
-2. **Qué compras en cada tienda:** en la ficha de cada necesidad, elige el producto concreto de cada tienda con el buscador, o «No lo compro aquí». Se compara por precio por kg, litro, unidad o lavado.
+2. **Qué compras en cada tienda:** pulsa **Elegir por mí** y la app pone el producto de Mercadona y de Consum que menos cuesta para lo que gastas, y lo cambia sola cuando aparece otro más barato. También puedes elegirlo tú con el buscador (entonces queda fijo) o decir «No lo compro aquí». Se compara por precio por kg, litro, unidad o lavado.
 3. **Tiendas:** Mercadona y Consum tienen precios automáticos. En Lidl y en las tiendas que añadas (hasta 8, por ejemplo la frutería) apuntas tú los precios mirando el ticket; la app avisa si un precio tiene más de 30 días. Cualquier tienda se puede apagar si no vas nunca.
 4. **Lista:** dice a qué tiendas ir, cuánto pagarás y cuánto ahorras frente a comprarlo todo en una sola tienda. En **Ajustes** eliges para cuánto tiempo compras (1 semana, 2 semanas o 1 mes) y cuánto te compensa ir a una tienda más.
-5. **Empezar la compra:** en la tienda, toca cada cosa al cogerla de la estantería y pasará al carro. La pantalla no se apaga mientras tanto. Al terminar, la app apunta qué has comprado: lo que dura más que una compra (el detergente del mes en una compra semanal) no vuelve a salir hasta que se vaya a acabar, y mientras tanto aparece en «Puede que aún te quede».
+5. **Menú y dieta:** en **Menú → Leer el PDF de la dieta**, elige el PDF de tu nutricionista (se lee en el iPhone y no se guarda). Sale **«Tu compra para esta dieta»**: lo que comprarías cada semana con el producto de cada tienda. Quita lo que sobre, di qué es lo que la app no reconozca (lo recordará otros meses) y pulsa **Usar esta compra**: se guardan el menú de lunes a domingo, las recetas y las necesidades. Las cantidades son orientativas cuando la dieta no las indica; se cambian en **Mis recetas**.
+6. **Empezar la compra:** en la tienda, toca cada cosa al cogerla de la estantería y pasará al carro. La pantalla no se apaga mientras tanto. Al terminar, la app apunta qué has comprado: lo que dura más que una compra (el detergente del mes en una compra semanal) no vuelve a salir hasta que se vaya a acabar, y mientras tanto aparece en «Puede que aún te quede».
 
 ### Copia de seguridad
 
@@ -46,9 +47,10 @@ Todos los días, a las 7:00 de España, GitHub descarga los catálogos completos
 | `data/mercadona.json` | Todos los productos de Mercadona, uno por línea |
 | `data/consum.json` | Todos los productos de Consum, uno por línea |
 | `data/meta.json` | Fecha, número de productos y estado de cada tienda |
-| `data/app.json` | Versión ligera para la app: solo los campos que usa (sin enlaces ni fotos) y el estado de cada tienda. Unos 2,4 MB, que se descargan comprimidos como unos 420 KB |
+| `data/secciones.json` | Nombre de cada sección de cada tienda («Carne > Aves y pollo > Pollo»), por su id |
+| `data/app.json` | Versión ligera para la app: solo los campos que usa (sin enlaces ni fotos) y el estado de cada tienda. Unos 2,8 MB, que se descargan comprimidos como unos 500 KB |
 
-Cada producto tiene su precio y su `precioRef`: el precio por kg, por litro o por unidad, que es el que sirve para comparar entre tiendas. Si está en oferta, `oferta` dice cuál es y `ofertaHasta`, su último día.
+Cada producto tiene su sección (`seccion`), su precio y su `precioRef`: el precio por kg, por litro o por unidad, que es el que sirve para comparar entre tiendas. Si está en oferta, `oferta` dice cuál es y `ofertaHasta`, su último día.
 
 La fecha de los precios está en `meta.json` (una por tienda), no en cada producto. Los productos van ordenados por id, uno por línea, así que cada commit diario «Actualiza los precios del DD/MM/AAAA», hecho por `github-actions[bot]`, solo muestra las líneas de los productos que han cambiado. Si no ha cambiado nada, no se crea ningún commit.
 
@@ -140,6 +142,9 @@ npm run build    # versión para publicar, en app/dist
 | `scraper/fixtures/` | Respuestas reales de las tiendas para los tests |
 | `app/` | La app (Vite, Preact y TypeScript) |
 | `app/src/necesidades/` | Necesidades, buscador y elección de productos |
+| `app/src/ingredientes/` | Catálogo de ingredientes y elección automática del producto («Elegir por mí») |
+| `app/src/menu/` | Menú por días, recetas y lector del PDF de la dieta (`dieta/`: lectura, recetario y compra automática) |
+| `app/src/despensa/` | Lo que queda en casa y avisos |
 | `app/src/tiendas/` | Tiendas propias, sus productos y tiendas apagadas |
 | `app/src/optimizador.ts` | Cálculo de la combinación de tiendas más barata |
 | `app/src/lista/` | Lista de compra, compra en la tienda y pantalla encendida |

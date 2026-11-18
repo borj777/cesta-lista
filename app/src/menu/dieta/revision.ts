@@ -1,15 +1,14 @@
 /**
- * Revisión de la dieta leída del PDF: qué receta es cada plato, cuántas veces se toma y el menú
- * que sale. Funciones puras.
+ * La dieta leída del PDF: sus platos agrupados, cómo se reparten por los días y qué parece
+ * llevar cada uno. Funciones puras.
  *
  * Un plato se reconoce en otros meses por su «alias»: el texto del PDF guardado en la receta
  * (se compara sin tildes, mayúsculas ni signos). Los platos para los que no se compra nada
  * (un café, «agua») se recuerdan en el ajuste `platosSinCompra`.
  */
-import { palabras } from '../../buscador.ts';
-import type { Necesidad, UnidadNecesidad } from '../../necesidades/modelo.ts';
+import type { UnidadNecesidad } from '../../necesidades/modelo.ts';
 import { DIAS_SEMANA, menuVacio, type Menu, type PlatoDia } from '../menu.ts';
-import { unidadesCompatibles, type Receta } from '../recetas.ts';
+import type { Receta } from '../recetas.ts';
 import { clavePlato, resumirDieta, type Lectura, type Momento } from './leer.ts';
 
 /** Máximo de veces de una línea suelta (sin tabla): tres al día. */
@@ -126,46 +125,6 @@ export function decisionDe(
 export const vecesDe = (p: PlatoRevision, elegidas: Readonly<Record<string, number>>) =>
   p.fijo ? p.veces : (elegidas[p.id] ?? p.veces);
 
-export type MenuDieta = {
-  menu: Menu;
-  /** Platos que se toman alguna vez y aún no tienen receta ni «no se compra nada» (sin repetir). */
-  pendientes: PlatoRevision[];
-};
-
-/**
- * El menú día a día que sale de la dieta. Los platos de la tabla van a su día y su comida; las
- * opciones de una comida se reparten por días seguidos (4 días la primera, 3 la segunda) y las
- * líneas sueltas, por toda la semana. Los platos sin receta salen con su nombre, sin comprar nada.
- */
-export function menuDeLaDieta(
-  grupos: readonly GrupoRevision[],
-  elegidas: Readonly<Record<string, number>>,
-  recetas: readonly Receta[],
-  sinCompra: readonly string[],
-  personas: number,
-  libres: readonly (Momento & { texto: string })[] = [],
-): MenuDieta {
-  const pendientes: PlatoRevision[] = [];
-  const menu = colocarEnDias(
-    grupos,
-    elegidas,
-    (p) => {
-      const d = decisionDe(p.texto, recetas, sinCompra);
-      // Un plato que sale en varias comidas («1 fruta») cuenta una vez: se decide una vez.
-      if (
-        d.tipo === 'pendiente' &&
-        !pendientes.some((x) => clavePlato(x.texto) === clavePlato(p.texto))
-      ) {
-        pendientes.push(p);
-      }
-      return d.tipo === 'receta' ? d.receta.id : undefined;
-    },
-    personas,
-    libres,
-  );
-  return { menu, pendientes };
-}
-
 /**
  * Coloca los platos en los días: los de la tabla en su día y su comida; las opciones de una
  * comida, por días seguidos; las líneas sueltas, por toda la semana. `recetaDe` dice la receta
@@ -224,32 +183,6 @@ export function colocarEnDias(
   return menu;
 }
 
-/** Recetas cuyo nombre se parece al del plato, las más parecidas primero. */
-export function recetasParecidas(texto: string, recetas: readonly Receta[], limite = 5): Receta[] {
-  const buscadas = new Set(palabras(texto));
-  if (buscadas.size === 0) return [];
-  return recetas
-    .map((r) => {
-      const suyas = palabras(r.nombre);
-      const comunes = suyas.filter((s) => buscadas.has(s)).length;
-      return { r, comunes, parecido: comunes / Math.max(suyas.length, buscadas.size) };
-    })
-    .filter((x) => x.comunes > 0)
-    .sort((a, b) => b.parecido - a.parecido || a.r.nombre.localeCompare(b.r.nombre, 'es'))
-    .slice(0, limite)
-    .map((x) => x.r);
-}
-
-export type IngredienteSugerido = {
-  /** «Arroz», «Frutos secos». */
-  nombre: string;
-  /** La necesidad que ya existe con ese nombre. */
-  necesidad?: Necesidad;
-  /** Cantidad que indica el plato («(70g)», «1 fruta»), para una ración. */
-  cantidad?: number;
-  unidad?: UnidadNecesidad;
-};
-
 /** «Arroz (70g)», «1 puñado de frutos secos (20-30g)»: la cantidad indicada (la mayor). */
 const CANTIDAD =
   /\(?\s*(\d+(?:[.,]\d+)?)(?:\s*-\s*(\d+(?:[.,]\d+)?))?\s*(kg|gramos|grs?|g|ml|cl|litros?|l)\b\.?\s*\)?/i;
@@ -289,21 +222,6 @@ function unidadDe(t: string): { unidad: UnidadNecesidad; factor: number } {
   if (u === 'cl') return { unidad: 'ml', factor: 10 };
   if (u === 'l' || u.startsWith('litro')) return { unidad: 'l', factor: 1 };
   return { unidad: 'g', factor: 1 };
-}
-
-/** La necesidad que tiene el mismo nombre, o la que tiene todas sus palabras en el texto. */
-function necesidadDe(nombre: string, necesidades: readonly Necesidad[]): Necesidad | undefined {
-  const k = clavePlato(nombre);
-  const exacta = necesidades.find((n) => clavePlato(n.nombre) === k);
-  if (exacta) return exacta;
-  const suyas = new Set(palabras(nombre));
-  let mejor: { n: Necesidad; largo: number } | undefined;
-  for (const n of necesidades) {
-    const de = palabras(n.nombre);
-    if (de.length === 0 || !de.every((p) => suyas.has(p))) continue;
-    if (!mejor || de.length > mejor.largo) mejor = { n, largo: de.length };
-  }
-  return mejor?.n;
 }
 
 /** Un trozo del texto de un plato: «Arroz» con 70 g, «Verduras», «Fruta» con 1 ud. */
@@ -369,29 +287,4 @@ export function trozosDelPlato(texto: string): TrozoPlato[] {
     trozos.push(t);
   }
   return trozos;
-}
-
-/**
- * Ingredientes que parece llevar un plato, con la cantidad si la indica: «Arroz (70g) con
- * verduras y gambas» → arroz (70 g), verduras, gambas. Es solo una ayuda: el usuario los revisa.
- */
-export function sugerirIngredientes(
-  texto: string,
-  necesidades: readonly Necesidad[],
-): IngredienteSugerido[] {
-  return trozosDelPlato(texto).map(({ nombre, cantidad, unidad }) => {
-    const necesidad = necesidadDe(nombre, necesidades);
-    const sugerido: IngredienteSugerido = { nombre };
-    if (necesidad) sugerido.necesidad = necesidad;
-    // Solo se propone la cantidad si encaja con la unidad de la necesidad (g con kg...).
-    if (
-      cantidad !== undefined &&
-      unidad &&
-      (!necesidad || unidadesCompatibles(necesidad.unidad).includes(unidad))
-    ) {
-      sugerido.cantidad = cantidad;
-      sugerido.unidad = unidad;
-    }
-    return sugerido;
-  });
 }

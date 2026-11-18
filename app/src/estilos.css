@@ -1040,31 +1040,7 @@ body:has(input:focus:not([type='radio'])) .pestanas {
   margin-bottom: 20px;
 }
 
-/* Revisar la dieta: cada plato con su receta, sus veces y, abierto, qué receta es. */
-.plato-dieta {
-  border-bottom: 1px solid var(--borde);
-}
-
-.tarjeta--lista li.plato-dieta:last-child {
-  border-bottom: none;
-}
-
-.plato-dieta .plato-dieta__fila {
-  border-bottom: none;
-}
-
-.plato-dieta__veces {
-  padding: 0 0 12px;
-}
-
-.elegir-receta {
-  padding: 0 0 14px;
-}
-
-.elegir-receta h3 {
-  margin-top: 6px;
-}
-
+/* Lista de recetas para elegir (al añadir un plato a un día). */
 .elegir-receta__lista {
   background: var(--superficie-2);
   border-radius: 12px;
@@ -1074,10 +1050,6 @@ body:has(input:focus:not([type='radio'])) .pestanas {
 
 .elegir-receta__lista .fila--compra {
   min-height: 48px;
-}
-
-.elegir-receta .acciones {
-  margin: 10px 0 0;
 }
 
 .elegir-receta__lista li:last-child .fila--compra {
