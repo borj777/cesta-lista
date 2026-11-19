@@ -13,7 +13,7 @@ Es un proyecto personal y sin ánimo de lucro.
 - **Fase 0 (terminada):** Mercadona y Consum responden desde GitHub Actions.
 - **Fase 1 (terminada):** descarga diaria completa de Mercadona y Consum.
 - **Fase 2 (terminada):** la app para el iPhone: necesidades, buscador, tiendas propias, cálculo de la compra más barata y lista para ir a comprar.
-- **Fase 3 (en marcha):** menú por días, despensa y avisos, la dieta en automático (la app lee el PDF de la dieta, saca lo que lleva cada plato y elige el producto más barato de cada tienda) las ofertas semanales de Lidl y el historial de precios con avisos de bajadas.
+- **Fase 3 (terminada):** menú por días, despensa y avisos, la dieta en automático (la app lee el PDF de la dieta, saca lo que lleva cada plato y elige el producto más barato de cada tienda), las ofertas semanales de Lidl y el historial de precios con avisos de bajadas.
 
 ## La app
 
