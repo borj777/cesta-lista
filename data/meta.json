@@ -1,12 +1,12 @@
 {
-  "generado": "2026-11-19T06:54:54.347Z",
+  "generado": "2026-11-20T06:53:59.961Z",
   "tiendas": {
     "mercadona": {
       "estado": "ok",
-      "actualizado": "2026-11-19T06:54:54.347Z",
-      "productos": 4392,
-      "comprobado": "2026-11-19T06:54:54.347Z",
-      "duracionSegundos": 271,
+      "actualizado": "2026-11-20T06:53:59.961Z",
+      "productos": 4399,
+      "comprobado": "2026-11-20T06:53:59.961Z",
+      "duracionSegundos": 267,
       "peticiones": 154,
       "sinVerificar": 206,
       "descartados": 0,
@@ -25,13 +25,6 @@
           "unidad": "l",
           "calculado": 5.2,
           "tienda": 4.73
-        },
-        {
-          "id": "24565",
-          "nombre": "Barritas de cereales avellana y cacao Hacendado",
-          "unidad": "kg",
-          "calculado": 13.4783,
-          "tienda": 12.92
         },
         {
           "id": "58293",
@@ -83,6 +76,13 @@
           "tienda": 0.02
         },
         {
+          "id": "85713",
+          "nombre": "Hojaldrada La Muralla",
+          "unidad": "kg",
+          "calculado": 5.625,
+          "tienda": 5.5
+        },
+        {
           "id": "18382",
           "nombre": "Postre Caramel Cake Hacendado con queso y caramelo salado",
           "unidad": "kg",
@@ -101,14 +101,14 @@
     },
     "consum": {
       "estado": "ok",
-      "actualizado": "2026-11-19T06:54:54.347Z",
-      "productos": 9485,
-      "comprobado": "2026-11-19T06:54:54.347Z",
-      "duracionSegundos": 187,
+      "actualizado": "2026-11-20T06:53:59.961Z",
+      "productos": 9425,
+      "comprobado": "2026-11-20T06:53:59.961Z",
+      "duracionSegundos": 178,
       "peticiones": 96,
-      "sinVerificar": 418,
+      "sinVerificar": 416,
       "descartados": 0,
-      "avisosPrecioRef": 9,
+      "avisosPrecioRef": 15,
       "ejemplosAvisos": [
         {
           "id": "9744",
@@ -128,8 +128,15 @@
           "id": "13837",
           "nombre": "Bombón Dulces Deseos",
           "unidad": "kg",
-          "calculado": 57.942,
-          "tienda": 59.32
+          "calculado": 43.4493,
+          "tienda": 44.48
+        },
+        {
+          "id": "14476",
+          "nombre": "Pañuelos Faciales 3 Capas Caja",
+          "unidad": "ud",
+          "calculado": 0.0227,
+          "tienda": 0.03
         },
         {
           "id": "17256",
@@ -137,6 +144,13 @@
           "unidad": "kg",
           "calculado": 11.0537,
           "tienda": 12.92
+        },
+        {
+          "id": "19650",
+          "nombre": "Servilleta 2 Capas Happy Hour",
+          "unidad": "ud",
+          "calculado": 0.0318,
+          "tienda": 0.04
         },
         {
           "id": "26807",
@@ -170,18 +184,46 @@
           "id": "47008",
           "nombre": "Cola de rape sin piel 200-500 gr",
           "unidad": "kg",
-          "calculado": 14.36,
-          "tienda": 17.95
+          "calculado": 12.92,
+          "tienda": 16.15
+        },
+        {
+          "id": "47113",
+          "nombre": "Suavizante Concentrado Azul",
+          "unidad": "lavado",
+          "calculado": 0.0459,
+          "tienda": 0.04
+        },
+        {
+          "id": "47205",
+          "nombre": "Perfumador Ropa Líquido Azul",
+          "unidad": "lavado",
+          "calculado": 0.0873,
+          "tienda": 0.08
+        },
+        {
+          "id": "47362",
+          "nombre": "Perfumador Ropa Líquido Tropical",
+          "unidad": "lavado",
+          "calculado": 0.0873,
+          "tienda": 0.08
+        },
+        {
+          "id": "47363",
+          "nombre": "Perfumador Ropa Líquido Rosa",
+          "unidad": "lavado",
+          "calculado": 0.0873,
+          "tienda": 0.08
         }
       ],
       "ejemplosDescartados": []
     },
     "lidl": {
       "estado": "ok",
-      "actualizado": "2026-11-19T06:54:54.347Z",
+      "actualizado": "2026-11-20T06:53:59.961Z",
       "productos": 68,
-      "comprobado": "2026-11-19T06:54:54.347Z",
-      "duracionSegundos": 1,
+      "comprobado": "2026-11-20T06:53:59.961Z",
+      "duracionSegundos": 0,
       "peticiones": 1,
       "sinVerificar": 8,
       "descartados": 0,
