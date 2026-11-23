@@ -23,7 +23,7 @@ Se publica sola (workflow «Publicar la app») cada vez que se sube un cambio a 
 
 ### Cómo se usa
 
-1. **Necesidades:** apunta lo que compras, con la cantidad y cada cuánto (por ejemplo, leche semidesnatada, 6 litros a la semana; detergente, 50 lavados al mes).
+1. **Necesidades:** apunta lo que compras, con la cantidad y cada cuánto (por ejemplo, leche semidesnatada, 6 litros a la semana; detergente, 50 lavados al mes). Para borrar una, deslízala hacia la izquierda y pulsa **Borrar**.
 2. **Qué compras en cada tienda:** pulsa **Elegir por mí** y la app pone el producto de Mercadona y de Consum que menos cuesta para lo que gastas, y lo cambia sola cuando aparece otro más barato. También puedes elegirlo tú con el buscador (entonces queda fijo) o decir «No lo compro aquí». Se compara por precio por kg, litro, unidad o lavado. Debajo de cada producto de Mercadona y de Consum sale **cómo ha cambiado su precio** desde el 15/11/2026: una gráfica (tócala para ver el precio de cada día), si ha subido o bajado y si es el más bajo, y **Ver los cambios** con cada cambio.
 3. **Tiendas:** Mercadona y Consum tienen precios automáticos. En Lidl y en las tiendas que añadas (hasta 8, por ejemplo la frutería) apuntas tú los precios mirando el ticket; la app avisa si un precio tiene más de 30 días. Cualquier tienda se puede apagar si no vas nunca.
    **Ofertas de Lidl:** cada mañana se descargan sus ofertas de la semana (las de Valencia). Las ves en **Tiendas → Lidl**, con su fecha de fin. La app elige sola, para cada necesidad, la oferta que menos cuesta y la usa mientras dura si sale más barata que en las otras tiendas; luego vuelve tu producto de siempre. La Lista enseña las ofertas que entran en la compra; si una no te vale, pulsa **No me vale** y no te la vuelve a proponer. También puedes elegir una oferta a mano en el buscador de Lidl de cada necesidad. Si tienes la app Lidl Plus, enciende **Ajustes → Tengo Lidl Plus** para que cuente ese precio.
@@ -112,7 +112,7 @@ Para no estropear los datos buenos, una tienda se marca como fallida y **no se s
 - más del 20 % de los precios varía más de un 50 % de un día para otro;
 - Mercadona deja de asignar el almacén de Valencia (`vlc1`) al código postal 46001.
 
-Las ofertas de Lidl cambian enteras cada semana, así que no se comparan con el día anterior: solo se rechazan si no llega ninguna o si más del 5 % no se puede leer.
+Las ofertas de Lidl cambian enteras cada semana, así que no se comparan con el día anterior: solo se rechazan si no llega ninguna o si más del 20 % no se puede leer (son unas 45, y unas pocas con un envase raro no deben tirar las de toda la semana).
 
 El historial de precios solo se anota con las descargas válidas: si una tienda falla, ese día no se añade nada y su historial sigue con el último precio bueno.
 
