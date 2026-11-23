@@ -367,6 +367,61 @@ p {
   border-bottom: none;
 }
 
+/* Filas que se deslizan hacia la izquierda para enseñar «Borrar» (Necesidades). */
+.tarjeta--deslizable {
+  overflow: hidden;
+}
+
+.deslizable {
+  position: relative;
+  margin: 0 -16px;
+  overflow: hidden;
+}
+
+.deslizable__accion {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  border: none;
+  background: var(--error);
+  color: var(--superficie);
+  font: inherit;
+  font-weight: 600;
+  /* Escondido con la fila cerrada (si no, asoma un hilo rojo en el borde); se esconde
+     cuando la fila ha terminado de volver. */
+  visibility: hidden;
+  transition: visibility 0s 0.2s;
+}
+
+.deslizable--activa .deslizable__accion {
+  visibility: visible;
+  transition: none;
+}
+
+.deslizable__fila {
+  position: relative;
+  padding: 0 16px;
+  background: var(--superficie);
+  touch-action: pan-y;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+.deslizable__fila--suelta {
+  transition: transform 0.2s ease;
+}
+
+.tarjeta--lista li:last-child .deslizable .fila {
+  border-bottom: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deslizable__fila--suelta {
+    transition: none;
+  }
+}
+
 .chevron {
   font-size: 26px;
   color: var(--texto-3);

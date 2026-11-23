@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
 import { useCatalogo } from '../catalogo.ts';
+import { Deslizable } from '../componentes/Deslizable.tsx';
 import { Icono } from '../componentes/Icono.tsx';
 import { Opciones } from '../componentes/Opciones.tsx';
 import { Punto } from '../componentes/Tienda.tsx';
@@ -151,6 +152,24 @@ function ListaNecesidades({
 }) {
   const { recetas, menu } = useRecetas();
   const aportes = aportesDelMenu(menu, recetas ?? [], necesidades);
+  /** Fila deslizada que enseña «Borrar» (solo una a la vez). */
+  const [abierta, setAbierta] = useState<string | null>(null);
+  const [fallo, setFallo] = useState<string | null>(null);
+  const alBorrar = async (n: Necesidad) => {
+    const usadaEn = recetas ? recetasCon(recetas, n.id) : [];
+    const aviso =
+      usadaEn.length > 0
+        ? `\n\nSe quitará también de tus recetas: ${usadaEn.map((r) => r.nombre).join(', ')}.`
+        : '';
+    if (!confirm(`¿Borrar «${n.nombre}» de tus necesidades?${aviso}`)) return;
+    setAbierta(null);
+    try {
+      await borrar(n.id);
+      setFallo(null);
+    } catch (error) {
+      setFallo(`No se ha podido borrar (${error instanceof Error ? error.message : error}).`);
+    }
+  };
   if (necesidades.length === 0) {
     return (
       <>
@@ -177,8 +196,14 @@ function ListaNecesidades({
     <>
       <h1>Mis necesidades</h1>
       <p class="secundario">
-        {necesidades.length === 1 ? '1 cosa apuntada' : `${necesidades.length} cosas apuntadas`}
+        {necesidades.length === 1 ? '1 cosa apuntada' : `${necesidades.length} cosas apuntadas`}.
+        Desliza una hacia la izquierda para borrarla.
       </p>
+      {fallo && (
+        <p class="aviso aviso--error" role="alert">
+          {fallo}
+        </p>
+      )}
       <a class="boton boton--ancho" href="#necesidades/en-casa">
         <Icono nombre="casa" tamano={20} /> Lo que tienes en casa
       </a>
@@ -188,19 +213,27 @@ function ListaNecesidades({
       {agruparPorCategoria(necesidades).map((grupo) => (
         <section key={grupo.categoria} class="grupo">
           <h2 class="grupo__titulo">{NOMBRE_CATEGORIA[grupo.categoria]}</h2>
-          <ul class="filas tarjeta tarjeta--lista">
+          <ul class="filas tarjeta tarjeta--lista tarjeta--deslizable">
             {grupo.necesidades.map((n) => (
               <li key={n.id}>
-                <a class="fila fila--enlace" href={`#necesidades/${n.id}`}>
-                  <div class="fila__texto">
-                    <span>{n.nombre}</span>
-                    <span class="secundario">{textoConMenu(n, aportes.get(n.id))}</span>
-                  </div>
-                  <TiendasElegidas necesidad={n} tiendas={tiendas} />
-                  <span class="chevron" aria-hidden="true">
-                    ›
-                  </span>
-                </a>
+                <Deslizable
+                  abierta={abierta === n.id}
+                  alCambiar={(si) => setAbierta((a) => (si ? n.id : a === n.id ? null : a))}
+                  accion="Borrar"
+                  etiquetaAccion={`Borrar ${n.nombre}`}
+                  alPulsar={() => void alBorrar(n)}
+                >
+                  <a class="fila fila--enlace" href={`#necesidades/${n.id}`} draggable={false}>
+                    <div class="fila__texto">
+                      <span>{n.nombre}</span>
+                      <span class="secundario">{textoConMenu(n, aportes.get(n.id))}</span>
+                    </div>
+                    <TiendasElegidas necesidad={n} tiendas={tiendas} />
+                    <span class="chevron" aria-hidden="true">
+                      ›
+                    </span>
+                  </a>
+                </Deslizable>
               </li>
             ))}
           </ul>
