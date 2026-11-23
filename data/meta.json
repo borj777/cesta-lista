@@ -1,14 +1,14 @@
 {
-  "generado": "2026-11-22T06:49:26.873Z",
+  "generado": "2026-11-23T07:06:35.392Z",
   "tiendas": {
     "mercadona": {
       "estado": "ok",
-      "actualizado": "2026-11-22T06:49:26.873Z",
+      "actualizado": "2026-11-23T07:06:35.392Z",
       "productos": 4406,
-      "comprobado": "2026-11-22T06:49:26.873Z",
-      "duracionSegundos": 261,
+      "comprobado": "2026-11-23T07:06:35.392Z",
+      "duracionSegundos": 255,
       "peticiones": 154,
-      "sinVerificar": 205,
+      "sinVerificar": 204,
       "descartados": 0,
       "avisosPrecioRef": 12,
       "ejemplosAvisos": [
@@ -101,10 +101,10 @@
     },
     "consum": {
       "estado": "ok",
-      "actualizado": "2026-11-22T06:49:26.873Z",
-      "productos": 9427,
-      "comprobado": "2026-11-22T06:49:26.873Z",
-      "duracionSegundos": 186,
+      "actualizado": "2026-11-23T07:06:35.392Z",
+      "productos": 9425,
+      "comprobado": "2026-11-23T07:06:35.392Z",
+      "duracionSegundos": 179,
       "peticiones": 96,
       "sinVerificar": 416,
       "descartados": 0,
@@ -219,17 +219,22 @@
       "ejemplosDescartados": []
     },
     "lidl": {
-      "estado": "ok",
+      "estado": "fallida",
       "actualizado": "2026-11-22T06:49:26.873Z",
       "productos": 68,
-      "comprobado": "2026-11-22T06:49:26.873Z",
+      "motivo": "Cambio de formato: 3 de 44 productos no se han podido leer",
+      "comprobado": "2026-11-23T07:06:35.392Z",
       "duracionSegundos": 1,
       "peticiones": 1,
-      "sinVerificar": 8,
-      "descartados": 0,
+      "sinVerificar": 5,
+      "descartados": 3,
       "avisosPrecioRef": 0,
       "ejemplosAvisos": [],
-      "ejemplosDescartados": []
+      "ejemplosDescartados": [
+        "11150788 Naranja nacional malla 3 kg",
+        "11137447 KRAFFT Lavaparabrisas",
+        "11007471 Detergente líquido (ActiveClean 45WL+45WLgrat.)"
+      ]
     }
   }
 }
