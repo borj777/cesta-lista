@@ -90,7 +90,10 @@ describe('evaluar: protección contra datos malos', () => {
     expect(evaluar(resultado([]), catalogo(70), { semanal: true })).toMatchObject({
       valido: false,
     });
-    const ilegibles = resultado(catalogo(60), { recibidos: 70, descartados: 10 });
+    // 3 de 44 raras no tiran toda la semana; más del 20 %, sí.
+    const pocas = resultado(catalogo(41), { recibidos: 44, descartados: 3 });
+    expect(evaluar(pocas, catalogo(70), { semanal: true })).toEqual({ valido: true });
+    const ilegibles = resultado(catalogo(50), { recibidos: 70, descartados: 20 });
     expect(evaluar(ilegibles, catalogo(70), { semanal: true })).toMatchObject({ valido: false });
   });
 

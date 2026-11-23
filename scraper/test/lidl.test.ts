@@ -149,8 +149,24 @@ describe('formatoLidl y nombreYMarca', () => {
     ['2,5kg', { cantidad: 2.5, unidad: 'kg' }],
     ['75 cl', { cantidad: 0.75, unidad: 'l' }],
     ['1,6 l', { cantidad: 1.6, unidad: 'l' }],
+    ['5 / l', { cantidad: 5, unidad: 'l' }],
+    ['4,05 / l', { cantidad: 4.05, unidad: 'l' }],
   ] as const)('%s', (envase, formato) => {
     expect(formatoLidl(envase, 'Algo')).toEqual({ formato, sinVerificar: false });
+  });
+
+  it('«Kg» es precio por kilo, como a granel (23/11/2026)', () => {
+    expect(formatoLidl('Kg', 'Naranja nacional malla 3 kg')).toEqual({
+      formato: { cantidad: 1, unidad: 'kg' },
+      sinVerificar: true,
+    });
+  });
+
+  it('los detergentes con los lavados en el nombre van por lavado', () => {
+    expect(formatoLidl('4,05 / l', 'Detergente líquido (ActiveClean 45WL+45WLgrat.)')).toEqual({
+      formato: { cantidad: 90, unidad: 'lavado' },
+      sinVerificar: false,
+    });
   });
 
   it('un envase que no se entiende no tiene formato', () => {

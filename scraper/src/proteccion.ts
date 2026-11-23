@@ -10,6 +10,11 @@ export const LIMITES = {
   caidaProductos: 0.3,
   /** Cambio de formato: más del 5 % de los productos recibidos no se puede leer. */
   descartados: 0.05,
+  /**
+   * En las ofertas semanales, más del 20 %: son unas 45 y con 3 raras ya pasan del 5 %
+   * (23/11/2026); un cambio de formato de verdad deja sin leer casi todas.
+   */
+  descartadosSemanal: 0.2,
   /** Descarga incompleta: se recibe menos del 95 % de lo que la tienda dice tener. */
   completitud: 0.95,
 } as const;
@@ -22,7 +27,7 @@ const pct = (n: number) => `${Math.round(n * 100)} %`;
  * Decide si los datos nuevos de una tienda pueden sustituir a los anteriores.
  * Si no, la tienda se marca como fallida y se conservan los datos buenos.
  * Con `semanal` (ofertas de Lidl, que cambian enteras cada semana) no se compara con el
- * último día bueno: solo se rechazan 0 productos o un cambio de formato.
+ * último día bueno: solo se rechazan 0 productos o un cambio de formato (con más margen).
  */
 export function evaluar(
   nuevo: ResultadoAdaptador,
@@ -32,7 +37,8 @@ export function evaluar(
   const n = nuevo.productos.length;
   if (n === 0) return { valido: false, motivo: 'La tienda ha devuelto 0 productos' };
 
-  if (nuevo.recibidos > 0 && nuevo.descartados / nuevo.recibidos > LIMITES.descartados) {
+  const limite = semanal ? LIMITES.descartadosSemanal : LIMITES.descartados;
+  if (nuevo.recibidos > 0 && nuevo.descartados / nuevo.recibidos > limite) {
     return {
       valido: false,
       motivo: `Cambio de formato: ${nuevo.descartados} de ${nuevo.recibidos} productos no se han podido leer`,

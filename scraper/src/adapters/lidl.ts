@@ -186,17 +186,28 @@ export function interesa(crudo: unknown): boolean {
 /** Lo que se vende a granel por piezas y no por kilo (el pepino «unidad», la lechuga...). */
 const POR_PIEZAS = /\b(unidad|pieza|iceberg|lechuga|coliflor|piña)\b/i;
 
+/** Lavados que indica el nombre de un detergente: «(ActiveClean 45WL+45WLgrat.)» → 90. */
+function lavadosDelNombre(nombre: string): number {
+  return [...nombre.matchAll(/(\d+)\s*WL/g)].reduce((suma, m) => suma + Number(m[1]), 0);
+}
+
 /**
  * Formato a partir del texto del envase de Lidl: «250 g», «4x125 g», «Aprox.500 g», «75 cl»,
- * «Paquete» (1 ud.) o «A granel» (precio por kg, salvo lo que se vende por piezas). Lo que
- * no indica la cantidad se marca como sin verificar.
+ * «5 / l» (desde el 23/11/2026: 5 litros), «Paquete» (1 ud.), «A granel» o «Kg» (precio por
+ * kg, salvo lo que se vende por piezas). Lo que no indica la cantidad se marca como sin
+ * verificar. Los detergentes que indican los lavados en el nombre («45WL») van por lavado.
  */
 export function formatoLidl(
   envase: string | undefined,
   nombre: string,
 ): { formato: Formato; sinVerificar: boolean } | null {
-  const t = (envase ?? '').replace(/aprox\.?\s*/gi, '').trim();
-  if (/granel/i.test(t)) {
+  const lavados = lavadosDelNombre(nombre);
+  if (lavados > 0) return { formato: { cantidad: lavados, unidad: 'lavado' }, sinVerificar: false };
+  const t = (envase ?? '')
+    .replace(/aprox\.?\s*/gi, '')
+    .replace(/(\d)\s*\/\s*(?=\p{L})/u, '$1 ')
+    .trim();
+  if (/granel/i.test(t) || /^kg$/i.test(t)) {
     return {
       formato: { cantidad: 1, unidad: POR_PIEZAS.test(nombre) ? 'ud' : 'kg' },
       sinVerificar: true,
