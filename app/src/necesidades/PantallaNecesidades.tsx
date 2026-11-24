@@ -15,6 +15,7 @@ import { ofertasDe } from '../tiendas/ofertas.ts';
 import { VistaDespensa } from '../despensa/PantallaDespensa.tsx';
 import { DetalleNecesidad } from './DetalleNecesidad.tsx';
 import { ElegirEnTodas } from '../ingredientes/ElegirPorMi.tsx';
+import { ingredienteDe, unidadCompatible, unidadDelNombre } from '../ingredientes/automatico.ts';
 import { ElegirProducto } from './ElegirProducto.tsx';
 import { borrar, guardar, useNecesidades } from './estado.ts';
 import {
@@ -26,6 +27,7 @@ import {
   FRECUENCIAS,
   leerCantidad,
   NOMBRE_CATEGORIA,
+  NOMBRE_UNIDAD,
   OPCIONES_UNIDAD,
   textoNecesidad,
   validarBorrador,
@@ -266,6 +268,14 @@ function FormNecesidad({ existente }: { existente?: Necesidad }) {
   // Una necesidad de recetas puede quedarse sin cantidad propia.
   const sinCantidadPropia = !!existente?.soloRecetas && !cantidadTexto.trim();
   const [unidad, setUnidad] = useState<UnidadNecesidad>(existente?.unidad ?? 'kg');
+  /** Si se ha tocado la unidad, ya no se cambia sola al escribir el nombre. */
+  const [unidadElegida, setUnidadElegida] = useState(!!existente);
+  // Ingrediente conocido en una unidad que no es la suya (p. ej. huevos en kg).
+  const ingrediente = ingredienteDe({ nombre, ingrediente: existente?.ingrediente });
+  const otraUnidad =
+    ingrediente && !unidadCompatible(ingrediente, { unidad })
+      ? { nombre: ingrediente.nombre, unidad: ingrediente.unidad }
+      : null;
   const [frecuencia, setFrecuencia] = useState<Frecuencia>(existente?.frecuencia ?? 'semana');
   const [notas, setNotas] = useState(existente?.notas ?? '');
   const [errores, setErrores] = useState<ErroresBorrador>({});
@@ -340,7 +350,12 @@ function FormNecesidad({ existente }: { existente?: Necesidad }) {
             }
           }}
           onInput={(e) => {
-            setNombre(e.currentTarget.value);
+            const texto = e.currentTarget.value;
+            setNombre(texto);
+            // «Huevos» se cuenta por unidades y «Leche» va en litros: se pone sola la unidad
+            // mientras no se haya elegido otra.
+            const sugerida = unidadElegida ? undefined : unidadDelNombre(texto);
+            if (sugerida) setUnidad(sugerida);
             if (errores.nombre) setErrores({ ...errores, nombre: undefined });
           }}
         />
@@ -382,9 +397,22 @@ function FormNecesidad({ existente }: { existente?: Necesidad }) {
         etiqueta="Unidad"
         opciones={OPCIONES_UNIDAD}
         valor={unidad}
-        alCambiar={setUnidad}
+        alCambiar={(u) => {
+          setUnidad(u);
+          setUnidadElegida(true);
+        }}
         columnas={4}
       />
+      {otraUnidad && (
+        <p class="aviso aviso--atencion">
+          <Icono nombre="alerta" tamano={20} />
+          <span>
+            «{otraUnidad.nombre}» va en {NOMBRE_UNIDAD[otraUnidad.unidad].varias}: en{' '}
+            {NOMBRE_UNIDAD[unidad].varias}, la app no podrá elegir el producto ni ponerlo en la
+            Lista.
+          </span>
+        </p>
+      )}
 
       <Opciones
         nombre="frecuencia"

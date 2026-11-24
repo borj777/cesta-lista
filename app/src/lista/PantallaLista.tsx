@@ -4,6 +4,7 @@ import { useCatalogo } from '../catalogo.ts';
 import { ComoInstalar } from '../componentes/Banderas.tsx';
 import { FechaPrecios } from '../componentes/EstadoPrecios.tsx';
 import { Icono } from '../componentes/Icono.tsx';
+import { cambioDeUnidad } from '../ingredientes/automatico.ts';
 import { NombreTienda } from '../componentes/Tienda.tsx';
 import { hoyEnEspana, textoDia, textoFormato, textoPrecio, textoPrecioRef } from '../formato.ts';
 import { bajadasDePrecio, type Bajada } from '../historial/bajadas.ts';
@@ -430,21 +431,45 @@ function Avisos({
         <a href={`#necesidades/${n.id}`}>{n.nombre}</a>
       </span>
     ));
+  // Ingredientes conocidos en una unidad que no es la suya (huevos en kg): no entran en la
+  // compra hasta cambiar la unidad, y se avisa aparte para que se vea por qué.
+  const malUnidad = new Set(
+    plan.analisis
+      .filter(
+        (a) =>
+          (Object.keys(a.opciones).length === 0 ||
+            a.problemas.some((p) => p.tipo === 'otra-unidad')) &&
+          cambioDeUnidad(a.necesidad),
+      )
+      .map((a) => a.necesidad.id),
+  );
+  const conUnidadMal = plan.analisis.map((a) => a.necesidad).filter((n) => malUnidad.has(n.id));
+  const sinProducto = plan.sinProducto.filter((n) => !malUnidad.has(n.id));
   const desaparecidos = plan.analisis
     .filter((a) => a.problemas.some((p) => p.tipo === 'desaparecido'))
     .map((a) => a.necesidad);
   const otraUnidad = plan.analisis
     .filter((a) => a.problemas.some((p) => p.tipo === 'otra-unidad'))
-    .map((a) => a.necesidad);
+    .map((a) => a.necesidad)
+    .filter((n) => !malUnidad.has(n.id));
 
   return (
     <>
-      {plan.mejor && plan.sinProducto.length > 0 && (
+      {conUnidadMal.length > 0 && (
+        <p class="aviso aviso--atencion">
+          <Icono nombre="alerta" tamano={20} />
+          <span>
+            No entran en la compra porque su unidad no es la de la tienda (por ejemplo, huevos en kg
+            en vez de unidades). Ábrelas para cambiarla: {enlaces(conUnidadMal)}.
+          </span>
+        </p>
+      )}
+      {plan.mejor && sinProducto.length > 0 && (
         <p class="aviso aviso--atencion">
           <Icono nombre="alerta" tamano={20} />
           <span>
             Sin producto elegido en ninguna tienda
-            {apagadas.length > 0 ? ' encendida' : ''} (no se cuentan): {enlaces(plan.sinProducto)}.
+            {apagadas.length > 0 ? ' encendida' : ''} (no se cuentan): {enlaces(sinProducto)}.
           </span>
         </p>
       )}

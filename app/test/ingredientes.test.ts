@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { leerCopia } from '../src/copia.ts';
 import {
   actualizarAutomaticas,
+  cambioDeUnidad,
   elegirPorMi,
   ingredienteDe,
   ingredientePorNombre,
+  unidadDelNombre,
 } from '../src/ingredientes/automatico.ts';
 import { INGREDIENTES, type Ingrediente } from '../src/ingredientes/catalogo.ts';
 import { candidatos, elegirProducto, encaja } from '../src/ingredientes/elegir.ts';
@@ -191,6 +193,43 @@ describe('elegir por mí', () => {
     });
     // Ya al día: no cambia nada.
     expect(actualizarAutomaticas(cambiadas, datos, HOY, AHORA)).toEqual([]);
+  });
+});
+
+describe('la unidad de cada ingrediente', () => {
+  it('al escribir el nombre, propone su unidad', () => {
+    expect(unidadDelNombre('Huevos')).toBe('ud');
+    expect(unidadDelNombre('Leche')).toBe('l');
+    expect(unidadDelNombre('Pechuga de pollo')).toBe('kg');
+    expect(unidadDelNombre('Pilas')).toBeUndefined();
+  });
+
+  it('huevos en kg: se pasan a unidades con el mismo número y sin la despensa de antes', () => {
+    const huevos = necesidad('Huevos', {
+      cantidad: 12,
+      despensa: { cantidad: 3, fecha: '2026-11-10' },
+      duraHasta: '2026-11-30',
+    });
+    const cambio = cambioDeUnidad(huevos);
+    expect(cambio?.ingrediente.id).toBe('huevos');
+    expect(cambio?.arreglada).toMatchObject({ unidad: 'ud', cantidad: 12 });
+    expect(cambio?.arreglada?.despensa).toBeUndefined();
+    expect(cambio?.arreglada?.duraHasta).toBeUndefined();
+    // Ya en unidades, la app sí elige el producto.
+    expect(cambioDeUnidad({ ...huevos, unidad: 'ud' })).toBeNull();
+  });
+
+  it('de g o ml se pasa a kg o l; de g a unidades hay que escribirlo', () => {
+    expect(
+      cambioDeUnidad(necesidad('Leche', { unidad: 'g', cantidad: 1500 }))?.arreglada,
+    ).toMatchObject({ unidad: 'l', cantidad: 1.5 });
+    expect(
+      cambioDeUnidad(necesidad('Huevos', { unidad: 'g', cantidad: 600 }))?.arreglada,
+    ).toBeNull();
+    // Lo que no es un ingrediente conocido o ya va bien (leche en ml) no se toca.
+    expect(cambioDeUnidad(necesidad('Leche', { unidad: 'ml', cantidad: 1500 }))).toBeNull();
+    expect(cambioDeUnidad(necesidad('Pilas', { unidad: 'ud' }))).toBeNull();
+    expect(cambioDeUnidad(necesidad('Pechuga de pollo', { unidad: 'g' }))).toBeNull();
   });
 });
 

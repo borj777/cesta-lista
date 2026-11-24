@@ -2,7 +2,12 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icono } from '../componentes/Icono.tsx';
 import { hoyEnEspana } from '../formato.ts';
 import { guardarVarias, useNecesidades } from '../necesidades/estado.ts';
-import { estadoEquivalencia, type Necesidad } from '../necesidades/modelo.ts';
+import {
+  estadoEquivalencia,
+  NOMBRE_UNIDAD,
+  textoNecesidad,
+  type Necesidad,
+} from '../necesidades/modelo.ts';
 import type { IdTienda } from '../tiendas/modelo.ts';
 import { quitarOfertasTerminadas } from '../tiendas/ofertas.ts';
 import type { DatosApp, ProductoApp } from '../tipos.ts';
@@ -12,6 +17,7 @@ import type { Receta } from '../menu/recetas.ts';
 import {
   actualizarAutomaticas,
   actualizarOfertas,
+  cambioDeUnidad,
   elegirPorMi,
   gastoSemanal,
   ingredienteDe,
@@ -101,6 +107,20 @@ export function ElegirPorMi({
 }) {
   const [aviso, setAviso] = useState<string | null>(null);
   const { recetas, menu } = useRecetas();
+  const cambio = cambioDeUnidad(necesidad);
+  if (cambio) {
+    return (
+      <CambiarUnidad
+        necesidad={necesidad}
+        {...cambio}
+        alCambiar={async (arreglada) => {
+          const semanal = gastosConMenu([arreglada], recetas ?? [], menu).get(arreglada.id);
+          const r = elegirPorMi(arreglada, datos, hoyEnEspana(), new Date().toISOString(), semanal);
+          await alCambiar(r?.necesidad ?? arreglada);
+        }}
+      />
+    );
+  }
   const ingrediente = ingredienteDe(necesidad);
   if (!ingrediente || !unidadCompatible(ingrediente, necesidad)) return null;
   const pendientes = tiendasSinProducto(necesidad, buscarProducto);
@@ -141,6 +161,61 @@ export function ElegirPorMi({
           <Icono nombre="alerta" tamano={20} />
           <span>{aviso}</span>
         </p>
+      )}
+    </section>
+  );
+}
+
+const SE_VENDE: Record<string, string> = {
+  kg: 'se vende por peso',
+  l: 'se vende por litros',
+  ud: 'se cuenta por unidades',
+};
+
+/**
+ * Aviso de la ficha cuando la necesidad va en una unidad que no es la de su ingrediente
+ * (huevos en kg): así no se puede elegir el producto ni entra en la Lista.
+ */
+function CambiarUnidad({
+  necesidad,
+  ingrediente,
+  arreglada,
+  alCambiar,
+}: {
+  necesidad: Necesidad;
+  ingrediente: { nombre: string; unidad: string };
+  arreglada: Necesidad | null;
+  alCambiar: (n: Necesidad) => Promise<void>;
+}) {
+  const [guardando, setGuardando] = useState(false);
+  return (
+    <section class="tarjeta elegir-por-mi">
+      <p class="aviso aviso--atencion">
+        <Icono nombre="alerta" tamano={20} />
+        <span>
+          «{ingrediente.nombre}» {SE_VENDE[ingrediente.unidad] ?? 'se vende en otra unidad'}, pero
+          aquí está en {NOMBRE_UNIDAD[necesidad.unidad].varias}. Así la app no puede elegir el
+          producto ni ponerlo en la Lista.
+        </span>
+      </p>
+      {arreglada ? (
+        <button
+          type="button"
+          class="boton boton--principal boton--ancho"
+          disabled={guardando}
+          onClick={() => {
+            setGuardando(true);
+            void alCambiar(arreglada).finally(() => setGuardando(false));
+          }}
+        >
+          {arreglada.soloRecetas
+            ? `Pasar a ${NOMBRE_UNIDAD[arreglada.unidad].varias}`
+            : `Cambiar a ${textoNecesidad(arreglada)}`}
+        </button>
+      ) : (
+        <a class="boton boton--principal boton--ancho" href={`#necesidades/${necesidad.id}/editar`}>
+          Cambiar la unidad
+        </a>
       )}
     </section>
   );

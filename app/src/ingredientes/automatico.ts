@@ -65,6 +65,39 @@ export function ingredienteDe(
 export const unidadCompatible = (i: Ingrediente, n: Pick<Necesidad, 'unidad'>) =>
   unidadDeComparacion(n.unidad) === i.unidad;
 
+/**
+ * Unidad que corresponde a un nombre («Huevos» → ud, «Leche» → l), si es de un ingrediente
+ * conocido. Sirve para poner la unidad al crear una necesidad.
+ */
+export function unidadDelNombre(nombre: string): Ingrediente['unidad'] | undefined {
+  return ingredientePorNombre(nombre)?.unidad;
+}
+
+export type CambioDeUnidad = {
+  ingrediente: Ingrediente;
+  /** La necesidad pasada a la unidad del ingrediente, o null si no se puede pasar sola. */
+  arreglada: Necesidad | null;
+};
+
+/**
+ * Si la necesidad es de un ingrediente conocido pero va en otra unidad (huevos en kg), la app
+ * no puede elegir el producto ni sumarla a la compra. Propone pasarla a la unidad del
+ * ingrediente con el mismo número (12 kg → 12 unidades; g y ml se pasan a kg y l). De g o ml
+ * a unidades no se sabe cuántas son: hay que escribirlo (arreglada = null).
+ */
+export function cambioDeUnidad(n: Necesidad): CambioDeUnidad | null {
+  const ingrediente = ingredienteDe(n);
+  if (!ingrediente || unidadCompatible(ingrediente, n)) return null;
+  const pequena = n.unidad === 'g' || n.unidad === 'ml';
+  if (pequena && ingrediente.unidad === 'ud') return { ingrediente, arreglada: null };
+  const cantidad = pequena ? n.cantidad / 1000 : n.cantidad;
+  const arreglada: Necesidad = { ...n, unidad: ingrediente.unidad, cantidad };
+  // Lo apuntado de la despensa iba en la unidad de antes: ya no vale.
+  delete arreglada.despensa;
+  delete arreglada.duraHasta;
+  return { ingrediente, arreglada };
+}
+
 /** ¿En qué tiendas con catálogo puede elegir la app? Donde no hay nada o lo eligió ella. */
 export function tiendasPorElegir(n: Necesidad): string[] {
   return TIENDAS_AUTOMATICAS.filter((t) => !n.equivalencias?.[t] || elegidoPorLaApp(n, t));
