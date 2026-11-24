@@ -2,8 +2,8 @@
  * Almacenamiento en el iPhone (IndexedDB). Los datos personales nunca salen del dispositivo,
  * salvo en la copia de seguridad que exporta el usuario.
  */
-import type { Receta } from './menu/recetas.ts';
 import type { Necesidad } from './necesidades/modelo.ts';
+import { AJUSTES_DEL_MENU, quitarMenu } from './sinMenu.ts';
 import { crearLidl, type TiendaPropia } from './tiendas/modelo.ts';
 import type { ProductoPropio } from './tiendas/productos.ts';
 
@@ -12,11 +12,12 @@ const NOMBRE_BD = 'cesta-lista';
  * Versión 1: necesidades, lidl (precios de Lidl) y ajustes.
  * Versión 2: tiendas propias y sus productos (los de Lidl pasan a la tienda propia «Lidl»).
  * Versión 3: recetas.
+ * Versión 4: sin recetas (se quitó el Menú): lo que gastaba el menú pasa a las necesidades.
  */
-const VERSION_BD = 3;
+const VERSION_BD = 4;
 
 /** Almacenes de la base de datos. */
-export const ALMACENES = ['necesidades', 'tiendas', 'productos', 'recetas', 'ajustes'] as const;
+export const ALMACENES = ['necesidades', 'tiendas', 'productos', 'ajustes'] as const;
 export type NombreAlmacen = (typeof ALMACENES)[number];
 
 /** Clave del ajuste con las tiendas apagadas. */
@@ -39,6 +40,26 @@ function terminada(tx: IDBTransaction): Promise<void> {
   });
 }
 
+/**
+ * Versión 4: suma a las necesidades lo que gastaba el menú, borra las recetas y los ajustes
+ * del Menú. Todo dentro de la actualización: si falla, la base de datos sigue como estaba.
+ */
+function quitarRecetas(bd: IDBDatabase, tx: IDBTransaction) {
+  const necesidades = tx.objectStore('necesidades');
+  const ajustes = tx.objectStore('ajustes');
+  const recetas = tx.objectStore('recetas').getAll();
+  const menu = ajustes.get('menu');
+  const lista = necesidades.getAll() as IDBRequest<Necesidad[]>;
+  // Las peticiones de una transacción terminan en orden: cuando acaba la última, están todas.
+  lista.onsuccess = () => {
+    for (const n of quitarMenu(lista.result, recetas.result as unknown[], menu.result)) {
+      necesidades.put(n);
+    }
+    for (const clave of AJUSTES_DEL_MENU) ajustes.delete(clave);
+    bd.deleteObjectStore('recetas');
+  };
+}
+
 export function abrir(): Promise<IDBDatabase> {
   conexion ??= new Promise((resolver, rechazar) => {
     const peticion = indexedDB.open(NOMBRE_BD, VERSION_BD);
@@ -49,8 +70,7 @@ export function abrir(): Promise<IDBDatabase> {
         bd.createObjectStore('necesidades', { keyPath: 'id' });
       }
       if (!bd.objectStoreNames.contains('ajustes')) bd.createObjectStore('ajustes');
-      if (!bd.objectStoreNames.contains('recetas'))
-        bd.createObjectStore('recetas', { keyPath: 'id' });
+      if (bd.objectStoreNames.contains('recetas') && tx) quitarRecetas(bd, tx);
       if (!bd.objectStoreNames.contains('tiendas')) {
         // Lidl viene creada siempre, con el id 'lidl' que ya usan las equivalencias.
         bd.createObjectStore('tiendas', { keyPath: 'id' }).put(crearLidl(new Date().toISOString()));
@@ -107,64 +127,10 @@ export async function guardarNecesidad(n: Necesidad): Promise<void> {
   void pedirAlmacenamientoPersistente();
 }
 
-/** Borra una necesidad y la quita de las recetas que la usaban, en una sola operación. */
 export async function borrarNecesidad(id: string): Promise<void> {
   const bd = await abrir();
-  const tx = bd.transaction(['necesidades', 'recetas'], 'readwrite');
-  const fin = terminada(tx);
+  const tx = bd.transaction('necesidades', 'readwrite');
   tx.objectStore('necesidades').delete(id);
-  const recetas = tx.objectStore('recetas');
-  const todas = recetas.getAll() as IDBRequest<Receta[]>;
-  todas.onsuccess = () => {
-    for (const r of todas.result) {
-      if (!r.ingredientes.some((i) => i.necesidad === id)) continue;
-      recetas.put({ ...r, ingredientes: r.ingredientes.filter((i) => i.necesidad !== id) });
-    }
-  };
-  await fin;
-}
-
-export async function listarRecetas(): Promise<Receta[]> {
-  const bd = await abrir();
-  return promesa<Receta[]>(
-    bd.transaction('recetas').objectStore('recetas').getAll() as IDBRequest<Receta[]>,
-  );
-}
-
-/** Guarda una receta junto con las necesidades nuevas de sus ingredientes, en una sola operación. */
-export async function guardarRecetaYNecesidades(r: Receta, nuevas: Necesidad[]): Promise<void> {
-  const bd = await abrir();
-  const tx = bd.transaction(['recetas', 'necesidades'], 'readwrite');
-  for (const n of nuevas) tx.objectStore('necesidades').put(n);
-  tx.objectStore('recetas').put(r);
-  await terminada(tx);
-  void pedirAlmacenamientoPersistente();
-}
-
-/**
- * Guarda lo que sale de la dieta en una sola operación: necesidades, recetas y ajustes (el
- * menú). Si algo falla, no se guarda nada.
- */
-export async function guardarDieta(cambios: {
-  necesidades: Necesidad[];
-  recetas: Receta[];
-  ajustes: Record<string, unknown>;
-}): Promise<void> {
-  const bd = await abrir();
-  const tx = bd.transaction(['necesidades', 'recetas', 'ajustes'], 'readwrite');
-  for (const n of cambios.necesidades) tx.objectStore('necesidades').put(n);
-  for (const r of cambios.recetas) tx.objectStore('recetas').put(r);
-  for (const [clave, valor] of Object.entries(cambios.ajustes)) {
-    tx.objectStore('ajustes').put(valor, clave);
-  }
-  await terminada(tx);
-  void pedirAlmacenamientoPersistente();
-}
-
-export async function borrarReceta(id: string): Promise<void> {
-  const bd = await abrir();
-  const tx = bd.transaction('recetas', 'readwrite');
-  tx.objectStore('recetas').delete(id);
   await terminada(tx);
 }
 
@@ -272,7 +238,6 @@ export type ContenidoBD = {
   necesidades: Necesidad[];
   tiendas: TiendaPropia[];
   productos: ProductoPropio[];
-  recetas: Receta[];
   ajustes: Record<string, unknown>;
 };
 
@@ -280,11 +245,10 @@ export async function leerTodo(): Promise<ContenidoBD> {
   const bd = await abrir();
   const tx = bd.transaction([...ALMACENES]);
   const ajustes = tx.objectStore('ajustes');
-  const [necesidades, tiendas, productos, recetas, claves, valores] = await Promise.all([
+  const [necesidades, tiendas, productos, claves, valores] = await Promise.all([
     promesa(tx.objectStore('necesidades').getAll() as IDBRequest<Necesidad[]>),
     promesa(tx.objectStore('tiendas').getAll() as IDBRequest<TiendaPropia[]>),
     promesa(tx.objectStore('productos').getAll() as IDBRequest<ProductoPropio[]>),
-    promesa(tx.objectStore('recetas').getAll() as IDBRequest<Receta[]>),
     promesa(ajustes.getAllKeys()),
     promesa(ajustes.getAll()),
   ]);
@@ -292,7 +256,6 @@ export async function leerTodo(): Promise<ContenidoBD> {
     necesidades,
     tiendas,
     productos,
-    recetas,
     ajustes: Object.fromEntries(claves.map((c, i) => [String(c), valores[i]])),
   };
 }
@@ -309,13 +272,11 @@ export async function reemplazarTodo(contenido: ContenidoBD): Promise<void> {
     const necesidades = tx.objectStore('necesidades');
     const tiendas = tx.objectStore('tiendas');
     const productos = tx.objectStore('productos');
-    const recetas = tx.objectStore('recetas');
     const ajustes = tx.objectStore('ajustes');
-    for (const almacen of [necesidades, tiendas, productos, recetas, ajustes]) almacen.clear();
+    for (const almacen of [necesidades, tiendas, productos, ajustes]) almacen.clear();
     for (const n of contenido.necesidades) necesidades.put(n);
     for (const t of contenido.tiendas) tiendas.put(t);
     for (const p of contenido.productos) productos.put(p);
-    for (const r of contenido.recetas) recetas.put(r);
     for (const [clave, valor] of Object.entries(contenido.ajustes)) ajustes.put(valor, clave);
   } catch (error) {
     // Un dato no válido lanza un error al momento: hay que cancelar la operación entera,

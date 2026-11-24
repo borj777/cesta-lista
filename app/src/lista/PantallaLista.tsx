@@ -26,7 +26,7 @@ import {
 import { guardarAdelantadas, guardarCompra, marcarBajadasVistas, useCompra } from './estado.ts';
 import { ModoCompra } from './ModoCompra.tsx';
 import { AvisosDespensa } from '../despensa/PantallaDespensa.tsx';
-import { useConMenu } from '../despensa/estado.ts';
+import { useParaComprar } from '../despensa/estado.ts';
 import {
   planificar,
   type Compra,
@@ -59,12 +59,11 @@ export function PantallaLista({ datos, ahora }: { datos: DatosApp | null; ahora:
   const semanas = ajustes ? semanasDe(ajustes.periodo) : 1;
 
   // Lo que dura más que una compra y aún no se ha acabado se deja fuera («puede que aún te quede»).
-  // Las necesidades con lo que gasta el menú sumado (las que son solo para recetas y no están
-  // en el menú no se compran).
-  const conMenu = useConMenu();
+  // Las necesidades sin cantidad no se compran.
+  const paraComprar = useParaComprar();
   const reparto = useMemo(
-    () => (conMenu ? repartirNecesidades(conMenu, hoy, semanas, adelantadas) : null),
-    [conMenu, hoy, semanas, adelantadas],
+    () => (paraComprar ? repartirNecesidades(paraComprar, hoy, semanas, adelantadas) : null),
+    [paraComprar, hoy, semanas, adelantadas],
   );
 
   const plan = useMemo(
@@ -99,15 +98,15 @@ export function PantallaLista({ datos, ahora }: { datos: DatosApp | null; ahora:
   // Productos elegidos que han bajado de precio (por kg, litro…) desde hace poco.
   const bajadas = useMemo(
     () =>
-      conMenu && buscarProducto && ajustes && tiendas
-        ? bajadasDePrecio(conMenu, buscarProducto, {
+      paraComprar && buscarProducto && ajustes && tiendas
+        ? bajadasDePrecio(paraComprar, buscarProducto, {
             hoy,
             minimo: ajustes.avisoBajada,
             activas: tiendas.filter((t) => t.activa).map((t) => t.id),
             vistas: bajadasVistas,
           })
         : [],
-    [conMenu, buscarProducto, ajustes, tiendas, hoy, bajadasVistas],
+    [paraComprar, buscarProducto, ajustes, tiendas, hoy, bajadasVistas],
   );
 
   if (!listo) return <h1>Lista de compra</h1>;
@@ -223,7 +222,7 @@ export function PantallaLista({ datos, ahora }: { datos: DatosApp | null; ahora:
           {plan.mejor && <ComprasPorTienda mejor={plan.mejor} tiendas={tiendas} />}
           {reparto && (
             <PuedeQueTeQuede
-              necesidades={conMenu ?? []}
+              necesidades={paraComprar ?? []}
               quedan={reparto.quedan}
               adelantadas={adelantadas}
               hoy={hoy}
@@ -567,7 +566,7 @@ function OfertasEnTuCompra({
   if (conOferta.length === 0) return null;
   const tiendasConOferta = [...new Set(conOferta.map((c) => c.opcion.tienda))];
   const noMeVale = (c: Compra) => {
-    // La necesidad guardada, no la de la lista (que lleva sumado el menú).
+    // La necesidad guardada, no la de la lista (que puede llevar otra cantidad).
     const original = necesidades.find((n) => n.id === c.analisis.necesidad.id);
     if (!original) return;
     alFallar(null);

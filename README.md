@@ -4,7 +4,7 @@ Aplicación web para iPhone que compara los precios de **Mercadona, Consum, Lidl
 
 - Se instala desde Safari con «Añadir a pantalla de inicio» y funciona sin conexión.
 - Los precios se obtienen de las webs públicas de los supermercados una vez al día, con pausas entre peticiones.
-- La dieta, la despensa y las listas se guardan solo en el teléfono. Este repositorio contiene únicamente código y precios públicos.
+- Tus necesidades, tus precios apuntados y las listas se guardan solo en el teléfono. Este repositorio contiene únicamente código y precios públicos.
 
 Es un proyecto personal y sin ánimo de lucro.
 
@@ -13,7 +13,7 @@ Es un proyecto personal y sin ánimo de lucro.
 - **Fase 0 (terminada):** Mercadona y Consum responden desde GitHub Actions.
 - **Fase 1 (terminada):** descarga diaria completa de Mercadona y Consum.
 - **Fase 2 (terminada):** la app para el iPhone: necesidades, buscador, tiendas propias, cálculo de la compra más barata y lista para ir a comprar.
-- **Fase 3 (terminada):** menú por días, despensa y avisos, la dieta en automático (la app lee el PDF de la dieta, saca lo que lleva cada plato y elige el producto más barato de cada tienda), las ofertas semanales de Lidl y el historial de precios con avisos de bajadas.
+- **Fase 3 (terminada):** elección automática del producto más barato de cada tienda, despensa y avisos, las ofertas semanales de Lidl y el historial de precios con avisos de bajadas. El menú por días, las recetas y la lectura del PDF de la dieta se quitaron el 24/11/2026 para que la app se centre en comparar precios y hacer la lista.
 
 ## La app
 
@@ -29,12 +29,11 @@ Se publica sola (workflow «Publicar la app») cada vez que se sube un cambio a 
    **Ofertas de Lidl:** cada mañana se descargan sus ofertas de la semana (las de Valencia). Las ves en **Tiendas → Lidl**, con su fecha de fin. La app elige sola, para cada necesidad, la oferta más barata por kg y la usa mientras dura si sale más barata que en las otras tiendas; luego vuelve tu producto de siempre. La Lista enseña las ofertas que entran en la compra; si una no te vale, pulsa **No me vale** y no te la vuelve a proponer. También puedes elegir una oferta a mano en el buscador de Lidl de cada necesidad. Si tienes la app Lidl Plus, enciende **Ajustes → Tengo Lidl Plus** para que cuente ese precio.
 4. **Lista:** cada cosa va a la tienda donde es más barata por kg (o por litro o por unidad), aunque allí el envase sea más grande; si en una tienda va por unidades y en otra por kg, compara lo que se paga. Dice a qué tiendas ir, cuánto pagarás y cuánto ahorras frente a comprarlo todo en una sola tienda, por la misma cantidad de cada cosa. En **Ajustes** eliges para cuánto tiempo compras (1 semana, 2 semanas o 1 mes) y cuánto te compensa ir a una tienda más.
    **Han bajado de precio:** si baja el precio por kg (o por litro, unidad…) de un producto que has elegido en Mercadona o Consum, la Lista lo avisa con lo que costaba antes. Por defecto avisa desde un 5 %; en **Ajustes** puedes poner 10 %, 20 % o que no avise. Cada aviso se quita con **Entendido** o al terminar la compra.
-5. **Menú y dieta:** en **Menú → Leer el PDF de la dieta**, elige el PDF de tu nutricionista (se lee en el iPhone y no se guarda). Sale **«Tu compra para esta dieta»**: lo que comprarías cada semana con el producto de cada tienda. Quita lo que sobre, di qué es lo que la app no reconozca (lo recordará otros meses) y pulsa **Usar esta compra**: se guardan el menú de lunes a domingo, las recetas y las necesidades. Las cantidades son orientativas cuando la dieta no las indica; se cambian en **Mis recetas**.
-6. **Empezar la compra:** en la tienda, toca cada cosa al cogerla de la estantería y pasará al carro. La pantalla no se apaga mientras tanto. Al terminar, la app apunta qué has comprado: lo que dura más que una compra (el detergente del mes en una compra semanal) no vuelve a salir hasta que se vaya a acabar, y mientras tanto aparece en «Puede que aún te quede».
+5. **Empezar la compra:** en la tienda, toca cada cosa al cogerla de la estantería y pasará al carro. La pantalla no se apaga mientras tanto. Al terminar, la app apunta qué has comprado: lo que dura más que una compra (el detergente del mes en una compra semanal) no vuelve a salir hasta que se vaya a acabar, y mientras tanto aparece en «Puede que aún te quede».
 
 ### Copia de seguridad
 
-Tus datos solo están en el iPhone. Haz de vez en cuando **Ajustes → Copia de seguridad → Exportar copia** y guárdala en Archivos o en iCloud. Para recuperarla, en un iPhone nuevo o tras borrar la app, usa **Importar copia**: sustituye todo lo que haya por lo de la copia. Las copias de versiones anteriores de la app se pueden seguir importando.
+Tus datos solo están en el iPhone. Haz de vez en cuando **Ajustes → Copia de seguridad → Exportar copia** y guárdala en Archivos o en iCloud. Para recuperarla, en un iPhone nuevo o tras borrar la app, usa **Importar copia**: sustituye todo lo que haya por lo de la copia. Las copias de versiones anteriores de la app se pueden seguir importando; si tienen recetas y menú, lo que gastaba el menú se suma a la cantidad de cada necesidad.
 
 ### Si algo falla
 
@@ -152,7 +151,7 @@ npm run build    # versión para publicar, en app/dist
 | `app/` | La app (Vite, Preact y TypeScript) |
 | `app/src/necesidades/` | Necesidades, buscador y elección de productos |
 | `app/src/ingredientes/` | Catálogo de ingredientes y elección automática del producto («Elegir por mí») y de las ofertas de Lidl |
-| `app/src/menu/` | Menú por días, recetas y lector del PDF de la dieta (`dieta/`: lectura, recetario y compra automática) |
+| `app/src/sinMenu.ts` | Paso de los datos del Menú (quitado) a las necesidades, al actualizar la app o importar una copia antigua |
 | `app/src/despensa/` | Lo que queda en casa y avisos |
 | `app/src/tiendas/` | Tiendas propias, sus productos, tiendas apagadas y ofertas de Lidl |
 | `app/src/optimizador.ts` | Cálculo de la combinación de tiendas más barata |

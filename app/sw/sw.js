@@ -6,13 +6,10 @@
  * - data/app.json, imagenes.json y los trozos del historial de precios se piden primero a la
  *   red y, si no hay conexión, se usa la última copia guardada.
  * - Las fotos de las tiendas se guardan al verlas (las 400 más recientes).
- * - El lector de PDF (pdf.js, unos 540 KB) se guarda la primera vez que se usa y se conserva
- *   entre versiones: así no se descarga con cada versión nueva de la app.
+ * - La caché «lector» (el lector de PDF del Menú, quitado el 24/11/2026) se borra.
  */
 const VERSION = '__VERSION__';
 const ARCHIVOS = __ARCHIVOS__;
-const LECTOR = __LECTOR__;
-const CACHE_LECTOR = 'lector';
 const CACHE_APP = `app-${VERSION}`;
 const CACHE_DATOS = 'datos';
 
@@ -46,22 +43,9 @@ self.addEventListener('activate', (evento) => {
       .then((nombres) =>
         Promise.all(
           nombres
-            .filter((n) => n.startsWith('app-') && n !== CACHE_APP)
+            .filter((n) => (n.startsWith('app-') && n !== CACHE_APP) || n === 'lector')
             .map((n) => caches.delete(n)),
         ),
-      )
-      // Del lector se borran las versiones que ya no usa la app (si se actualiza pdf.js).
-      .then(() => caches.open(CACHE_LECTOR))
-      .then((cache) =>
-        cache
-          .keys()
-          .then((claves) =>
-            Promise.all(
-              claves
-                .filter((c) => !LECTOR.some((archivo) => c.url.endsWith(`/${archivo}`)))
-                .map((c) => cache.delete(c)),
-            ),
-          ),
       )
       .then(() => self.clients.claim()),
   );
@@ -101,19 +85,6 @@ async function primeroRed(evento) {
   // La descarga sigue en segundo plano y actualizará la copia para la próxima vez.
   evento.waitUntil(red.catch(() => {}));
   return guardada;
-}
-
-/** Lector de PDF: de la caché si está y, si no, de la red guardando una copia. */
-async function lector(evento) {
-  const cache = await caches.open(CACHE_LECTOR);
-  const guardada = await cache.match(evento.request, { ignoreSearch: true });
-  if (guardada) return guardada;
-  const respuesta = await fetch(evento.request);
-  if (respuesta.ok) {
-    const copia = respuesta.clone();
-    evento.waitUntil(cache.put(evento.request, copia).catch(() => {}));
-  }
-  return respuesta;
 }
 
 async function primeroCache(peticion) {
@@ -170,8 +141,6 @@ self.addEventListener('fetch', (evento) => {
     url.pathname.includes('/data/historial/')
   ) {
     evento.respondWith(primeroRed(evento));
-  } else if (LECTOR.some((archivo) => url.pathname.endsWith(`/${archivo}`))) {
-    evento.respondWith(lector(evento));
   } else if (request.mode === 'navigate') {
     // Cualquier página de la app abre index.html, también sin conexión.
     evento.respondWith(caches.match('./').then((r) => r ?? fetch(request)));

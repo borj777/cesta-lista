@@ -6,10 +6,8 @@
  * - `buscar`: frases alternativas; el nombre del producto debe tener todas las palabras de una.
  * - `en`: trozos de la ruta de sección («Carne > Aves y pollo»); vale si la ruta contiene uno.
  * - `excluir`: si el nombre tiene todas las palabras de una de estas frases, no vale.
- * - `nombres`: otras formas de escribirlo en la dieta o en las necesidades.
+ * - `nombres`: otras formas de escribirlo en las necesidades.
  * - `maxEnvase`: envase máximo, en su unidad.
- * - `racion`: cantidad orientativa por persona y plato, en su unidad (cantidades de cocina
- *   habituales, no una pauta de salud; el usuario las puede cambiar).
  */
 import type { UnidadIngrediente } from './elegir.ts';
 
@@ -21,7 +19,6 @@ export type Ingrediente = {
   en: string[];
   excluir?: string[];
   nombres?: string[];
-  racion?: number;
   /** Envase más grande que tiene sentido (un jamón entero de 7 kg no es «jamón en lonchas»). */
   maxEnvase?: number;
 };
@@ -165,7 +162,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: POLLO,
     excluir: [...NO_PREPARADO, 'pavo'],
     nombres: ['pechuga', 'pollo a la plancha'],
-    racion: 0.15,
   },
   {
     id: 'pollo',
@@ -181,7 +177,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: POLLO,
     excluir: NO_PREPARADO,
     nombres: ['pollo', 'muslos de pollo', 'contramuslos'],
-    racion: 0.25,
   },
   {
     id: 'pavo',
@@ -191,7 +186,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: POLLO,
     excluir: NO_PREPARADO,
     nombres: ['pavo'],
-    racion: 0.15,
   },
   {
     id: 'lomo-cerdo',
@@ -201,7 +195,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: CERDO,
     excluir: NO_PREPARADO,
     nombres: ['lomo', 'cerdo', 'cinta de lomo'],
-    racion: 0.15,
   },
   {
     id: 'solomillo-cerdo',
@@ -211,7 +204,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: CERDO,
     excluir: NO_PREPARADO,
     nombres: ['solomillo'],
-    racion: 0.15,
   },
   {
     id: 'ternera',
@@ -221,7 +213,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: VACUNO,
     excluir: [...NO_PREPARADO, 'higado'],
     nombres: ['ternera', 'filete de ternera', 'añojo'],
-    racion: 0.15,
   },
   {
     id: 'carne-picada',
@@ -231,7 +222,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: PICADA,
     excluir: [...NO_PREPARADO, 'albondiga'],
     nombres: ['carne picada', 'picada'],
-    racion: 0.12,
   },
   {
     id: 'conejo',
@@ -240,7 +230,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['conejo'],
     en: ['Conejo y cordero > Conejo', 'Carnicería > Conejo', 'Carnicería corte > Conejo'],
     excluir: NO_PREPARADO,
-    racion: 0.2,
   },
   {
     id: 'hamburguesa',
@@ -250,7 +239,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: ['Hamburguesas y picadas > Hamburguesas', 'Picadas y hamburguesas'],
     excluir: ['pan', 'vegetal', 'vegana', 'crispy'],
     nombres: ['hamburguesas'],
-    racion: 0.15,
   },
   // Pescado y marisco
   {
@@ -261,7 +249,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: PESCADO,
     excluir: NO_PREPARADO,
     nombres: ['merluza', 'pescadilla', 'pescado blanco'],
-    racion: 0.17,
   },
   {
     id: 'salmon',
@@ -271,7 +258,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: PESCADO,
     excluir: [...NO_PREPARADO, 'ahumado', 'trucha', 'salmonete', 'marinera', 'pate'],
     nombres: ['salmón'],
-    racion: 0.15,
   },
   {
     id: 'bacalao',
@@ -280,7 +266,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['bacalao'],
     en: [...PESCADO, 'Salazones'],
     excluir: [...NO_PREPARADO, 'ajoarriero', 'brandada'],
-    racion: 0.17,
   },
   {
     id: 'dorada',
@@ -289,7 +274,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['dorada'],
     en: PESCADO,
     excluir: NO_PREPARADO,
-    racion: 0.3,
   },
   {
     id: 'lubina',
@@ -298,7 +282,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['lubina'],
     en: PESCADO,
     excluir: NO_PREPARADO,
-    racion: 0.3,
   },
   {
     id: 'sardinas',
@@ -307,7 +290,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['sardina'],
     en: PESCADO,
     excluir: NO_PREPARADO,
-    racion: 0.2,
   },
   {
     id: 'boquerones',
@@ -316,7 +298,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['boqueron'],
     en: PESCADO,
     excluir: [...NO_PREPARADO, 'vinagre'],
-    racion: 0.2,
   },
   {
     id: 'emperador',
@@ -325,7 +306,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['emperador', 'pez espada'],
     en: PESCADO,
     excluir: NO_PREPARADO,
-    racion: 0.17,
   },
   {
     id: 'gambas',
@@ -335,7 +315,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: MARISCO,
     excluir: [...NO_PREPARADO, 'cocid'],
     nombres: ['gambas', 'langostinos'],
-    racion: 0.1,
   },
   {
     id: 'calamar',
@@ -345,7 +324,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: CEFALOPODOS,
     excluir: [...NO_PREPARADO, 'romana'],
     nombres: ['calamares', 'sepia'],
-    racion: 0.15,
   },
   {
     id: 'mejillones',
@@ -354,7 +332,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['mejillon'],
     en: MARISCO,
     excluir: NO_PREPARADO,
-    racion: 0.25,
   },
   // Huevos y lácteos
   {
@@ -365,7 +342,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: HUEVOS,
     excluir: ['codorniz', 'clara', 'cocido'],
     nombres: ['huevo', 'tortilla', 'revuelto', 'huevo duro'],
-    racion: 2,
   },
   {
     id: 'leche',
@@ -375,7 +351,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: LECHE,
     excluir: ['sin lactosa', 'calcio', 'fresca'],
     nombres: ['leche'],
-    racion: 0.2,
   },
   {
     id: 'leche-desnatada',
@@ -384,7 +359,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['leche desnatada'],
     en: LECHE,
     excluir: ['sin lactosa', 'calcio', 'fresca'],
-    racion: 0.2,
   },
   {
     id: 'leche-entera',
@@ -393,7 +367,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['leche entera'],
     en: LECHE,
     excluir: ['sin lactosa', 'calcio', 'fresca', 'polvo'],
-    racion: 0.2,
   },
   {
     id: 'bebida-avena',
@@ -401,7 +374,6 @@ export const INGREDIENTES: Ingrediente[] = [
     unidad: 'l',
     buscar: ['bebida avena'],
     en: ['Bebidas vegetales'],
-    racion: 0.2,
   },
   {
     id: 'yogur-natural',
@@ -411,7 +383,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: YOGUR,
     excluir: ['azucarado', 'edulcorado', 'sabor', 'fresa', 'griego', 'liquido', 'bifidus'],
     nombres: ['yogur', 'yogures'],
-    racion: 0.125,
   },
   {
     id: 'yogur-griego',
@@ -420,7 +391,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['yogur griego', 'griego natural'],
     en: YOGUR,
     excluir: ['sabor', 'fresa', 'azucarado', 'miel', 'stracciatella'],
-    racion: 0.125,
   },
   {
     id: 'queso-fresco',
@@ -430,7 +400,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: QUESO,
     excluir: ['untar', 'crema', 'batido'],
     nombres: ['queso de burgos', 'queso fresco batido'],
-    racion: 0.08,
   },
   {
     id: 'queso-batido',
@@ -438,7 +407,6 @@ export const INGREDIENTES: Ingrediente[] = [
     unidad: 'kg',
     buscar: ['queso batido', 'queso fresco batido'],
     en: [...QUESO, ...YOGUR, 'Postres y yogures'],
-    racion: 0.125,
   },
   {
     id: 'queso-curado',
@@ -448,7 +416,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: QUESO,
     excluir: ['loncha', 'rallado', 'taco', 'untar', 'dado', 'cheddar'],
     nombres: ['queso'],
-    racion: 0.03,
   },
   {
     id: 'queso-rallado',
@@ -456,7 +423,6 @@ export const INGREDIENTES: Ingrediente[] = [
     unidad: 'kg',
     buscar: ['queso rallado', 'rallado'],
     en: QUESO,
-    racion: 0.02,
   },
   {
     id: 'mozzarella',
@@ -465,7 +431,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['mozzarella'],
     en: QUESO,
     excluir: ['rallad', 'pizza'],
-    racion: 0.06,
   },
   {
     id: 'mantequilla',
@@ -474,7 +439,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['mantequilla'],
     excluir: ['light'],
     en: ['Mantequilla y margarina > Mantequilla', 'productos lácteos y huevos > Mantequilla'],
-    racion: 0.01,
   },
   {
     id: 'nata-cocinar',
@@ -482,7 +446,6 @@ export const INGREDIENTES: Ingrediente[] = [
     unidad: 'l',
     buscar: ['nata cocinar', 'nata para cocinar', 'nata ligera'],
     en: ['Mantequilla y margarina > Nata', 'Lácteos y huevos > Nata'],
-    racion: 0.05,
   },
   // Fruta
   {
@@ -493,7 +456,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: FRUTA,
     excluir: ['zumo', 'deshidrat', 'compota', 'troceada', 'macedonia', 'mini'],
     nombres: ['fruta', 'pieza de fruta', 'fruta de temporada'],
-    racion: 0.2,
   },
   {
     id: 'manzana',
@@ -503,7 +465,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: FRUTA,
     excluir: ['zumo', 'troceada', 'deshidrat'],
     nombres: ['manzanas'],
-    racion: 0.2,
   },
   {
     id: 'pera',
@@ -512,7 +473,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['pera'],
     en: FRUTA,
     excluir: ['zumo', 'troceada'],
-    racion: 0.2,
   },
   {
     id: 'platano',
@@ -522,7 +482,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: FRUTA,
     excluir: ['zumo', 'deshidrat'],
     nombres: ['plátanos', 'banana'],
-    racion: 0.15,
   },
   {
     id: 'naranja',
@@ -532,7 +491,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: FRUTA,
     excluir: ['zumo', 'sanguina'],
     nombres: ['naranjas'],
-    racion: 0.2,
   },
   {
     id: 'mandarina',
@@ -541,7 +499,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['mandarina', 'clementina'],
     en: FRUTA,
     nombres: ['mandarinas'],
-    racion: 0.15,
   },
   {
     id: 'kiwi',
@@ -550,7 +507,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['kiwi'],
     en: FRUTA,
     excluir: ['gold', 'amarillo'],
-    racion: 0.1,
   },
   {
     id: 'fresas',
@@ -559,7 +515,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['fresa', 'freson'],
     en: FRUTA,
     excluir: ['platano', 'yogur'],
-    racion: 0.15,
   },
   {
     id: 'uvas',
@@ -568,7 +523,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['uva'],
     en: FRUTA,
     excluir: ['pasa'],
-    racion: 0.15,
   },
   {
     id: 'melon',
@@ -577,7 +531,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['melon'],
     en: FRUTA,
     excluir: ['troceado', 'tarrina'],
-    racion: 0.25,
   },
   {
     id: 'sandia',
@@ -586,7 +539,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['sandia'],
     en: FRUTA,
     excluir: ['troceada', 'tarrina'],
-    racion: 0.25,
   },
   {
     id: 'pina',
@@ -595,7 +547,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['piña'],
     en: FRUTA,
     excluir: ['troceada', 'tarrina', 'rodaja'],
-    racion: 0.2,
   },
   {
     id: 'limon',
@@ -605,7 +556,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: FRUTA,
     excluir: ['pera'],
     nombres: ['limones', 'zumo de limón'],
-    racion: 0.03,
   },
   {
     id: 'aguacate',
@@ -614,7 +564,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['aguacate'],
     en: FRUTA,
     excluir: ['guacamole'],
-    racion: 0.1,
   },
   {
     id: 'frutos-rojos',
@@ -622,7 +571,6 @@ export const INGREDIENTES: Ingrediente[] = [
     unidad: 'kg',
     buscar: ['arandano', 'frambuesa', 'frutos rojos', 'frutos del bosque'],
     en: [...FRUTA, 'Congelados > Fruta y verdura > Fruta', 'Fruta congelada'],
-    racion: 0.08,
   },
   // Verdura y hortalizas
   {
@@ -633,7 +581,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: VERDURA,
     excluir: ['frito', 'triturado', 'seco', 'cherry'],
     nombres: ['tomates'],
-    racion: 0.15,
   },
   {
     id: 'tomate-cherry',
@@ -641,7 +588,6 @@ export const INGREDIENTES: Ingrediente[] = [
     unidad: 'kg',
     buscar: ['tomate cherry', 'cherry'],
     en: VERDURA,
-    racion: 0.1,
   },
   {
     id: 'lechuga',
@@ -651,7 +597,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: ENSALADA,
     excluir: ['cesar', 'pasta', 'pollo', 'atun', 'queso', 'salsa'],
     nombres: ['ensalada', 'ensalada verde', 'canónigos', 'rúcula'],
-    racion: 0.08,
   },
   {
     id: 'cebolla',
@@ -661,7 +606,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: VERDURA,
     excluir: ['frita', 'cebolleta', 'roja', 'morada'],
     nombres: ['cebollas'],
-    racion: 0.07,
   },
   {
     id: 'ajo',
@@ -671,7 +615,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: VERDURA,
     excluir: ['tierno', 'picado', 'picada', 'negro', 'puerro'],
     nombres: ['ajos'],
-    racion: 0.01,
   },
   {
     id: 'patata',
@@ -681,7 +624,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: VERDURA,
     excluir: ['frita', 'chips', 'baby', 'microondas', 'cocida', 'boniato'],
     nombres: ['patatas'],
-    racion: 0.2,
   },
   {
     id: 'boniato',
@@ -689,7 +631,6 @@ export const INGREDIENTES: Ingrediente[] = [
     unidad: 'kg',
     buscar: ['boniato', 'batata'],
     en: VERDURA,
-    racion: 0.2,
   },
   {
     id: 'zanahoria',
@@ -699,7 +640,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: VERDURA,
     excluir: ['rallada', 'baby', 'palito', 'mini', 'coliflor', 'brocoli', 'guisante'],
     nombres: ['zanahorias'],
-    racion: 0.08,
   },
   {
     id: 'calabacin',
@@ -708,7 +648,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['calabacin'],
     en: VERDURA,
     excluir: ['espagueti', 'spaghetti', 'tallarin'],
-    racion: 0.2,
   },
   {
     id: 'calabaza',
@@ -717,7 +656,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['calabaza'],
     en: VERDURA,
     excluir: ['crema', 'pipa'],
-    racion: 0.2,
   },
   {
     id: 'berenjena',
@@ -725,7 +663,6 @@ export const INGREDIENTES: Ingrediente[] = [
     unidad: 'kg',
     buscar: ['berenjena'],
     en: VERDURA,
-    racion: 0.2,
   },
   {
     id: 'pimiento',
@@ -735,7 +672,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: VERDURA,
     excluir: ['padron', 'asado', 'piquillo', 'guindilla'],
     nombres: ['pimientos', 'pimiento rojo', 'pimiento verde'],
-    racion: 0.1,
   },
   {
     id: 'pepino',
@@ -744,7 +680,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['pepino'],
     en: VERDURA,
     excluir: ['pepinillo', 'mini'],
-    racion: 0.1,
   },
   {
     id: 'puerro',
@@ -753,7 +688,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['puerro'],
     en: VERDURA,
     excluir: ['ajo'],
-    racion: 0.08,
   },
   {
     id: 'brocoli',
@@ -762,7 +696,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['brocoli', 'brecol'],
     en: [...VERDURA, ...VERDURA_CONGELADA],
     excluir: ['microondas', 'vapor', 'coliflor', 'zanahoria'],
-    racion: 0.2,
   },
   {
     id: 'coliflor',
@@ -771,7 +704,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['coliflor'],
     en: [...VERDURA, ...VERDURA_CONGELADA],
     excluir: ['microondas', 'vapor', 'brocoli'],
-    racion: 0.2,
   },
   {
     id: 'judia-verde',
@@ -781,7 +713,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: [...VERDURA, ...VERDURA_CONGELADA],
     excluir: ['microondas', 'vapor', 'patata'],
     nombres: ['judías verdes', 'judías'],
-    racion: 0.2,
   },
   {
     id: 'espinacas',
@@ -790,7 +721,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['espinaca'],
     en: [...VERDURA, ...VERDURA_CONGELADA, ...ENSALADA],
     excluir: ['crema', 'pasta', 'microondas'],
-    racion: 0.15,
   },
   {
     id: 'acelgas',
@@ -798,7 +728,6 @@ export const INGREDIENTES: Ingrediente[] = [
     unidad: 'kg',
     buscar: ['acelga'],
     en: [...VERDURA, ...VERDURA_CONGELADA],
-    racion: 0.2,
   },
   {
     id: 'champinones',
@@ -807,7 +736,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['champiñon', 'champinon'],
     en: ['Setas y champiñones', 'Champiñones y setas', 'Frutas y hortalizas > Verduras'],
     nombres: ['champiñones', 'setas'],
-    racion: 0.1,
   },
   {
     id: 'esparragos',
@@ -816,7 +744,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['esparrago verde', 'esparrago triguero', 'esparragos verdes'],
     en: [...VERDURA, 'Verduras > Espárragos'],
     excluir: ['salteado', 'gamba'],
-    racion: 0.12,
   },
   {
     id: 'alcachofa',
@@ -824,7 +751,6 @@ export const INGREDIENTES: Ingrediente[] = [
     unidad: 'kg',
     buscar: ['alcachofa'],
     en: [...VERDURA, ...VERDURA_CONGELADA],
-    racion: 0.2,
   },
   {
     id: 'guisantes',
@@ -833,7 +759,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['guisante'],
     en: [...VERDURA_CONGELADA, ...CONSERVA_VERDURA],
     excluir: ['jamon', 'zanahoria'],
-    racion: 0.08,
   },
   {
     id: 'menestra',
@@ -843,7 +768,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: VERDURA_CONGELADA,
     excluir: ['arroz', 'pasta', 'pollo', 'gamba'],
     nombres: ['verduras', 'verdura', 'menestra', 'verduras salteadas', 'salteado de verduras'],
-    racion: 0.2,
   },
   {
     id: 'maiz',
@@ -851,7 +775,6 @@ export const INGREDIENTES: Ingrediente[] = [
     unidad: 'kg',
     buscar: ['maiz'],
     en: CONSERVA_VERDURA,
-    racion: 0.03,
   },
   {
     id: 'perejil',
@@ -860,7 +783,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['perejil'],
     en: [...VERDURA, 'Aromáticos', 'Hierbas aromáticas'],
     excluir: ['ajo'],
-    racion: 0.005,
   },
   // Cereales, pan, pasta, arroz y legumbres
   {
@@ -885,7 +807,6 @@ export const INGREDIENTES: Ingrediente[] = [
       'harina',
     ],
     nombres: ['arroz blanco', 'paella', 'arroz a la cubana'],
-    racion: 0.08,
   },
   {
     id: 'arroz-integral',
@@ -894,7 +815,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['arroz integral'],
     en: ARROZ,
     excluir: ['cocido', 'vasito', 'microondas'],
-    racion: 0.08,
   },
   {
     id: 'pasta',
@@ -915,7 +835,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: PASTA,
     excluir: ['integral', 'sin gluten', 'fresca', 'relleno', 'lenteja', 'garbanzo', 'quinoa'],
     nombres: ['pasta', 'macarrones', 'espaguetis', 'tallarines'],
-    racion: 0.08,
   },
   {
     id: 'pasta-integral',
@@ -924,7 +843,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['integral'],
     en: PASTA,
     excluir: ['sin gluten', 'fresca'],
-    racion: 0.08,
   },
   {
     id: 'fideos',
@@ -933,7 +851,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['fideo', 'fideua'],
     en: PASTA,
     excluir: ['oriental', 'arroz', 'noodle', 'instantaneo', 'yakisoba', 'ramen'],
-    racion: 0.08,
   },
   {
     id: 'quinoa',
@@ -947,7 +864,6 @@ export const INGREDIENTES: Ingrediente[] = [
       'Semillas',
     ],
     excluir: ['vasito', 'cocida', 'microondas', 'pasta', 'arroz', 'tortita', 'cracker'],
-    racion: 0.07,
   },
   {
     id: 'garbanzos',
@@ -957,7 +873,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: LEGUMBRES,
     excluir: ['pasta', 'harina', 'hummus'],
     nombres: ['garbanzos'],
-    racion: 0.2,
   },
   {
     id: 'lentejas',
@@ -967,7 +882,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: LEGUMBRES,
     excluir: ['pasta', 'harina'],
     nombres: ['lentejas'],
-    racion: 0.2,
   },
   {
     id: 'alubias',
@@ -977,7 +891,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: LEGUMBRES,
     excluir: ['pasta', 'harina'],
     nombres: ['alubias', 'judías blancas', 'fabada'],
-    racion: 0.2,
   },
   {
     id: 'avena',
@@ -999,7 +912,6 @@ export const INGREDIENTES: Ingrediente[] = [
       'sin gluten',
     ],
     nombres: ['avena'],
-    racion: 0.04,
   },
   {
     id: 'cereales',
@@ -1016,7 +928,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: CEREALES,
     excluir: ['chocolate', 'choco', 'miel', 'barrita', 'relleno', 'avena', 'infantil', 'galleta'],
     nombres: ['cereales'],
-    racion: 0.04,
   },
   {
     id: 'pan',
@@ -1036,7 +947,6 @@ export const INGREDIENTES: Ingrediente[] = [
       'pico',
     ],
     nombres: ['pan', 'barra de pan', 'tostada', 'bocadillo'],
-    racion: 0.06,
   },
   {
     id: 'pan-integral',
@@ -1046,7 +956,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: PAN,
     excluir: ['sin gluten', 'tostado', 'biscote', 'pan rallado'],
     nombres: ['pan integral', 'tostada integral'],
-    racion: 0.06,
   },
   {
     id: 'pan-molde',
@@ -1055,7 +964,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['pan molde'],
     en: [...PAN, 'Pan de molde'],
     excluir: ['sin gluten', 'integral', 'brioche', 'hamburguesa'],
-    racion: 0.05,
   },
   {
     id: 'tortitas',
@@ -1064,7 +972,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['tortita'],
     en: ['Cereales y galletas > Tortitas', 'Nutrición y dietética > Tortitas'],
     excluir: ['chocolate', 'yogur'],
-    racion: 0.02,
   },
   {
     id: 'tortillas-trigo',
@@ -1078,7 +985,6 @@ export const INGREDIENTES: Ingrediente[] = [
     ],
     excluir: ['kit', 'salsa', 'nacho'],
     nombres: ['wrap', 'fajitas', 'burrito'],
-    racion: 0.06,
   },
   {
     id: 'harina',
@@ -1101,7 +1007,6 @@ export const INGREDIENTES: Ingrediente[] = [
       'semolosa',
       'frito',
     ],
-    racion: 0.02,
   },
   {
     id: 'pan-rallado',
@@ -1109,7 +1014,6 @@ export const INGREDIENTES: Ingrediente[] = [
     unidad: 'kg',
     buscar: ['pan rallado'],
     en: ['Pan rallado'],
-    racion: 0.02,
   },
   // Conservas, aceites y condimentos
   {
@@ -1120,7 +1024,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: CONSERVA_PESCADO,
     excluir: ['ventresca', 'pate', 'escabeche', 'tomate', 'salsa', 'ensalada'],
     nombres: ['atún'],
-    racion: 0.06,
   },
   {
     id: 'atun-natural',
@@ -1129,7 +1032,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['atun natural'],
     en: CONSERVA_PESCADO,
     excluir: ['ventresca'],
-    racion: 0.06,
   },
   {
     id: 'sardinas-lata',
@@ -1138,7 +1040,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['sardina', 'sardinilla'],
     en: CONSERVA_PESCADO,
     excluir: ['tomate', 'picant', 'escabeche'],
-    racion: 0.06,
   },
   {
     id: 'tomate-triturado',
@@ -1146,7 +1047,6 @@ export const INGREDIENTES: Ingrediente[] = [
     unidad: 'kg',
     buscar: ['tomate triturado', 'tomate natural triturado'],
     en: TOMATE_CONSERVA,
-    racion: 0.06,
   },
   {
     id: 'tomate-frito',
@@ -1156,7 +1056,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: TOMATE_CONSERVA,
     excluir: ['albahaca', 'cebolla', 'pimiento', 'oregano'],
     nombres: ['salsa de tomate', 'tomate'],
-    racion: 0.05,
   },
   {
     id: 'aceite-oliva',
@@ -1166,7 +1065,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: ACEITE,
     excluir: ['spray', 'aromatizado', 'trufa', 'ajo', 'guindilla'],
     nombres: ['aceite', 'aceite de oliva', 'AOVE'],
-    racion: 0.01,
   },
   {
     id: 'aceite-girasol',
@@ -1174,7 +1072,6 @@ export const INGREDIENTES: Ingrediente[] = [
     unidad: 'l',
     buscar: ['aceite girasol'],
     en: ACEITE,
-    racion: 0.01,
   },
   {
     id: 'vinagre',
@@ -1183,7 +1080,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['vinagre'],
     en: ['Vinagre y otros aderezos', 'Vinagre y aliños'],
     excluir: ['crema', 'modena', 'balsamico', 'manzana', 'jerez'],
-    racion: 0.005,
   },
   {
     id: 'sal',
@@ -1192,7 +1088,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['sal'],
     en: ['Aceite, vinagre y sal > Sal', 'Sal, bicarbonato y especias > Sal'],
     excluir: ['escamas', 'hierbas', 'ajo', 'baja', 'himalaya', 'rosa'],
-    racion: 0.002,
   },
   {
     id: 'caldo',
@@ -1202,7 +1097,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: ['Caldo líquido', 'Caldo liquido'],
     excluir: ['pastilla', 'concentrado', 'pescado', 'marisco', 'cocido', 'ramen'],
     nombres: ['caldo de pollo', 'caldo de verduras'],
-    racion: 0.25,
   },
   {
     id: 'hummus',
@@ -1211,7 +1105,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['hummus'],
     en: ['Hummus y otros', 'Ensaladas preparadas y guacamole', 'Platos preparados'],
     nombres: ['humus'],
-    racion: 0.05,
   },
   // Frutos secos y semillas
   {
@@ -1231,7 +1124,6 @@ export const INGREDIENTES: Ingrediente[] = [
       'datil',
       'higo',
     ],
-    racion: 0.025,
   },
   {
     id: 'almendras',
@@ -1251,7 +1143,6 @@ export const INGREDIENTES: Ingrediente[] = [
       'higo',
       'cascara',
     ],
-    racion: 0.025,
   },
   {
     id: 'frutos-secos',
@@ -1288,7 +1179,6 @@ export const INGREDIENTES: Ingrediente[] = [
       'pecana',
     ],
     nombres: ['frutos secos', 'puñado de frutos secos'],
-    racion: 0.025,
   },
   {
     id: 'cacahuetes',
@@ -1297,7 +1187,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['cacahuete'],
     en: FRUTOS_SECOS,
     excluir: ['crema', 'chocolate', 'miel', 'cascara', 'barbacoa', 'cocktail', 'frito'],
-    racion: 0.025,
   },
   {
     id: 'crema-cacahuete',
@@ -1305,7 +1194,6 @@ export const INGREDIENTES: Ingrediente[] = [
     unidad: 'kg',
     buscar: ['crema cacahuete'],
     en: ['Cremas de untar', 'Frutos secos', 'Cremas de desayuno', 'Nutrición y dietética'],
-    racion: 0.015,
   },
   {
     id: 'semillas',
@@ -1314,7 +1202,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['chia', 'lino', 'sesamo', 'semilla'],
     en: ['Semillas', 'Frutos secos', 'Especias'],
     excluir: ['pan', 'galleta', 'pipa', 'pasa', 'cracker'],
-    racion: 0.01,
   },
   {
     id: 'pasas',
@@ -1323,7 +1210,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['pasa'],
     en: FRUTOS_SECOS,
     excluir: ['cocktail', 'coctel'],
-    racion: 0.02,
   },
   // Charcutería
   {
@@ -1334,7 +1220,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: [...EMBUTIDO, 'Jamón serrano'],
     excluir: ['taco', 'hueso', 'pieza', 'iberico', 'bellota', 'crema', 'taquito'],
     nombres: ['jamón'],
-    racion: 0.03,
     maxEnvase: 1,
   },
   {
@@ -1345,7 +1230,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: EMBUTIDO,
     excluir: ['crema', 'taco'],
     maxEnvase: 1,
-    racion: 0.04,
   },
   {
     id: 'pavo-fiambre',
@@ -1354,7 +1238,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['pechuga pavo', 'fiambre pavo', 'pavo'],
     en: ['Aves y jamón cocido > Pavo', 'Cocidos de pavo'],
     maxEnvase: 1,
-    racion: 0.04,
   },
   {
     id: 'bacon',
@@ -1362,7 +1245,6 @@ export const INGREDIENTES: Ingrediente[] = [
     unidad: 'kg',
     buscar: ['bacon', 'bacón', 'panceta'],
     en: ['Bacón y salchichas > Bacón', 'Bacon y panceta'],
-    racion: 0.03,
   },
   // Desayuno y dulces
   {
@@ -1373,7 +1255,6 @@ export const INGREDIENTES: Ingrediente[] = [
     en: ['Café molido y en grano', 'Café y cápsulas'],
     excluir: ['capsula', 'descafeinado', 'monodosis'],
     nombres: ['café'],
-    racion: 0.007,
   },
   {
     id: 'cacao',
@@ -1382,7 +1263,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['cacao puro', 'cacao 0', 'cacao desgrasado'],
     en: ['Cacao soluble', 'Cacao y cereales solubles', 'Repostería'],
     excluir: ['soluble', 'crema'],
-    racion: 0.01,
   },
   {
     id: 'miel',
@@ -1390,7 +1270,6 @@ export const INGREDIENTES: Ingrediente[] = [
     unidad: 'kg',
     buscar: ['miel'],
     en: ['Mermelada y miel > Miel', 'Mermeladas, confituras y miel > Miel'],
-    racion: 0.01,
   },
   {
     id: 'mermelada',
@@ -1398,7 +1277,6 @@ export const INGREDIENTES: Ingrediente[] = [
     unidad: 'kg',
     buscar: ['mermelada', 'confitura'],
     en: ['Mermelada y miel', 'Mermeladas, confituras y miel'],
-    racion: 0.02,
   },
   {
     id: 'azucar',
@@ -1407,7 +1285,6 @@ export const INGREDIENTES: Ingrediente[] = [
     buscar: ['azucar'],
     en: ['Azúcar y edulcorante > Azúcar', 'Azúcar y edulcorantes > Azúcar'],
     excluir: ['glas', 'caña', 'moreno', 'sobre'],
-    racion: 0.005,
   },
   {
     id: 'chocolate-negro',
@@ -1431,6 +1308,5 @@ export const INGREDIENTES: Ingrediente[] = [
       'filipino',
       'avellana',
     ],
-    racion: 0.02,
   },
 ];

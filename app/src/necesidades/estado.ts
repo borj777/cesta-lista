@@ -33,13 +33,9 @@ export async function guardarVarias(ns: readonly Necesidad[]): Promise<void> {
   await recargarNecesidades();
 }
 
-/** Borra la necesidad (y la quita de las recetas que la usaban). */
 export async function borrar(id: string): Promise<void> {
   await borrarNecesidad(id);
   await recargarNecesidades();
-  // Import diferido: el estado de las recetas importa este módulo.
-  const { recargarRecetas } = await import('../menu/estado.ts');
-  await recargarRecetas();
 }
 
 export function useNecesidades(): Estado {

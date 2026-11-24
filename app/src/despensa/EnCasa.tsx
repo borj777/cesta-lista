@@ -3,10 +3,10 @@ import { Icono } from '../componentes/Icono.tsx';
 import { Opciones } from '../componentes/Opciones.tsx';
 import { hoyEnEspana } from '../formato.ts';
 import { consumoSemanal } from '../lista/compra.ts';
-import { unidadesCompatibles } from '../menu/recetas.ts';
 import { guardar } from '../necesidades/estado.ts';
 import {
   leerCantidad,
+  unidadesCompatibles,
   OPCIONES_UNIDAD,
   type Necesidad,
   type UnidadNecesidad,
@@ -19,19 +19,16 @@ import {
   textoDespensa,
 } from './despensa.ts';
 
-/**
- * Lo que queda en casa de una necesidad, con correcciones de un toque. `conMenu` es la
- * necesidad con el menú sumado (para saber lo que se gasta); se guarda sobre `necesidad`.
- */
-export function EnCasa({ necesidad, conMenu }: { necesidad: Necesidad; conMenu: Necesidad }) {
+/** Lo que queda en casa de una necesidad, con correcciones de un toque. */
+export function EnCasa({ necesidad }: { necesidad: Necesidad }) {
   const [escribiendo, setEscribiendo] = useState(false);
   const [cantidadTexto, setCantidadTexto] = useState('');
   const [unidad, setUnidad] = useState<UnidadNecesidad>(necesidad.unidad);
   const [error, setError] = useState<string | null>(null);
   const [fallo, setFallo] = useState<string | null>(null);
   const hoy = hoyEnEspana();
-  const semanal = consumoSemanal(conMenu);
-  const estado = estadoDespensa(conMenu, semanal, hoy);
+  const semanal = consumoSemanal(necesidad);
+  const estado = estadoDespensa(necesidad, semanal, hoy);
   const lleno = necesidad.despensa?.lleno;
   const unidades = unidadesCompatibles(necesidad.unidad);
 
@@ -50,7 +47,7 @@ export function EnCasa({ necesidad, conMenu }: { necesidad: Necesidad; conMenu: 
         <Icono nombre="casa" tamano={20} /> En casa
       </h3>
       <p class={estado.tipo === 'acabado' ? 'texto--atencion' : 'secundario'}>
-        {textoDespensa(conMenu, estado)}
+        {textoDespensa(necesidad, estado)}
       </p>
       {estado.tipo !== 'desconocido' && (
         <p class="secundario en-casa__nota">

@@ -3,10 +3,7 @@ import { Icono } from '../componentes/Icono.tsx';
 import { InfoProducto } from '../componentes/Producto.tsx';
 import { Punto } from '../componentes/Tienda.tsx';
 import { hoyEnEspana, textoDia, unidadDeComparacion } from '../formato.ts';
-import { useRecetas } from '../menu/estado.ts';
 import { EnCasa } from '../despensa/EnCasa.tsx';
-import { aportesDelMenu, necesidadesConMenu, textoConMenu } from '../menu/menu.ts';
-import { recetasCon } from '../menu/recetas.ts';
 import { useTiendas } from '../tiendas/estado.ts';
 import type { IdTienda, InfoTienda } from '../tiendas/modelo.ts';
 import { estadoOferta, quitarOferta } from '../tiendas/ofertas.ts';
@@ -21,6 +18,7 @@ import {
   NOMBRE_CATEGORIA,
   noComprarEn,
   quitarEquivalencia,
+  textoNecesidad,
   type Necesidad,
 } from './modelo.ts';
 
@@ -45,9 +43,6 @@ export function DetalleNecesidad({
 }) {
   const [fallo, setFallo] = useState<string | null>(null);
   const { productos: propios } = useTiendas();
-  const { recetas, menu } = useRecetas();
-  const usadaEn = recetas ? recetasCon(recetas, necesidad.id) : [];
-  const aporte = aportesDelMenu(menu, recetas ?? [], [necesidad]).get(necesidad.id);
   const activas = (tiendas ?? []).filter((t) => t.activa);
   const apagadas = (tiendas ?? []).filter((t) => !t.activa);
   const hoy = new Date();
@@ -74,33 +69,9 @@ export function DetalleNecesidad({
       )}
       <h1>{necesidad.nombre}</h1>
       <p class="secundario">
-        {textoConMenu(necesidad, aporte)} · {NOMBRE_CATEGORIA[necesidad.categoria]}
+        {textoNecesidad(necesidad)} · {NOMBRE_CATEGORIA[necesidad.categoria]}
         {necesidad.notas ? ` · ${necesidad.notas}` : ''}
       </p>
-      {aporte && (
-        <p class="secundario">
-          En tu menú:{' '}
-          {aporte.platos
-            .map(
-              (p) =>
-                `${p.receta.nombre} (${p.veces === 1 ? '1 vez' : `${p.veces} veces`} a la semana, ${p.personas === 1 ? '1 persona' : `${p.personas} personas`})`,
-            )
-            .join('; ')}
-          .
-        </p>
-      )}
-      {usadaEn.length > 0 && (
-        <p class="secundario">
-          En tus recetas:{' '}
-          {usadaEn.map((r, i) => (
-            <span key={r.id}>
-              {i > 0 && ', '}
-              <a href={`#menu/receta/${r.id}`}>{r.nombre}</a>
-            </span>
-          ))}
-          .
-        </p>
-      )}
       {necesidad.ultimaCompra && (
         <p class="secundario">Comprado por última vez el {textoDia(necesidad.ultimaCompra)}.</p>
       )}
@@ -108,17 +79,7 @@ export function DetalleNecesidad({
         Editar cantidad y frecuencia
       </a>
 
-      {(!necesidad.soloRecetas || aporte) && (
-        <EnCasa
-          necesidad={necesidad}
-          conMenu={
-            necesidadesConMenu(
-              [necesidad],
-              aporte ? new Map([[necesidad.id, aporte]]) : new Map(),
-            )[0] ?? necesidad
-          }
-        />
-      )}
+      {!necesidad.soloRecetas && <EnCasa necesidad={necesidad} />}
 
       <h2 class="grupo__titulo grupo__titulo--separado">Qué compras en cada tienda</h2>
       {fallo && (

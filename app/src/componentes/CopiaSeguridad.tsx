@@ -4,7 +4,6 @@ import { guardarAjuste, leerAjuste, leerTodo, reemplazarTodo } from '../almacen.
 import { crearCopia, leerCopia, nombreArchivo, ofrecerArchivo, textoCopia } from '../copia.ts';
 import { fechaHora } from '../estado.ts';
 import { recargarCompra } from '../lista/estado.ts';
-import { recargarRecetas } from '../menu/estado.ts';
 import { recargarNecesidades, useNecesidades } from '../necesidades/estado.ts';
 import { recargarTiendas, useTiendas } from '../tiendas/estado.ts';
 import { Icono } from './Icono.tsx';
@@ -82,7 +81,6 @@ export function CopiaSeguridad() {
         recargarTiendas(),
         recargarAjustesCompra(),
         recargarCompra(),
-        recargarRecetas(),
       ]);
       setUltima(copia.exportada);
       setMensaje({

@@ -947,16 +947,7 @@ body:has(input:focus:not([type='radio'])) .pestanas {
   gap: 8px;
 }
 
-/* Recetas: editor de ingredientes y sugerencias. */
-.editor-ingrediente {
-  margin-top: 12px;
-}
-
-.sugerencias {
-  margin: 0 0 12px;
-}
-
-/* Cinco pestañas: que quepan los nombres en los iPhone más estrechos. */
+/* Pestañas: que quepan los nombres en los iPhone más estrechos. */
 .pestana {
   min-width: 0;
 }
@@ -979,31 +970,6 @@ body:has(input:focus:not([type='radio'])) .pestanas {
     font-size: 9.5px;
     letter-spacing: -0.2px;
   }
-}
-
-/* Menú de la semana: cada plato con sus contadores. */
-.plato-menu {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--borde);
-  display: grid;
-  gap: 8px;
-}
-
-.tarjeta--lista li.plato-menu:last-child {
-  border-bottom: none;
-}
-
-.plato-menu__cabecera {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  font-weight: 600;
-}
-
-.plato-menu__cabecera a {
-  color: inherit;
-  text-decoration: none;
 }
 
 .contador {
@@ -1082,139 +1048,6 @@ body:has(input:focus:not([type='radio'])) .pestanas {
   margin-top: 10px;
 }
 
-/* Leer la dieta en PDF */
-.elegir-pdf {
-  position: relative;
-  margin-top: 16px;
-}
-
-.elegir-pdf__entrada {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.dieta-dias summary {
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.dieta-dias__dia h3 {
-  margin: 14px 0 4px;
-  font-size: 16px;
-}
-
-.dieta-dias__dia p {
-  margin: 2px 0;
-}
-
-.boton-dieta {
-  margin-bottom: 20px;
-}
-
-/* Lista de recetas para elegir (al añadir un plato a un día). */
-.elegir-receta__lista {
-  background: var(--superficie-2);
-  border-radius: 12px;
-  padding: 0 12px;
-  margin: 6px 0 10px;
-}
-
-.elegir-receta__lista .fila--compra {
-  min-height: 48px;
-}
-
-.elegir-receta__lista li:last-child .fila--compra {
-  border-bottom: none;
-}
-
-/* Menú por días: una tarjeta por día, de lunes a domingo. */
-.dia-menu {
-  display: grid;
-  gap: 10px;
-}
-
-.dia-menu--hoy {
-  border-color: var(--marca);
-  box-shadow: 0 0 0 1px var(--marca);
-}
-
-.dia-menu__titulo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  font-size: 19px;
-}
-
-.dia-menu__hoy {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--sobre-marca);
-  background: var(--marca);
-  border-radius: 999px;
-  padding: 2px 8px;
-}
-
-.dia-menu__nombre-comida {
-  margin: 0 0 4px;
-  font-size: 13px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: var(--texto-2);
-}
-
-.dia-menu__platos {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 2px;
-}
-
-.dia-menu__plato {
-  display: grid;
-  gap: 1px;
-  width: 100%;
-  padding: 6px 0;
-  border: none;
-  background: none;
-  color: var(--texto);
-  font: inherit;
-  text-align: left;
-  overflow-wrap: anywhere;
-  cursor: pointer;
-}
-
-.dia-menu__plato .secundario {
-  font-size: 13px;
-}
-
-.dia-menu__acciones {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 2px 0 8px;
-}
-
-.dia-menu__anadir {
-  justify-self: start;
-}
-
-.dia-menu__anadiendo {
-  display: grid;
-  gap: 10px;
-  border-top: 1px solid var(--borde);
-  padding-top: 10px;
-}
-
-.boton-recetas {
-  margin-top: 8px;
-}
-
 /* «Elegir por mí»: la app elige el producto más barato de cada tienda. */
 .elegir-por-mi {
   display: grid;
@@ -1228,52 +1061,6 @@ body:has(input:focus:not([type='radio'])) .pestanas {
 .nota-automatica {
   margin: 0 0 8px;
   font-size: 13px;
-}
-
-/* «Tu compra para esta dieta»: cada cosa con su producto en cada tienda. */
-.cosas-dieta {
-  padding: 0;
-}
-
-.cosa-dieta {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--borde);
-  display: grid;
-  gap: 4px;
-}
-
-.tarjeta--lista li.cosa-dieta:last-child {
-  border-bottom: none;
-}
-
-.cosa-dieta__cabecera {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.cosa-dieta__platos {
-  font-size: 13px;
-  overflow-wrap: anywhere;
-}
-
-.cosa-dieta__producto {
-  font-size: 14px;
-  overflow-wrap: anywhere;
-}
-
-.cosa-dieta__tienda {
-  font-weight: 600;
-}
-
-.cosa-dieta__quitar {
-  justify-self: start;
-  margin-top: 4px;
-}
-
-.desconocidos {
-  display: grid;
-  gap: 10px;
 }
 
 .enlace {

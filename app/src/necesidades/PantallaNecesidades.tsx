@@ -4,9 +4,6 @@ import { Deslizable } from '../componentes/Deslizable.tsx';
 import { Icono } from '../componentes/Icono.tsx';
 import { Opciones } from '../componentes/Opciones.tsx';
 import { Punto } from '../componentes/Tienda.tsx';
-import { useRecetas } from '../menu/estado.ts';
-import { aportesDelMenu, textoConMenu } from '../menu/menu.ts';
-import { recetasCon } from '../menu/recetas.ts';
 import { useTiendas } from '../tiendas/estado.ts';
 import type { IdTienda, InfoTienda } from '../tiendas/modelo.ts';
 import type { DatosApp, ProductoApp } from '../tipos.ts';
@@ -152,18 +149,11 @@ function ListaNecesidades({
   datos: DatosApp | null;
   buscarProducto: ((tienda: IdTienda, id: string) => ProductoApp | undefined) | null;
 }) {
-  const { recetas, menu } = useRecetas();
-  const aportes = aportesDelMenu(menu, recetas ?? [], necesidades);
   /** Fila deslizada que enseña «Borrar» (solo una a la vez). */
   const [abierta, setAbierta] = useState<string | null>(null);
   const [fallo, setFallo] = useState<string | null>(null);
   const alBorrar = async (n: Necesidad) => {
-    const usadaEn = recetas ? recetasCon(recetas, n.id) : [];
-    const aviso =
-      usadaEn.length > 0
-        ? `\n\nSe quitará también de tus recetas: ${usadaEn.map((r) => r.nombre).join(', ')}.`
-        : '';
-    if (!confirm(`¿Borrar «${n.nombre}» de tus necesidades?${aviso}`)) return;
+    if (!confirm(`¿Borrar «${n.nombre}» de tus necesidades?`)) return;
     setAbierta(null);
     try {
       await borrar(n.id);
@@ -228,7 +218,7 @@ function ListaNecesidades({
                   <a class="fila fila--enlace" href={`#necesidades/${n.id}`} draggable={false}>
                     <div class="fila__texto">
                       <span>{n.nombre}</span>
-                      <span class="secundario">{textoConMenu(n, aportes.get(n.id))}</span>
+                      <span class="secundario">{textoNecesidad(n)}</span>
                     </div>
                     <TiendasElegidas necesidad={n} tiendas={tiendas} />
                     <span class="chevron" aria-hidden="true">
@@ -263,9 +253,7 @@ function FormNecesidad({ existente }: { existente?: Necesidad }) {
   const [cantidadTexto, setCantidadTexto] = useState(
     existente && !existente.soloRecetas ? escribirCantidad(existente.cantidad) : '',
   );
-  const { recetas } = useRecetas();
-  const usadaEn = existente && recetas ? recetasCon(recetas, existente.id) : [];
-  // Una necesidad de recetas puede quedarse sin cantidad propia.
+  // Una necesidad sin cantidad (de las recetas de antes) puede seguir sin ella.
   const sinCantidadPropia = !!existente?.soloRecetas && !cantidadTexto.trim();
   const [unidad, setUnidad] = useState<UnidadNecesidad>(existente?.unidad ?? 'kg');
   /** Si se ha tocado la unidad, ya no se cambia sola al escribir el nombre. */
@@ -314,11 +302,7 @@ function FormNecesidad({ existente }: { existente?: Necesidad }) {
   };
 
   const alBorrar = async () => {
-    const aviso =
-      usadaEn.length > 0
-        ? `\n\nSe quitará también de tus recetas: ${usadaEn.map((r) => r.nombre).join(', ')}.`
-        : '';
-    if (!existente || !confirm(`¿Borrar «${existente.nombre}» de tus necesidades?${aviso}`)) return;
+    if (!existente || !confirm(`¿Borrar «${existente.nombre}» de tus necesidades?`)) return;
     await borrar(existente.id);
     ir('necesidades');
   };
@@ -372,9 +356,7 @@ function FormNecesidad({ existente }: { existente?: Necesidad }) {
 
       <div class="campo">
         <label class="campo__etiqueta" for="cantidad">
-          {existente?.soloRecetas
-            ? 'Cuánto gastáis aparte de las recetas (opcional)'
-            : 'Cuánto gastáis'}
+          Cuánto gastáis
         </label>
         <input
           id="cantidad"
@@ -448,7 +430,7 @@ function FormNecesidad({ existente }: { existente?: Necesidad }) {
 
       {existente?.soloRecetas && (
         <p class="secundario">
-          Ahora solo se compra para tus recetas. Si también lo gastáis aparte, escribe cuánto.
+          Ahora no tiene cantidad y no entra en la lista. Escribe cuánto gastáis para que entre.
         </p>
       )}
       {cantidad !== null && nombre.trim() && (

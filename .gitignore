@@ -23,4 +23,3 @@ data/**/*.tmp
 
 # Documentos personales (dietas en PDF): nunca al repositorio público.
 *.pdf
-!app/test/fixtures/dieta-inventada.pdf

@@ -5,12 +5,7 @@
  */
 import { palabras } from '../buscador.ts';
 import { unidadDeComparacion } from '../formato.ts';
-import {
-  elegidoPorLaApp,
-  elegirAutomatico,
-  SEMANAS,
-  type Necesidad,
-} from '../necesidades/modelo.ts';
+import { elegidoPorLaApp, elegirAutomatico, type Necesidad } from '../necesidades/modelo.ts';
 import { TIENDAS_AUTOMATICAS } from '../tiendas/modelo.ts';
 import {
   elegirOferta,
@@ -171,15 +166,6 @@ export function actualizarAutomaticas(
     if (nueva !== n) cambiadas.push(nueva);
   }
   return cambiadas;
-}
-
-/** Lo que se gasta a la semana de una necesidad, en kg, l o ud. (g y ml pasan a kg y l). */
-export function gastoSemanal(n: Pick<Necesidad, 'cantidad' | 'unidad' | 'frecuencia'>): number {
-  const base = unidadDeComparacion(n.unidad);
-  const factor = n.unidad === 'g' || n.unidad === 'ml' ? 0.001 : 1;
-  return base === 'kg' || base === 'l' || base === 'ud'
-    ? (n.cantidad * factor) / SEMANAS[n.frecuencia]
-    : 0;
 }
 
 /** «por kg», «por litro» o «por unidad», para explicar cómo elige la app. */

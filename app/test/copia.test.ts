@@ -13,7 +13,6 @@ import {
 } from '../src/almacen.ts';
 import { leerCompra } from '../src/lista/compra.ts';
 import { crearCopia, leerCopia, nombreArchivo, textoCopia, VERSION_COPIA } from '../src/copia.ts';
-import type { Receta } from '../src/menu/recetas.ts';
 import { crearNecesidad, type Necesidad } from '../src/necesidades/modelo.ts';
 import { crearLidl, crearTienda } from '../src/tiendas/modelo.ts';
 import { crearProducto } from '../src/tiendas/productos.ts';
@@ -92,15 +91,18 @@ const vacio: ContenidoBD = {
   necesidades: [],
   tiendas: [],
   productos: [],
-  recetas: [],
   ajustes: {},
 };
 
-const paella: Receta = {
+/** Receta tal como se guardaba en las copias de la versión 3 (el Menú se quitó). */
+const paella = {
   id: 'paella',
   nombre: 'Paella',
   raciones: 2,
-  ingredientes: [{ necesidad: 'pollo', cantidad: 300, unidad: 'g' }],
+  ingredientes: [
+    { necesidad: 'pollo', cantidad: 300, unidad: 'g' },
+    { necesidad: 'arroz', cantidad: 160, unidad: 'g' },
+  ],
   creada: AHORA,
   actualizada: AHORA,
 };
@@ -112,46 +114,76 @@ describe('leerCopia', () => {
         necesidades: [pollo, detergente],
         tiendas: [lidl, fruteria],
         productos: [lecheLidl, naranjas],
-        recetas: [paella],
         ajustes: { tiendasApagadas: ['consum'] },
       },
       AHORA,
     );
-    expect(copia.version).toBe(3);
+    expect(copia.version).toBe(4);
+    expect(copia).not.toHaveProperty('recetas');
     const leida = leerCopia(textoCopia(copia));
     expect(leida).toEqual({ ok: true, copia });
   });
 
-  it('una copia de la versión 2 se importa sin recetas', () => {
-    const r = leerCopia(copiaTexto([pollo]));
-    expect(r).toMatchObject({ ok: true, copia: { recetas: [] } });
-  });
-
-  it('acepta una necesidad solo para recetas, sin cantidad propia', () => {
+  it('acepta una necesidad sin cantidad (de las recetas de antes)', () => {
     const arroz = { ...pollo, id: 'arroz', nombre: 'Arroz', cantidad: 0, soloRecetas: true };
     expect(leerCopia(copiaTexto([arroz])).ok).toBe(true);
     // Sin la marca, la cantidad 0 no vale.
     expect(leerCopia(copiaTexto([{ ...arroz, soloRecetas: undefined }])).ok).toBe(false);
   });
 
-  it.each([
-    ['sin raciones', { ...paella, raciones: 0 }, 'las raciones no son válidas'],
-    [
-      'con un ingrediente que no está en las necesidades',
-      { ...paella, ingredientes: [{ necesidad: 'no', cantidad: 1, unidad: 'g' }] },
-      'algún ingrediente no está en tus necesidades',
-    ],
-    [
-      'con una unidad que no encaja',
-      { ...paella, ingredientes: [{ necesidad: 'pollo', cantidad: 1, unidad: 'ml' }] },
-      'la unidad de algún ingrediente no encaja con su necesidad',
-    ],
-  ])('rechaza una receta %s', (_caso, mala, motivo) => {
-    const r = leerCopia(copiaTexto([pollo], { version: 3, recetas: [mala] }));
-    expect(r).toEqual({
-      ok: false,
-      error: `La receta n.º 1 («Paella») no es válida: ${motivo}.`,
-    });
+  it('una copia de la versión 3 suma a las necesidades lo que gastaba el menú', () => {
+    const arroz = { ...pollo, id: 'arroz', nombre: 'Arroz', cantidad: 0, soloRecetas: true };
+    const sal = { ...pollo, id: 'sal', nombre: 'Sal', cantidad: 0, soloRecetas: true };
+    // La paella, 2 veces a la semana para 3 personas: 6 raciones de 150 g de pollo y 80 g de arroz.
+    const menu = {
+      personas: 3,
+      dias: [
+        [{ comida: 'Comida', nombre: 'Paella', receta: 'paella' }],
+        [],
+        [],
+        [],
+        [],
+        [
+          { comida: 'Comida', nombre: '', receta: 'paella' },
+          { comida: 'Cena', nombre: 'Libre con moderación' },
+        ],
+        [],
+      ],
+    };
+    const r = leerCopia(
+      copiaTexto([pollo, arroz, sal], {
+        version: 3,
+        recetas: [paella],
+        ajustes: { menu, trozosAprendidos: { pan: 'pan' }, platosSinCompra: [], costeVisita: 1 },
+      }),
+    );
+    if (!r.ok) throw new Error(r.error);
+    const [p, a, s] = r.copia.necesidades;
+    expect(p).toMatchObject({ id: 'pollo', cantidad: 2.4, frecuencia: 'semana' });
+    expect(a).toMatchObject({ id: 'arroz', cantidad: 0.48, unidad: 'kg', frecuencia: 'semana' });
+    expect(a).not.toHaveProperty('soloRecetas');
+    // La que no estaba en el menú se queda sin cantidad.
+    expect(s).toEqual(sal);
+    expect(r.copia.ajustes).toEqual({ costeVisita: 1 });
+    expect(r.copia).not.toHaveProperty('recetas');
+  });
+
+  it('una copia de la versión 3 con el menú antiguo (veces a la semana) también se convierte', () => {
+    const arroz = { ...pollo, id: 'arroz', nombre: 'Arroz', cantidad: 0, soloRecetas: true };
+    const menu = [{ receta: 'paella', veces: 1, personas: 2 }];
+    const r = leerCopia(
+      copiaTexto([detergente, arroz], { version: 3, recetas: [paella], ajustes: { menu } }),
+    );
+    if (!r.ok) throw new Error(r.error);
+    expect(r.copia.necesidades[1]).toMatchObject({ cantidad: 0.16, frecuencia: 'semana' });
+    expect(r.copia.necesidades[0]).toEqual(detergente);
+  });
+
+  it('ignora las recetas dañadas de una copia de la versión 3', () => {
+    const malas = [{ ...paella, raciones: 0 }, 'paella', { id: 'x', ingredientes: 'no' }];
+    const menu = { personas: 1, dias: [[{ comida: '', nombre: '', receta: 'paella' }]] };
+    const r = leerCopia(copiaTexto([pollo], { version: 3, recetas: malas, ajustes: { menu } }));
+    expect(r).toMatchObject({ ok: true, copia: { necesidades: [pollo] } });
   });
 
   it('una copia de la versión 1 pasa los precios de Lidl a la tienda «Lidl»', () => {

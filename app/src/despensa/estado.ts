@@ -1,28 +1,16 @@
 /**
- * Lo que comparten las pantallas de la despensa: las necesidades con el menú sumado y el
- * ajuste «número en el icono» (almacén `ajustes`, así que va en la copia de seguridad).
+ * Lo que comparten las pantallas de la despensa: las necesidades que se compran y el ajuste
+ * «número en el icono» (almacén `ajustes`, así que va en la copia de seguridad).
  */
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { guardarAjuste, leerAjuste } from '../almacen.ts';
-import { useRecetas } from '../menu/estado.ts';
-import { aportesDelMenu, necesidadesConMenu } from '../menu/menu.ts';
 import { useNecesidades } from '../necesidades/estado.ts';
 import type { Necesidad } from '../necesidades/modelo.ts';
 
-/**
- * Necesidades tal como se compran y se gastan, con el menú sumado (las que son solo para
- * recetas y no están en el menú no aparecen). null mientras se leen.
- */
-export function useConMenu(): Necesidad[] | null {
+/** Necesidades que se compran (las que no tienen cantidad no aparecen). null mientras se leen. */
+export function useParaComprar(): Necesidad[] | null {
   const { necesidades } = useNecesidades();
-  const { recetas, menu } = useRecetas();
-  return useMemo(
-    () =>
-      necesidades && recetas
-        ? necesidadesConMenu(necesidades, aportesDelMenu(menu, recetas, necesidades))
-        : null,
-    [necesidades, recetas, menu],
-  );
+  return useMemo(() => necesidades?.filter((n) => !n.soloRecetas) ?? null, [necesidades]);
 }
 
 export const AJUSTE_ICONO = 'numeroEnIcono';

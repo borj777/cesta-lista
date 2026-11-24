@@ -138,7 +138,6 @@ describe('qué ingrediente es cada necesidad', () => {
     for (const i of INGREDIENTES) {
       expect(i.buscar.length, i.id).toBeGreaterThan(0);
       expect(i.en.length, i.id).toBeGreaterThan(0);
-      expect(i.racion ?? 1, i.id).toBeGreaterThan(0);
     }
   });
 });

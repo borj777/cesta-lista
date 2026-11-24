@@ -1,6 +1,7 @@
 import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
+  abrir,
   AJUSTE_APAGADAS,
   borrarTiendaPropia,
   cerrar,
@@ -149,6 +150,63 @@ describe('base de datos', () => {
         creado: AHORA,
       },
     ]);
+  });
+
+  it('al actualizar desde la versión 3, lo que gastaba el menú pasa a las necesidades', async () => {
+    const arroz = {
+      ...crearNecesidad(
+        {
+          nombre: 'Arroz',
+          categoria: 'alimentacion',
+          cantidad: 0,
+          unidad: 'g',
+          frecuencia: 'semana',
+        },
+        AHORA,
+        'arroz',
+      ),
+      soloRecetas: true,
+    };
+    const sal = { ...arroz, id: 'sal', nombre: 'Sal' };
+    // Base de datos como la dejaba la versión con el Menú.
+    await new Promise<void>((resolver, rechazar) => {
+      const peticion = indexedDB.open('cesta-lista', 3);
+      peticion.onupgradeneeded = () => {
+        const bd = peticion.result;
+        const necesidades = bd.createObjectStore('necesidades', { keyPath: 'id' });
+        necesidades.put(arroz);
+        necesidades.put(sal);
+        const ajustes = bd.createObjectStore('ajustes');
+        ajustes.put({ personas: 2, dias: [[{ comida: '', nombre: '', receta: 'r' }]] }, 'menu');
+        ajustes.put({ pan: '' }, 'trozosAprendidos');
+        ajustes.put(3, 'costeVisita');
+        bd.createObjectStore('tiendas', { keyPath: 'id' }).put(crearLidl(AHORA));
+        bd.createObjectStore('productos', { keyPath: 'id' });
+        bd.createObjectStore('recetas', { keyPath: 'id' }).put({
+          id: 'r',
+          nombre: 'Arroz blanco',
+          raciones: 1,
+          ingredientes: [{ necesidad: 'arroz', cantidad: 0.08, unidad: 'kg' }],
+          creada: AHORA,
+          actualizada: AHORA,
+        });
+      };
+      peticion.onsuccess = () => {
+        peticion.result.close();
+        resolver();
+      };
+      peticion.onerror = () => rechazar(peticion.error);
+    });
+
+    const contenido = await leerTodo();
+    const porId = new Map(contenido.necesidades.map((n) => [n.id, n]));
+    expect(porId.get('arroz')).toEqual({ ...arroz, cantidad: 160, soloRecetas: undefined });
+    expect(porId.get('arroz')).not.toHaveProperty('soloRecetas');
+    expect(porId.get('sal')).toEqual(sal);
+    expect(contenido.ajustes).toEqual({ costeVisita: 3 });
+    expect(contenido.tiendas.map((t) => t.id)).toEqual(['lidl']);
+    const bd = await abrir();
+    expect([...bd.objectStoreNames]).not.toContain('recetas');
   });
 
   it('borrar una tienda quita sus productos, lo elegido en ella y que esté apagada', async () => {

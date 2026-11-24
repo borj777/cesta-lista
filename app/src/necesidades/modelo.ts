@@ -75,8 +75,8 @@ export type Necesidad = {
   /** Ofertas («lidl:id») que no valen para esta necesidad: la app no las vuelve a proponer. */
   ofertasNoValen?: string[];
   /**
-   * Solo se compra para las recetas del menú: no tiene cantidad propia (`cantidad` es 0).
-   * Se crea al añadir un ingrediente nuevo a una receta.
+   * Sin cantidad (`cantidad` es 0): no entra en la lista hasta que se le pone. Son las que se
+   * crearon para las recetas del menú, que ya no existe, y no estaban en él.
    */
   soloRecetas?: true;
   /**
@@ -114,6 +114,39 @@ export type BorradorNecesidad = Pick<
   'nombre' | 'categoria' | 'cantidad' | 'unidad' | 'frecuencia' | 'notas'
 >;
 
+const FAMILIA: Record<UnidadNecesidad, string> = {
+  kg: 'peso',
+  g: 'peso',
+  l: 'volumen',
+  ml: 'volumen',
+  ud: 'ud',
+  lavado: 'lavado',
+  m: 'm',
+};
+const FACTOR: Record<UnidadNecesidad, number> = {
+  kg: 1,
+  g: 0.001,
+  l: 1,
+  ml: 0.001,
+  ud: 1,
+  lavado: 1,
+  m: 1,
+};
+
+/** ¿Son de la misma familia (g y kg, ml y l...)? */
+export const mismaFamilia = (a: UnidadNecesidad, b: UnidadNecesidad) => FAMILIA[a] === FAMILIA[b];
+
+/** Unidades en las que se puede escribir una cantidad de esta unidad (g o kg, ml o l...). */
+export function unidadesCompatibles(unidad: UnidadNecesidad): UnidadNecesidad[] {
+  return UNIDADES_NECESIDAD.filter((u) => mismaFamilia(u, unidad));
+}
+
+/** Pasa una cantidad a otra unidad de la misma familia (160 g → 0,16 kg). */
+export function convertir(cantidad: number, de: UnidadNecesidad, a: UnidadNecesidad): number {
+  if (!mismaFamilia(de, a)) throw new Error(`No se puede pasar de ${de} a ${a}`);
+  return Math.round(((cantidad * FACTOR[de]) / FACTOR[a]) * 1e6) / 1e6;
+}
+
 const formatoNumero = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 3 });
 
 /** "1,5" o "1.5" → 1.5. Devuelve null si no es un número positivo. */
@@ -139,7 +172,7 @@ export function textoCantidad(cantidad: number, unidad: UnidadNecesidad): string
 export function textoNecesidad(
   n: Pick<Necesidad, 'cantidad' | 'unidad' | 'frecuencia' | 'soloRecetas'>,
 ): string {
-  if (n.soloRecetas) return 'Solo para tus recetas';
+  if (n.soloRecetas) return 'Sin cantidad: no entra en la lista';
   return `${textoCantidad(n.cantidad, n.unidad)} ${NOMBRE_FRECUENCIA[n.frecuencia]}`;
 }
 
@@ -173,8 +206,8 @@ export function crearNecesidad(b: BorradorNecesidad, ahora: string, id: string):
 }
 
 /**
- * Aplica los cambios del formulario a una necesidad existente. Si era solo para recetas y
- * ahora tiene cantidad propia, deja de serlo.
+ * Aplica los cambios del formulario a una necesidad existente. Si no tenía cantidad y ahora
+ * la tiene, ya entra en la lista.
  */
 export function editarNecesidad(n: Necesidad, b: BorradorNecesidad, ahora: string): Necesidad {
   const editada = limpiar({ ...n, ...b, actualizada: ahora });

@@ -5,8 +5,8 @@
  * Funciones puras. Las cantidades van en la unidad de comparación (kg, l, ud, lavado o m).
  */
 import { unidadDeComparacion } from '../formato.ts';
-import { convertir } from '../menu/recetas.ts';
 import {
+  convertir,
   escribirCantidad,
   NOMBRE_UNIDAD,
   type Necesidad,

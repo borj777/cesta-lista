@@ -4,7 +4,7 @@ import { Interruptor } from '../componentes/Tienda.tsx';
 import { hoyEnEspana, textoDia } from '../formato.ts';
 import { avisosDespensa, olvidada, resumenDespensa, type FilaDespensa } from './avisos.ts';
 import { textoAproximado, textoDias } from './despensa.ts';
-import { guardarNumeroEnIcono, useConMenu, useNumeroEnIcono } from './estado.ts';
+import { guardarNumeroEnIcono, useParaComprar, useNumeroEnIcono } from './estado.ts';
 import { estadoIcono, pedirPermisoIcono, ponerNumeroEnIcono, type EstadoIcono } from './icono.ts';
 
 function Enlaces({
@@ -30,9 +30,9 @@ function Enlaces({
 
 /** Avisos de la despensa en la lista de la compra (solo si hay alguno). */
 export function AvisosDespensa({ hoy }: { hoy: string }) {
-  const conMenu = useConMenu();
-  if (!conMenu) return null;
-  const { acabado, poco, olvidado, total } = avisosDespensa(conMenu, hoy);
+  const paraComprar = useParaComprar();
+  if (!paraComprar) return null;
+  const { acabado, poco, olvidado, total } = avisosDespensa(paraComprar, hoy);
   if (total === 0) return null;
   return (
     <section class="tarjeta en-casa avisos-casa">
@@ -123,28 +123,26 @@ function Grupo({
 
 /** #necesidades/en-casa: lo que queda de cada cosa. */
 export function VistaDespensa() {
-  const conMenu = useConMenu();
+  const paraComprar = useParaComprar();
   const hoy = hoyEnEspana();
   const volver = (
     <a class="volver" href="#necesidades">
       ‹ Mis necesidades
     </a>
   );
-  if (!conMenu) return volver;
-  const r = resumenDespensa(conMenu, hoy);
+  if (!paraComprar) return volver;
+  const r = resumenDespensa(paraComprar, hoy);
   return (
     <>
       {volver}
       <h1>En casa</h1>
       <p class="secundario">
-        Lo que te queda de cada cosa, calculado con lo que gastas (y tu menú). Es una estimación:
-        toca cualquiera para corregirla.
+        Lo que te queda de cada cosa, calculado con lo que gastas. Es una estimación: toca
+        cualquiera para corregirla.
       </p>
-      {conMenu.length === 0 && (
+      {paraComprar.length === 0 && (
         <section class="tarjeta">
-          <p class="secundario">
-            Aún no hay nada que se gaste. Añade tus necesidades o pon platos en tu menú.
-          </p>
+          <p class="secundario">Aún no hay nada que se gaste. Añade tus necesidades.</p>
         </section>
       )}
       <Grupo titulo="Se ha acabado" filas={r.acabado} hoy={hoy} atencion />
@@ -161,7 +159,7 @@ export function VistaDespensa() {
  */
 export function NumeroEnIcono() {
   const activo = useNumeroEnIcono();
-  const conMenu = useConMenu();
+  const paraComprar = useParaComprar();
   const [, setVuelta] = useState(0);
   useEffect(() => {
     const alVolver = () => {
@@ -170,7 +168,7 @@ export function NumeroEnIcono() {
     document.addEventListener('visibilitychange', alVolver);
     return () => document.removeEventListener('visibilitychange', alVolver);
   }, []);
-  const total = conMenu ? avisosDespensa(conMenu, hoyEnEspana()).total : null;
+  const total = paraComprar ? avisosDespensa(paraComprar, hoyEnEspana()).total : null;
   useEffect(() => {
     if (activo === null || total === null) return;
     ponerNumeroEnIcono(activo ? total : 0);
