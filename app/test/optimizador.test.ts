@@ -250,16 +250,67 @@ describe('planificar', () => {
     expect(plan.mejor?.total).toBe(4.98);
   });
 
-  it('si una cosa cuesta lo mismo en dos tiendas, elige la de menor precio por unidad', () => {
-    producto('mercadona', 'pan-m', 1, 0.5, 'kg'); // 2 €/kg
-    producto('consum', 'pan-c', 1, 0.4, 'kg'); // 2,50 €/kg
+  it('elige la tienda más barata por kg aunque allí se pague más en caja', () => {
+    producto('mercadona', 'arroz-m', 1.2, 1, 'kg'); // 1,20 €/kg
+    producto('consum', 'arroz-c', 5, 5, 'kg'); // 1,00 €/kg, pero el saco cuesta 5 €
+    const arroz = necesidad('arroz', 1, 'kg', {
+      mercadona: { id: 'arroz-m' },
+      consum: { id: 'arroz-c' },
+    });
+    const plan = planificar([arroz], buscarProducto, opciones(0));
+    expect(plan.mejor?.tiendas).toEqual(['consum']);
+    // En caja se pagan 5 €; por la misma cantidad (1 kg) son 1 €, y 0,20 € menos que en Mercadona.
+    expect(plan.mejor).toMatchObject({ costeProductos: 5, valorProductos: 1, total: 1 });
+    expect(plan.unaTienda?.tiendas).toEqual(['consum']);
+    const mercadona = plan.combinaciones.find((r) => r.tiendas.join() === 'mercadona');
+    expect(mercadona).toMatchObject({ costeProductos: 1.2, total: 1.2 });
+  });
+
+  it('el coste por visita se compara con el ahorro por kg', () => {
+    // 0,20 € menos por kg de arroz en Consum no compensa ir a otra tienda por 1 €.
+    const arroz = necesidad('arroz', 1, 'kg', {
+      mercadona: { id: 'arroz-m' },
+      consum: { id: 'arroz-c' },
+    });
+    const plan = planificar(
+      [arroz, pollo],
+      buscarProducto,
+      opciones(1, 1, ['mercadona', 'consum']),
+    );
+    expect(plan.mejor?.tiendas).toEqual(['consum']);
+    const soloMercadona = planificar(
+      [arroz, necesidad('pollo', 1.5, 'kg', { mercadona: { id: 'pollo-m' } })],
+      buscarProducto,
+      opciones(1, 1, ['mercadona', 'consum']),
+    );
+    // Todo en Mercadona: 1,20 + 9,75 = 10,95; con Consum para el arroz: 1 + 9,75 + 1 = 11,75.
+    expect(soloMercadona.mejor).toMatchObject({ tiendas: ['mercadona'], total: 10.95 });
+    expect(soloMercadona.ahorro).toBe(0);
+  });
+
+  it('si una tienda vende por unidades y otra por kg, compara lo que se paga en caja', () => {
+    producto('mercadona', 'lechuga-m', 0.8, 1, 'ud');
+    producto('consum', 'lechuga-c', 1.2, 0.5, 'kg'); // 2,40 €/kg: no se compara con €/ud.
+    const lechuga = necesidad('lechuga', 2, 'ud', {
+      mercadona: { id: 'lechuga-m' },
+      consum: { id: 'lechuga-c' },
+    });
+    const plan = planificar([lechuga], buscarProducto, opciones(0));
+    expect(plan.analisis[0]?.porEnvase).toBe(true);
+    expect(plan.analisis[0]?.opciones.consum).toMatchObject({ coste: 2.4, valor: 2.4 });
+    expect(plan.mejor).toMatchObject({ tiendas: ['mercadona'], costeProductos: 1.6, total: 1.6 });
+  });
+
+  it('si una cosa cuesta lo mismo por kg en dos tiendas, elige la que menos se paga', () => {
+    producto('mercadona', 'pan-m', 2, 1, 'kg'); // 2 €/kg
+    producto('consum', 'pan-c', 1, 0.5, 'kg'); // 2 €/kg
     const pan = necesidad('pan', 0.3, 'kg', {
       mercadona: { id: 'pan-m' },
       consum: { id: 'pan-c' },
     });
     const plan = planificar([pan], buscarProducto, opciones(0));
     const ambas = plan.combinaciones.find((r) => r.tiendas.length === 2);
-    expect(ambas?.compras[0]?.opcion.tienda).toBe('mercadona');
+    expect(ambas?.compras[0]?.opcion.tienda).toBe('consum');
   });
 
   it('no elige una combinación en la que falta algo, aunque sea más barata', () => {

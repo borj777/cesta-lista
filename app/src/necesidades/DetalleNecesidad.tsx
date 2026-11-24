@@ -165,7 +165,7 @@ export function DetalleNecesidad({
                   </div>
                   <p class="secundario nota-automatica">
                     {necesidad.ofertas?.[tienda]?.auto
-                      ? 'Elegida por la app: la oferta de esta semana que menos cuesta para lo que gastas. '
+                      ? 'Elegida por la app: la oferta de esta semana más barata por kg. '
                       : ''}
                     {plazo === 'proxima'
                       ? 'Aún no ha empezado: la app la usará cuando empiece, si sale más barata.'

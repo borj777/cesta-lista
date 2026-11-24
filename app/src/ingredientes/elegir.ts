@@ -72,39 +72,17 @@ export function candidatos(
     .sort((a, b) => refDeHoy(a, hoy) - refDeHoy(b, hoy) || a.precio - b.precio);
 }
 
-/** Semanas de gasto que se tienen en cuenta al elegir el envase. */
-export const SEMANAS_ELEGIR = 4;
-
 /**
- * Lo que cuesta cubrir lo que se gasta en 4 semanas con este producto: envases enteros
- * (como mínimo 1) por su precio de hoy.
- */
-export function costeParaGasto(p: ProductoApp, semanal: number, hoy: string): number {
-  const envases = Math.max(1, Math.ceil((semanal * SEMANAS_ELEGIR) / p.formato.cantidad - 1e-9));
-  return envases * precioVigente(p, hoy).precio;
-}
-
-/**
- * El producto del ingrediente que elige la app en la tienda. Si se sabe lo que se gasta a la
- * semana (en kg, l o ud.), el que menos cuesta para cubrir 4 semanas: así no propone un salmón
- * entero de 3 kg para 150 g a la semana. Si no, el más barato por kg (o l o ud.). En los dos
- * casos, a igualdad, el de menor precio por kg.
+ * El producto del ingrediente que elige la app en la tienda: el más barato por kg (o l o ud.),
+ * aunque el envase sea grande; a igualdad, el de menor precio.
  */
 export function elegirProducto(
   ingrediente: Ingrediente,
   datos: Pick<DatosApp, 'productos' | 'secciones'>,
   tienda: string,
   hoy: string,
-  semanal?: number,
 ): ProductoApp | undefined {
-  const lista = candidatos(ingrediente, datos, tienda, hoy);
-  if (!semanal || semanal <= 0) return lista[0];
-  let mejor: { p: ProductoApp; coste: number } | undefined;
-  for (const p of lista) {
-    const coste = costeParaGasto(p, semanal, hoy);
-    if (!mejor || coste < mejor.coste - 1e-9) mejor = { p, coste };
-  }
-  return mejor?.p;
+  return candidatos(ingrediente, datos, tienda, hoy)[0];
 }
 
 export type UnidadIngrediente = Extract<Unidad, 'kg' | 'l' | 'ud'>;

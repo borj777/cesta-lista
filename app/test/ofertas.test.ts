@@ -277,11 +277,9 @@ describe('ofertas elegidas por la app', () => {
   };
   const pollo = () => necesidad({ nombre: 'Pechuga de pollo' });
 
-  it('elige la oferta de su ingrediente que menos cuesta para lo que se gasta', () => {
-    // 1 kg a la semana: en 4 semanas, 8 bandejas de 0,5 kg (31,92 €) o 2 de 2 kg (26 €).
+  it('elige la oferta de su ingrediente más barata por kg', () => {
+    // La bandeja de 2 kg (6,50 €/kg) frente a la de 0,5 kg (7,98 €/kg).
     expect(ofertaAutomatica(pollo(), conSecciones, 'lidl', HOY)?.id).toBe('f2');
-    // Con 150 g a la semana, la bandeja pequeña.
-    expect(ofertaAutomatica(pollo(), conSecciones, 'lidl', HOY, 0.15)?.id).toBe('f1');
     // Lo preparado no vale, ni lo que aún no ha empezado, ni otra necesidad.
     expect(
       ofertaAutomatica(necesidad({ nombre: 'Detergente' }), conSecciones, 'lidl', HOY),
@@ -289,12 +287,10 @@ describe('ofertas elegidas por la app', () => {
   });
 
   it('la pone al día cada día y no toca la elegida a mano', () => {
-    const [auto] = actualizarOfertas([pollo()], conSecciones, HOY, AHORA, () => 0.15);
-    expect(auto?.ofertas).toEqual({ lidl: { id: 'f1', auto: true } });
+    const [auto] = actualizarOfertas([pollo()], conSecciones, HOY, AHORA);
+    expect(auto?.ofertas).toEqual({ lidl: { id: 'f2', auto: true } });
     // Sin cambios, nada que guardar.
-    expect(actualizarOfertas([auto as Necesidad], conSecciones, HOY, AHORA, () => 0.15)).toEqual(
-      [],
-    );
+    expect(actualizarOfertas([auto as Necesidad], conSecciones, HOY, AHORA)).toEqual([]);
     // Si ya no hay ninguna que valga, la quita.
     const sinOfertas = { ...conSecciones, productos: [empanada] };
     expect(
@@ -306,13 +302,13 @@ describe('ofertas elegidas por la app', () => {
   });
 
   it('«No me vale» la quita y no la vuelve a proponer; elegirla a mano la recupera', () => {
-    const [auto] = actualizarOfertas([pollo()], conSecciones, HOY, AHORA, () => 0.15);
+    const [auto] = actualizarOfertas([pollo()], conSecciones, HOY, AHORA);
     const rechazada = quitarOferta(auto as Necesidad, 'lidl', AHORA, true);
     expect(rechazada.ofertas).toBeUndefined();
-    expect(rechazada.ofertasNoValen).toEqual(['lidl:f1']);
-    const [otra] = actualizarOfertas([rechazada], conSecciones, HOY, AHORA, () => 0.15);
-    expect(otra?.ofertas?.lidl?.id).toBe('f2');
-    expect(elegirOferta(rechazada, 'lidl', 'f1', AHORA).ofertasNoValen).toBeUndefined();
+    expect(rechazada.ofertasNoValen).toEqual(['lidl:f2']);
+    const [otra] = actualizarOfertas([rechazada], conSecciones, HOY, AHORA);
+    expect(otra?.ofertas?.lidl?.id).toBe('f1');
+    expect(elegirOferta(rechazada, 'lidl', 'f2', AHORA).ofertasNoValen).toBeUndefined();
   });
 
   it('olvida los «No me vale» de ofertas que ya no se descargan', () => {

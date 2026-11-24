@@ -3,7 +3,7 @@ import { getDocument, OPS, Util } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { describe, expect, it } from 'vitest';
 import { gastoSemanal } from '../src/ingredientes/automatico.ts';
 import { INGREDIENTES } from '../src/ingredientes/catalogo.ts';
-import { costeParaGasto, elegirProducto } from '../src/ingredientes/elegir.ts';
+import { elegirProducto } from '../src/ingredientes/elegir.ts';
 import {
   analizarPlato,
   cambiosDeLaDieta,
@@ -257,7 +257,7 @@ describe('la compra de la dieta inventada', () => {
   });
 });
 
-describe('elegir el envase según lo que se gasta', () => {
+describe('elegir el envase', () => {
   const salmon = INGREDIENTES.find((i) => i.id === 'salmon');
   const producto = (id: string, cantidad: number, precio: number): ProductoApp => ({
     tienda: 'consum',
@@ -273,14 +273,10 @@ describe('elegir el envase según lo que se gasta', () => {
     productos: [producto('entero', 2.86, 31.3), producto('filete', 0.2, 4.94)],
   };
 
-  it('sin gasto conocido, el más barato por kg; con gasto, el que menos cuesta en 4 semanas', () => {
+  it('elige el más barato por kg, aunque el envase sea grande', () => {
     if (!salmon) throw new Error('falta el salmón en el catálogo');
+    // 10,94 €/kg el entero frente a 24,70 €/kg los filetes.
     expect(elegirProducto(salmon, datos, 'consum', HOY)?.id).toBe('entero');
-    // 150 g a la semana: 600 g en 4 semanas → 3 filetes (14,82 €) frente a 31,30 €.
-    expect(elegirProducto(salmon, datos, 'consum', HOY, 0.15)?.id).toBe('filete');
-    expect(costeParaGasto(datos.productos[1] as ProductoApp, 0.15, HOY)).toBeCloseTo(14.82, 2);
-    // Si se gasta mucho, el grande sale a cuenta.
-    expect(elegirProducto(salmon, datos, 'consum', HOY, 1)?.id).toBe('entero');
   });
 
   it('el gasto semanal de una necesidad, en kg, l o ud.', () => {

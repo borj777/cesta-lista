@@ -394,12 +394,16 @@ function ResumenPlan({
         {nombres(mejor.tiendas)}
       </h2>
       <p class="plan__total">{euros(mejor.costeProductos)}</p>
+      <p class="secundario">
+        Cada cosa va a la tienda donde es más barata por kg (o por litro o por unidad), aunque allí
+        el envase sea más grande.
+      </p>
       <p>
         {unaTienda === null
           ? 'Ninguna tienda tiene todo lo que compras: hace falta ir a varias.'
           : unaTienda === mejor || !ahorro
             ? `Es lo más barato: comprarlo todo en ${nombres(mejor.tiendas)}.`
-            : `Ahorras ${euros(ahorro)} frente a comprarlo todo en ${nombres(unaTienda.tiendas)}.`}
+            : `Ahorras ${euros(ahorro)} frente a comprarlo todo en ${nombres(unaTienda.tiendas)}, por la misma cantidad de cada cosa.`}
       </p>
       {mejor.costeVisitas > 0 && (
         <p class="secundario">
@@ -526,8 +530,15 @@ function FilaCompra({ compra }: { compra: Compra }) {
           </span>
           <span class="secundario">
             {opcion.envases} × {euros(opcion.precio)}
-            {opcion.porEnvase ? ' (un envase por unidad)' : ''}
+            {opcion.porEnvase
+              ? ' (un envase por unidad)'
+              : ` · ${textoPrecioRef(opcion.precioRef, opcion.producto.formato.unidad)}`}
           </span>
+          {analisis.porEnvase && Object.keys(analisis.opciones).length > 1 && (
+            <span class="secundario">
+              Se compara por precio del envase: en cada tienda se vende en una unidad distinta.
+            </span>
+          )}
         </div>
         <span class="fila__importe">{euros(opcion.coste)}</span>
       </a>
@@ -639,7 +650,7 @@ function OtrasOpciones({
               <span class="secundario">
                 {r.completa
                   ? r.costeVisitas > 0
-                    ? `${euros(r.costeProductos)} en caja + ${euros(r.costeVisitas)} por ir a ${r.tiendas.length} tiendas`
+                    ? `${euros(r.costeProductos)} en caja; cuenta ${euros(r.costeVisitas)} por ir a ${r.tiendas.length} tiendas`
                     : `${euros(r.costeProductos)} en caja`
                   : `Falta: ${r.faltan.map((n) => n.nombre).join(', ')}`}
               </span>
@@ -655,8 +666,9 @@ function OtrasOpciones({
         ))}
       </ul>
       <p class="secundario">
-        Lo que cuesta de más cada opción frente a la elegida, contando el tiempo de ir a cada tienda
-        extra. Lo puedes cambiar en <a href="#ajustes">Ajustes</a>.
+        Lo que cuesta de más cada opción frente a la elegida con la misma cantidad de cada cosa (por
+        su precio por kg), contando el tiempo de ir a cada tienda extra. Lo puedes cambiar en{' '}
+        <a href="#ajustes">Ajustes</a>.
       </p>
     </section>
   );

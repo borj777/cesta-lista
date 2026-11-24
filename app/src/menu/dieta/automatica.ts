@@ -6,7 +6,6 @@
 import { palabras } from '../../buscador.ts';
 import {
   elegirPorMi,
-  gastoSemanal,
   ingredienteDe,
   ingredientePorNombre,
   unidadCompatible,
@@ -410,8 +409,7 @@ export function productoDe(
   if (e && 'noCompro' in e) return undefined;
   if (e && 'id' in e && !e.auto) return buscarProducto(tienda, e.id);
   if (!cosa.ingrediente) return e && 'id' in e ? buscarProducto(tienda, e.id) : undefined;
-  const semanal = cosa.semanal + (cosa.necesidad ? gastoSemanal(cosa.necesidad) : 0);
-  return elegirProducto(cosa.ingrediente, datos, tienda, hoy, semanal);
+  return elegirProducto(cosa.ingrediente, datos, tienda, hoy);
 }
 
 export type Cambios = {
@@ -442,16 +440,13 @@ export function cambiosDeLaDieta(
   const { ahora, hoy, datos } = contexto;
   const cambiadas = new Map<string, Necesidad>();
   const nuevas = new Map<string, Necesidad>();
-  /** Lo que se gasta a la semana de cada cosa, para elegir el envase. */
-  const gastoDe = new Map(plan.cosas.map((c) => [c.clave, c.semanal]));
   /** Necesidad de un ingrediente: la que existe o una nueva. */
   const necesidadPara = (i: Ingrediente): Necesidad => {
     const existente = necesidadDelIngrediente(i, contexto.necesidades);
     if (existente) {
       if (!cambiadas.has(existente.id)) {
         // Si le falta el producto de alguna tienda, lo elige la app.
-        const semanal = (gastoDe.get(`n:${existente.id}`) ?? 0) + gastoSemanal(existente);
-        const r = elegirPorMi(existente, datos, hoy, ahora, semanal);
+        const r = elegirPorMi(existente, datos, hoy, ahora);
         cambiadas.set(existente.id, r?.necesidad ?? existente);
       }
       return cambiadas.get(existente.id) ?? existente;
@@ -462,7 +457,7 @@ export function cambiosDeLaDieta(
       ...necesidadParaIngrediente(nombreCorto(i), unidadNueva(i), ahora, contexto.nuevoId()),
       ingrediente: i.id,
     };
-    const n = elegirPorMi(base, datos, hoy, ahora, gastoDe.get(`i:${i.id}`))?.necesidad ?? base;
+    const n = elegirPorMi(base, datos, hoy, ahora)?.necesidad ?? base;
     nuevas.set(i.id, n);
     return n;
   };

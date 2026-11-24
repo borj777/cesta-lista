@@ -122,8 +122,6 @@ export function elegirPorMi(
   datos: Datos,
   hoy: string,
   ahora: string,
-  /** Lo que se gasta a la semana en kg, l o ud. (con el menú); si falta, el de la necesidad. */
-  semanal: number = gastoSemanal(n),
 ): ResultadoEleccion | null {
   const ingrediente = ingredienteDe(n);
   if (!ingrediente || !unidadCompatible(ingrediente, n)) return null;
@@ -131,7 +129,7 @@ export function elegirPorMi(
   const elegidas: string[] = [];
   const sinProducto: string[] = [];
   for (const tienda of tiendasPorElegir(n)) {
-    const producto = elegirProducto(ingrediente, datos, tienda, hoy, semanal);
+    const producto = elegirProducto(ingrediente, datos, tienda, hoy);
     if (!producto) {
       sinProducto.push(tienda);
       continue;
@@ -155,8 +153,6 @@ export function actualizarAutomaticas(
   datos: Datos,
   hoy: string,
   ahora: string,
-  /** Lo que se gasta a la semana de cada necesidad (con el menú), en kg, l o ud. */
-  semanalDe: (n: Necesidad) => number = gastoSemanal,
 ): Necesidad[] {
   const cambiadas: Necesidad[] = [];
   for (const n of necesidades) {
@@ -166,7 +162,7 @@ export function actualizarAutomaticas(
     if (!ingrediente || !unidadCompatible(ingrediente, n)) continue;
     let nueva = n;
     for (const tienda of automaticas) {
-      const producto = elegirProducto(ingrediente, datos, tienda, hoy, semanalDe(n));
+      const producto = elegirProducto(ingrediente, datos, tienda, hoy);
       const actual = n.equivalencias?.[tienda];
       if (producto && actual && 'id' in actual && actual.id !== producto.id) {
         nueva = elegirAutomatico(nueva, tienda, producto.id, ahora);
@@ -192,7 +188,7 @@ export const textoPorUnidad = (i: Ingrediente) =>
 
 /**
  * La oferta de la semana que elige la app para una necesidad en una tienda sin catálogo
- * (Lidl): la que menos cuesta para lo que se gasta entre las ofertas de hoy que son su
+ * (Lidl): la más barata por kg (o l o ud.) entre las ofertas de hoy que son su
  * ingrediente, sin las que el usuario ha dicho que no le valen.
  */
 export function ofertaAutomatica(
@@ -200,7 +196,6 @@ export function ofertaAutomatica(
   datos: Datos,
   tienda: string,
   hoy: string,
-  semanal: number = gastoSemanal(n),
 ): ProductoApp | undefined {
   const ingrediente = ingredienteDe(n);
   if (!ingrediente || !unidadCompatible(ingrediente, n)) return undefined;
@@ -217,7 +212,6 @@ export function ofertaAutomatica(
     { productos: ofertas, secciones: datos.secciones },
     tienda,
     hoy,
-    semanal,
   );
 }
 
@@ -231,7 +225,6 @@ export function actualizarOfertas(
   datos: Datos,
   hoy: string,
   ahora: string,
-  semanalDe: (n: Necesidad) => number = gastoSemanal,
 ): Necesidad[] {
   const tiendas = [
     ...new Set(datos.productos.filter((p) => esOfertaSemanal(p)).map((p) => p.tienda)),
@@ -242,7 +235,7 @@ export function actualizarOfertas(
     for (const tienda of tiendas) {
       const actual = nueva.ofertas?.[tienda];
       if (actual && !actual.auto) continue;
-      const mejor = ofertaAutomatica(nueva, datos, tienda, hoy, semanalDe(n));
+      const mejor = ofertaAutomatica(nueva, datos, tienda, hoy);
       if (mejor && mejor.id !== actual?.id)
         nueva = elegirOferta(nueva, tienda, mejor.id, ahora, true);
       else if (!mejor && actual) nueva = quitarOferta(nueva, tienda, ahora);

@@ -6,8 +6,12 @@
  * un coste por cada tienda extra (tiempo y desplazamiento). Gana la de menor coste total.
  * Es un cálculo exacto: se prueban todas las combinaciones.
  *
- * El coste de cada necesidad es lo que se paga en caja: envases enteros × precio del envase,
- * con la cantidad que se gasta en el periodo de la compra (por ejemplo, una semana).
+ * Se compara por precio por kg (o l, ud., lavado o m), no por lo que se paga en caja: cada
+ * necesidad va a la tienda donde es más barata por kg, aunque el envase sea más grande. Para
+ * sumar y decidir si compensa ir a otra tienda, se cuenta la misma cantidad en todas
+ * (precio por kg × cantidad). Si los productos de una necesidad van en unidades distintas en
+ * cada tienda (lechuga por unidades y por kg), no se puede comparar por kg: entonces se compara
+ * lo que se paga en caja.
  */
 import { precioVigente, unidadDeComparacion } from './formato.ts';
 import { SEMANAS, type Necesidad } from './necesidades/modelo.ts';
@@ -49,6 +53,11 @@ export type Opcion = {
   /** Lo que se paga en caja: envases × precio. */
   coste: number;
   /**
+   * Lo que se compara entre tiendas: precio por kg × cantidad (la misma en todas), o lo que se
+   * paga en caja si la necesidad no se puede comparar por kg.
+   */
+  valor: number;
+  /**
    * El producto se vende en otra unidad que la necesidad, que se cuenta en unidades:
    * se compra un envase por unidad (p. ej. «1 detergente al mes» y un detergente por lavados).
    */
@@ -63,6 +72,11 @@ export type AnalisisNecesidad = {
   cantidad: number;
   unidad: Unidad;
   opciones: Partial<Record<IdTienda, Opcion>>;
+  /**
+   * Los productos van en unidades distintas en cada tienda (o en otra que la necesidad): se
+   * comparan por lo que se paga en caja, no por precio por kg.
+   */
+  porEnvase: boolean;
   /** Tiendas con un producto elegido que no se puede usar. */
   problemas: ProblemaTienda[];
 };
@@ -76,8 +90,11 @@ export type Resultado = {
   faltan: Necesidad[];
   /** Lo que se paga en caja. */
   costeProductos: number;
+  /** Lo que se compara: la suma de `valor` (la misma cantidad en todas las tiendas). */
+  valorProductos: number;
   /** Coste de las tiendas extra: costeVisita × (tiendas − 1). */
   costeVisitas: number;
+  /** Lo que se compara entre combinaciones: valorProductos + costeVisitas. */
   total: number;
   /** Cubre todas las necesidades que se pueden comprar en alguna tienda. */
   completa: boolean;
@@ -93,7 +110,10 @@ export type Plan = {
   combinaciones: Resultado[];
   /** La tienda sola más barata que tiene todo, para calcular el ahorro. */
   unaTienda: Resultado | null;
-  /** Lo que se ahorra en caja frente a comprarlo todo en `unaTienda`. */
+  /**
+   * Lo que se ahorra frente a comprarlo todo en `unaTienda`, con la misma cantidad de cada cosa
+   * (sin contar el coste por visita).
+   */
   ahorro: number | null;
   /** Necesidades sin ningún producto que se pueda comprar: no entran en el cálculo. */
   sinProducto: Necesidad[];
@@ -153,6 +173,7 @@ export function opcionDe(
     precio: vigente.precio,
     precioRef: vigente.precioRef,
     coste: centimos(envases * vigente.precio),
+    valor: mismaUnidad ? vigente.precioRef * cantidad : centimos(envases * vigente.precio),
     porEnvase: !mismaUnidad,
   };
 }
@@ -193,18 +214,26 @@ export function analizar(
       }
       if (opcion) opciones[tienda] = opcion;
     }
-    return { necesidad, cantidad, unidad, opciones, problemas };
+    // Si alguna tienda no se puede comparar por kg, todas se comparan por lo que se paga.
+    const lista = Object.values(opciones).filter((o): o is Opcion => o !== undefined);
+    const porEnvase = lista.some((o) => o.porEnvase);
+    if (porEnvase) for (const o of lista) o.valor = o.coste;
+    return { necesidad, cantidad, unidad, opciones, porEnvase, problemas };
   });
 }
 
 /**
- * La opción más barata en caja; si empatan, la de menor precio por unidad y luego la de la
- * primera tienda (en el orden de `orden`).
+ * La opción más barata: la de menor precio por kg (o lo que se paga, si no se puede comparar por
+ * kg); si empatan, la que menos se paga en caja y luego la de la primera tienda (en el orden de
+ * `orden`).
  */
 function masBarata(opciones: Opcion[], orden: Tiendas): Opcion | undefined {
   const pos = (t: IdTienda) => orden.indexOf(t);
   return [...opciones].sort(
-    (a, b) => a.coste - b.coste || a.precioRef - b.precioRef || pos(a.tienda) - pos(b.tienda),
+    (a, b) =>
+      (Math.abs(a.valor - b.valor) > MARGEN ? a.valor - b.valor : 0) ||
+      a.coste - b.coste ||
+      pos(a.tienda) - pos(b.tienda),
   )[0];
 }
 
@@ -228,14 +257,16 @@ export function evaluar(
     else faltan.push(a.necesidad);
   }
   const costeProductos = centimos(compras.reduce((suma, c) => suma + c.opcion.coste, 0));
+  const valorProductos = centimos(compras.reduce((suma, c) => suma + c.opcion.valor, 0));
   const costeVisitas = centimos(costeVisita * (tiendas.length - 1));
   return {
     tiendas,
     compras,
     faltan,
     costeProductos,
+    valorProductos,
     costeVisitas,
-    total: centimos(costeProductos + costeVisitas),
+    total: centimos(valorProductos + costeVisitas),
     completa: faltan.length === 0,
   };
 }
@@ -282,7 +313,7 @@ export function planificar(
     ? (combinaciones.find((r) => r.tiendas.length === 1 && r.completa) ?? null)
     : null;
   const ahorro =
-    mejor && unaTienda ? centimos(unaTienda.costeProductos - mejor.costeProductos) : null;
+    mejor && unaTienda ? centimos(unaTienda.valorProductos - mejor.valorProductos) : null;
 
   return { mejor, combinaciones, unaTienda, ahorro, sinProducto, analisis };
 }
