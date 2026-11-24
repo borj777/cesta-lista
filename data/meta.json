@@ -1,14 +1,14 @@
 {
-  "generado": "2026-11-23T17:40:51.064Z",
+  "generado": "2026-11-24T06:53:44.785Z",
   "tiendas": {
     "mercadona": {
       "estado": "ok",
-      "actualizado": "2026-11-23T07:06:35.392Z",
-      "comprobado": "2026-11-23T07:06:35.392Z",
-      "productos": 4406,
-      "duracionSegundos": 255,
+      "actualizado": "2026-11-24T06:53:44.785Z",
+      "productos": 4410,
+      "comprobado": "2026-11-24T06:53:44.785Z",
+      "duracionSegundos": 271,
       "peticiones": 154,
-      "sinVerificar": 204,
+      "sinVerificar": 205,
       "descartados": 0,
       "avisosPrecioRef": 12,
       "ejemplosAvisos": [
@@ -83,17 +83,17 @@
           "tienda": 5.5
         },
         {
-          "id": "18382",
-          "nombre": "Postre Caramel Cake Hacendado con queso y caramelo salado",
-          "unidad": "kg",
-          "calculado": 1.0625,
-          "tienda": 10.63
-        },
-        {
           "id": "13053",
           "nombre": "Cheesecake con arándanos Hacendado",
           "unidad": "kg",
           "calculado": 9.4444,
+          "tienda": 10.63
+        },
+        {
+          "id": "18382",
+          "nombre": "Postre Caramel Cake Hacendado con queso y caramelo salado",
+          "unidad": "kg",
+          "calculado": 1.0625,
           "tienda": 10.63
         }
       ],
@@ -101,12 +101,12 @@
     },
     "consum": {
       "estado": "ok",
-      "actualizado": "2026-11-23T07:06:35.392Z",
-      "comprobado": "2026-11-23T07:06:35.392Z",
-      "productos": 9425,
-      "duracionSegundos": 179,
+      "actualizado": "2026-11-24T06:53:44.785Z",
+      "productos": 9417,
+      "comprobado": "2026-11-24T06:53:44.785Z",
+      "duracionSegundos": 187,
       "peticiones": 96,
-      "sinVerificar": 416,
+      "sinVerificar": 413,
       "descartados": 0,
       "avisosPrecioRef": 15,
       "ejemplosAvisos": [
@@ -220,9 +220,9 @@
     },
     "lidl": {
       "estado": "ok",
-      "actualizado": "2026-11-23T17:40:51.064Z",
+      "actualizado": "2026-11-24T06:53:44.785Z",
       "productos": 47,
-      "comprobado": "2026-11-23T17:40:51.064Z",
+      "comprobado": "2026-11-24T06:53:44.785Z",
       "duracionSegundos": 1,
       "peticiones": 1,
       "sinVerificar": 6,
