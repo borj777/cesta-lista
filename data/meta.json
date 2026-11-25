@@ -1,16 +1,16 @@
 {
-  "generado": "2026-11-24T06:53:44.785Z",
+  "generado": "2026-11-25T06:56:13.919Z",
   "tiendas": {
     "mercadona": {
       "estado": "ok",
-      "actualizado": "2026-11-24T06:53:44.785Z",
-      "productos": 4410,
-      "comprobado": "2026-11-24T06:53:44.785Z",
-      "duracionSegundos": 271,
+      "actualizado": "2026-11-25T06:56:13.919Z",
+      "productos": 4415,
+      "comprobado": "2026-11-25T06:56:13.919Z",
+      "duracionSegundos": 267,
       "peticiones": 154,
-      "sinVerificar": 205,
+      "sinVerificar": 202,
       "descartados": 0,
-      "avisosPrecioRef": 12,
+      "avisosPrecioRef": 14,
       "ejemplosAvisos": [
         {
           "id": "29540",
@@ -34,11 +34,25 @@
           "tienda": 9.56
         },
         {
+          "id": "14258",
+          "nombre": "Paleta de bellota ibérica 100% La Hacienda del Ibérico",
+          "unidad": "kg",
+          "calculado": 22.2222,
+          "tienda": 25
+        },
+        {
           "id": "58154",
           "nombre": "Paleta de cebo ibérica 50% La Hacienda del Ibérico",
           "unidad": "kg",
           "calculado": 15,
           "tienda": 18.75
+        },
+        {
+          "id": "18696",
+          "nombre": "Jamón de bellota ibérico 100% Iberibérico",
+          "unidad": "kg",
+          "calculado": 36.6667,
+          "tienda": 34.38
         },
         {
           "id": "72641",
@@ -101,12 +115,12 @@
     },
     "consum": {
       "estado": "ok",
-      "actualizado": "2026-11-24T06:53:44.785Z",
-      "productos": 9417,
-      "comprobado": "2026-11-24T06:53:44.785Z",
+      "actualizado": "2026-11-25T06:56:13.919Z",
+      "productos": 9526,
+      "comprobado": "2026-11-25T06:56:13.919Z",
       "duracionSegundos": 187,
-      "peticiones": 96,
-      "sinVerificar": 413,
+      "peticiones": 97,
+      "sinVerificar": 427,
       "descartados": 0,
       "avisosPrecioRef": 15,
       "ejemplosAvisos": [
@@ -220,10 +234,10 @@
     },
     "lidl": {
       "estado": "ok",
-      "actualizado": "2026-11-24T06:53:44.785Z",
+      "actualizado": "2026-11-25T06:56:13.919Z",
       "productos": 47,
-      "comprobado": "2026-11-24T06:53:44.785Z",
-      "duracionSegundos": 1,
+      "comprobado": "2026-11-25T06:56:13.919Z",
+      "duracionSegundos": 2,
       "peticiones": 1,
       "sinVerificar": 6,
       "descartados": 0,
