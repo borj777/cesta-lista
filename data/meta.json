@@ -1,12 +1,12 @@
 {
-  "generado": "2026-11-25T06:56:13.919Z",
+  "generado": "2026-11-26T06:55:25.987Z",
   "tiendas": {
     "mercadona": {
       "estado": "ok",
-      "actualizado": "2026-11-25T06:56:13.919Z",
-      "productos": 4415,
-      "comprobado": "2026-11-25T06:56:13.919Z",
-      "duracionSegundos": 267,
+      "actualizado": "2026-11-26T06:55:25.987Z",
+      "productos": 4424,
+      "comprobado": "2026-11-26T06:55:25.987Z",
+      "duracionSegundos": 269,
       "peticiones": 154,
       "sinVerificar": 202,
       "descartados": 0,
@@ -52,7 +52,7 @@
           "nombre": "Jamón de bellota ibérico 100% Iberibérico",
           "unidad": "kg",
           "calculado": 36.6667,
-          "tienda": 34.38
+          "tienda": 39.29
         },
         {
           "id": "72641",
@@ -115,10 +115,10 @@
     },
     "consum": {
       "estado": "ok",
-      "actualizado": "2026-11-25T06:56:13.919Z",
-      "productos": 9526,
-      "comprobado": "2026-11-25T06:56:13.919Z",
-      "duracionSegundos": 187,
+      "actualizado": "2026-11-26T06:55:25.987Z",
+      "productos": 9519,
+      "comprobado": "2026-11-26T06:55:25.987Z",
+      "duracionSegundos": 192,
       "peticiones": 97,
       "sinVerificar": 427,
       "descartados": 0,
@@ -234,10 +234,10 @@
     },
     "lidl": {
       "estado": "ok",
-      "actualizado": "2026-11-25T06:56:13.919Z",
+      "actualizado": "2026-11-26T06:55:25.987Z",
       "productos": 47,
-      "comprobado": "2026-11-25T06:56:13.919Z",
-      "duracionSegundos": 2,
+      "comprobado": "2026-11-26T06:55:25.987Z",
+      "duracionSegundos": 1,
       "peticiones": 1,
       "sinVerificar": 6,
       "descartados": 0,
