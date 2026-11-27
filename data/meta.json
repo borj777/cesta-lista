@@ -1,14 +1,14 @@
 {
-  "generado": "2026-11-26T06:55:25.987Z",
+  "generado": "2026-11-27T06:57:20.921Z",
   "tiendas": {
     "mercadona": {
       "estado": "ok",
-      "actualizado": "2026-11-26T06:55:25.987Z",
-      "productos": 4424,
-      "comprobado": "2026-11-26T06:55:25.987Z",
-      "duracionSegundos": 269,
+      "actualizado": "2026-11-27T06:57:20.921Z",
+      "productos": 4430,
+      "comprobado": "2026-11-27T06:57:20.921Z",
+      "duracionSegundos": 268,
       "peticiones": 154,
-      "sinVerificar": 202,
+      "sinVerificar": 204,
       "descartados": 0,
       "avisosPrecioRef": 14,
       "ejemplosAvisos": [
@@ -115,12 +115,12 @@
     },
     "consum": {
       "estado": "ok",
-      "actualizado": "2026-11-26T06:55:25.987Z",
-      "productos": 9519,
-      "comprobado": "2026-11-26T06:55:25.987Z",
-      "duracionSegundos": 192,
+      "actualizado": "2026-11-27T06:57:20.921Z",
+      "productos": 9506,
+      "comprobado": "2026-11-27T06:57:20.921Z",
+      "duracionSegundos": 188,
       "peticiones": 97,
-      "sinVerificar": 427,
+      "sinVerificar": 426,
       "descartados": 0,
       "avisosPrecioRef": 15,
       "ejemplosAvisos": [
@@ -234,9 +234,9 @@
     },
     "lidl": {
       "estado": "ok",
-      "actualizado": "2026-11-26T06:55:25.987Z",
+      "actualizado": "2026-11-27T06:57:20.921Z",
       "productos": 47,
-      "comprobado": "2026-11-26T06:55:25.987Z",
+      "comprobado": "2026-11-27T06:57:20.921Z",
       "duracionSegundos": 1,
       "peticiones": 1,
       "sinVerificar": 6,
